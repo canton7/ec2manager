@@ -38,10 +38,12 @@ namespace Ec2Manager
                     using (var client = new InstanceManager(a.PublicIp, "ubuntu", a.PrivateKey, accessKey, secretKey))
                     {
                         client.Setup();
+
+                        await a.MountDevice("snap-03b13e28", "/home/ubuntu/left4dead2", client);
                     }
 
                     await a.DestroyAsync();
-                });
+               });
             
         }
     }

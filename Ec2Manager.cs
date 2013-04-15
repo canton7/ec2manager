@@ -17,6 +17,10 @@ namespace Ec2Manager
         private string reservationId;
         private string instanceId;
 
+        // We can mount on xvdf -> xvdp
+        private char nextVolumeMountPointSuffix = 'f';
+        private static readonly char maxVolumeMountPointSuffix = 'p';
+
         public string PrivateKey;
         public string PublicIp;
 
@@ -37,8 +41,45 @@ namespace Ec2Manager
             this.uniqueKey = Guid.NewGuid().ToString();
         }
 
+        private RunningInstance GetRunningInstance()
+        {
+            var describeInstancesRequest = new DescribeInstancesRequest()
+            {
+                InstanceId = new List<string>(){ this.instanceId },
+            };
+
+            DescribeInstancesResponse describeInstancesResponse = null;
+
+            try
+            {
+                describeInstancesResponse = this.client.DescribeInstances(describeInstancesRequest);
+            }
+            catch (AmazonEC2Exception e)
+            {
+            }
+
+            return describeInstancesResponse.DescribeInstancesResult.Reservation
+                .Where(x => x.ReservationId == this.reservationId)
+                .FirstOrDefault().RunningInstance
+                .Where(x => x.InstanceId == this.instanceId)
+                .FirstOrDefault();
+        }
+
+        private string GetNextDevice()
+        {
+            if (this.nextVolumeMountPointSuffix > maxVolumeMountPointSuffix)
+                throw new Exception("Run out of mount points. You have too many volumes mounted!");
+
+            var result = "/dev/xvd" + this.nextVolumeMountPointSuffix;
+            this.nextVolumeMountPointSuffix++;
+            return result;
+        }
+
         public async Task CreateAsync()
         {
+            var allocateResponse = this.client.AllocateAddress(new AllocateAddressRequest());
+            this.PublicIp = allocateResponse.AllocateAddressResult.PublicIp;
+
             var newGroupRequest = new CreateSecurityGroupRequest()
             {
                 GroupName = "Ec2SecurityGroup-" + this.uniqueKey,
@@ -74,7 +115,7 @@ namespace Ec2Manager
 
             var runInstanceRequest = new RunInstancesRequest()
             {
-                ImageId = "ami-8ec9dcfa",
+                ImageId = "ami-5a60692e",
                 InstanceType = "m1.small",
                 MinCount = 1,
                 MaxCount = 1,
@@ -89,15 +130,36 @@ namespace Ec2Manager
 
             await this.UntilStateAsync("running");
 
-            var allocateResponse = this.client.AllocateAddress(new AllocateAddressRequest());
-            this.PublicIp = allocateResponse.AllocateAddressResult.PublicIp;
-
             this.client.AssociateAddress(new AssociateAddressRequest() 
             {
                 InstanceId = this.instanceId,
                 PublicIp = this.PublicIp,
             });
+        }
 
+        public async Task MountDevice(string snapshotId, string mountPoint, IMachineInteractionProvider client)
+        {
+            var createVolumeResponse = this.client.CreateVolume(new CreateVolumeRequest()
+            {
+                SnapshotId = snapshotId,
+                VolumeType = "standard",
+                AvailabilityZone = this.GetRunningInstance().Placement.AvailabilityZone,
+            });
+            var volumeId = createVolumeResponse.CreateVolumeResult.Volume.VolumeId;
+
+            await this.UntilVolumeStateAsync(volumeId, "available");
+
+            var device = this.GetNextDevice();
+            var attachVolumeResponse = this.client.AttachVolume(new AttachVolumeRequest()
+            {
+                InstanceId = this.instanceId,
+                VolumeId = volumeId,
+                Device = device,
+            });
+
+            await this.UntilVolumeAttachedStateAsync(volumeId, "attached");
+
+            client.MountDevice(device, mountPoint);
         }
 
         private async Task UntilStateAsync(string state)
@@ -106,26 +168,7 @@ namespace Ec2Manager
 
             while (!gotToState)
             {
-                var describeInstancesRequest = new DescribeInstancesRequest()
-                {
-                    InstanceId = new List<string>(){ this.instanceId },
-                };
-                DescribeInstancesResponse describeInstancesResponse = null;
-
-                try
-                {
-                    describeInstancesResponse = this.client.DescribeInstances(describeInstancesRequest);
-                }
-                catch (AmazonEC2Exception e)
-                {
-                }
-
-                this.InstanceState = describeInstancesResponse.DescribeInstancesResult.Reservation
-                    .Where(x => x.ReservationId == this.reservationId)
-                    .FirstOrDefault().RunningInstance
-                    .Where(x => x.InstanceId == this.instanceId)
-                    .FirstOrDefault()
-                    .InstanceState.Name;
+                this.instanceState = this.GetRunningInstance().InstanceState.Name;
 
                 if (this.InstanceState == state)
                 {
@@ -138,25 +181,113 @@ namespace Ec2Manager
             }
         }
 
+        private async Task UntilVolumeStateAsync(string volumeId, string state)
+        {
+            bool gotToState = false;
+
+            var describeVolumesRequest = new DescribeVolumesRequest()
+            {
+                VolumeId = new List<string>() { volumeId },
+            };
+
+            while (!gotToState)
+            {
+                var describeVolumesResponse = this.client.DescribeVolumes(describeVolumesRequest);
+                var status = describeVolumesResponse.DescribeVolumesResult.Volume.FirstOrDefault(x => x.VolumeId == volumeId).Status;
+
+                if (status == state)
+                {
+                    gotToState = true;
+                }
+                else
+                {
+                    await Task.Delay(1000);
+                }
+            }
+        }
+
+        private async Task UntilVolumeAttachedStateAsync(string volumeId, string state, bool allowNone = true)
+        {
+            bool gotToState = false;
+
+            var describeVolumesRequest = new DescribeVolumesRequest()
+            {
+                VolumeId = new List<string>() { volumeId },
+            };
+
+            while (!gotToState)
+            {
+                var describeVolumesResponse = this.client.DescribeVolumes(describeVolumesRequest);
+                var attachment = describeVolumesResponse.DescribeVolumesResult.Volume
+                    .FirstOrDefault(x => x.VolumeId == volumeId)
+                    .Attachment;
+
+                if ((attachment.Count == 0 && allowNone) || attachment.FirstOrDefault(x => x.InstanceId == this.instanceId).Status == state)
+                {
+                    gotToState = true;
+                }
+                else
+                {
+                    await Task.Delay(1000);
+                }
+            }
+        }
+
         public async Task DestroyAsync()
         {
-            var termRequest = new TerminateInstancesRequest();
-            termRequest.InstanceId = new List<string>() { this.instanceId };
-            var termResponse = this.client.TerminateInstances(termRequest);
+            var instanceStatus = this.GetRunningInstance();
+            var groupIds = instanceStatus.GroupId;
+            var keyName = instanceStatus.KeyName;
+            // This excludes volumes attached to other machines as well
+            var volumes = this.client.DescribeVolumes(new DescribeVolumesRequest()).DescribeVolumesResult.Volume
+                .Where(x => x.Attachment.Count == 1 && x.Attachment[0].InstanceId == this.instanceId)
+                .Select(x => x.VolumeId);
+
+            foreach (var volume in volumes)
+            {
+                this.client.DetachVolume(new DetachVolumeRequest()
+                {
+                    Force = true,
+                    InstanceId = this.instanceId,
+                    VolumeId = volume,
+                });
+
+                await this.UntilVolumeAttachedStateAsync(volume, "available");
+
+                this.client.DeleteVolume(new DeleteVolumeRequest()
+                {
+                    VolumeId = volume,
+                });
+            }
+
+            var termResponse = this.client.TerminateInstances(new TerminateInstancesRequest()
+            {
+                InstanceId = new List<string>() { this.instanceId },
+            });
 
             await this.UntilStateAsync("terminated");
 
-            var deleteSecurityGroupRequest = new DeleteSecurityGroupRequest()
-            {
-                GroupName = "Ec2SecurityGroup-" + this.uniqueKey,
-            };
-            this.client.DeleteSecurityGroup(deleteSecurityGroupRequest);
+            // This has to be set after the instance has been terminated
+            var allInstances = this.client.DescribeInstances(new DescribeInstancesRequest()).DescribeInstancesResult.Reservation
+                .Where(x => x.RunningInstance.All(y => y.InstanceState.Name != "terminated")).ToArray();
 
-            var deleteKeyPairRequest = new DeleteKeyPairRequest()
+            var usedGroupIds = allInstances.SelectMany(x => x.GroupId).Distinct();
+            foreach (var groupId in groupIds.Except(usedGroupIds))
             {
-                KeyName = "Ec2KeyPair-" + this.uniqueKey,
-            };
-            this.client.DeleteKeyPair(deleteKeyPairRequest);
+                this.client.DeleteSecurityGroup(new DeleteSecurityGroupRequest()
+                {
+                    GroupId = groupId,
+                });
+            }
+
+            var usedKeyNames = allInstances.SelectMany(x => x.RunningInstance.Select(y => y.KeyName)).Distinct();
+            if (!usedKeyNames.Contains(keyName))
+            {
+                this.client.DeleteKeyPair(new DeleteKeyPairRequest()
+                {
+                    KeyName = keyName,
+                });
+            }
 
             this.client.ReleaseAddress(new ReleaseAddressRequest()
             {

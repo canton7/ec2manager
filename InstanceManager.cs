@@ -9,7 +9,7 @@ using System.Threading.Tasks;
 
 namespace Ec2Manager
 {
-    class InstanceManager : IDisposable
+    class InstanceManager : IDisposable, IMachineInteractionProvider
     {
         private SshClient client;
         private string accessKey;
@@ -56,6 +56,13 @@ namespace Ec2Manager
             this.client.RunCommand("echo access_key = " + this.accessKey + " >> ~/.s3cfg");
             this.client.RunCommand("echo secret_key = " + this.secretKey + " >> ~/.s3cfg");
             this.client.RunCommand("echo bucket_location = EU >> ~/.s3cfg");
+        }
+
+        public void MountDevice(string device, string mountPoint)
+        {
+            this.client.RunCommand("sudo mkdir \"" + mountPoint + "\"");
+            this.client.RunCommand("sudo mount " + device + " \"" + mountPoint + "\"");
+            this.client.RunCommand("sudo chown -R ubuntu.ubuntu \"" + mountPoint + "\"");
         }
 
         public void Dispose()
