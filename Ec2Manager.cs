@@ -159,7 +159,7 @@ namespace Ec2Manager
 
             await this.UntilVolumeAttachedStateAsync(volumeId, "attached");
 
-            client.MountDevice(device, mountPoint);
+            client.MountAndSetupDevice(device, mountPoint);
         }
 
         private async Task UntilStateAsync(string state)

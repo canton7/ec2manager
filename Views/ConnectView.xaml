@@ -1,0 +1,37 @@
+﻿<UserControl x:Class="Ec2Manager.Views.ConnectView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
+             mc:Ignorable="d" 
+             d:DesignHeight="500" d:DesignWidth="600"
+             Padding="20">
+    <DockPanel>
+        <GroupBox Header="Credentials" DockPanel.Dock="Top" VerticalAlignment="Top" Padding="10">
+            <StackPanel Orientation="Horizontal">
+                <TextBlock>Access Key:</TextBlock>
+                <TextBox Name="AwsAccessKey" Width="150" Margin="15,0"/>
+                <TextBlock>Secret Key:</TextBlock>
+                <TextBox Name="AwsSecretKey" Width="150" Margin="15,0"/>
+            </StackPanel>
+        </GroupBox>
+
+        <GroupBox Header="Instance" DockPanel.Dock="Top" VerticalAlignment="Top" Padding="10">
+            <DockPanel>
+                <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Margin="0,0,0,20">
+                    <TextBlock>Name:</TextBlock>
+                    <TextBox Name="InstanceName" Width="200" Margin="15,0"/>
+                </StackPanel>
+
+                <StackPanel DockPanel.Dock="Top" Orientation="Horizontal">
+                    <TextBlock>Instance type:</TextBlock>
+                    <ComboBox x:Name="InstanceTypes" DisplayMemberPath="Label" Margin="15,0" HorizontalAlignment="Stretch" Width="200"/>
+                    <TextBlock>AMI:</TextBlock>
+                    <TextBox Name="AMI" Width="150" Margin="15,0"></TextBox>
+                </StackPanel>
+            </DockPanel>
+        </GroupBox>
+        
+        <Button Name="Create" DockPanel.Dock="Top" HorizontalAlignment="Center" VerticalAlignment="Top" Margin="0,10" Padding="20,5">Create Instance</Button>
+    </DockPanel>
+</UserControl>

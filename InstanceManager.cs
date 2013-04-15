@@ -15,12 +15,15 @@ namespace Ec2Manager
         private string accessKey;
         private string secretKey;
 
+        private string user;
+
         private static readonly string bucketName = "ec2-packates";
 
         public InstanceManager(string host, string user, string key, string accessKey, string secretKey)
         {
             this.accessKey = accessKey;
             this.secretKey = secretKey;
+            this.user = user;
 
             this.client = new SshClient(host, user, new PrivateKeyFile(new MemoryStream(Encoding.ASCII.GetBytes(key))));
             while (!this.client.IsConnected)
@@ -58,11 +61,14 @@ namespace Ec2Manager
             this.client.RunCommand("echo bucket_location = EU >> ~/.s3cfg");
         }
 
-        public void MountDevice(string device, string mountPoint)
+        public void MountAndSetupDevice(string device, string mountPoint)
         {
             this.client.RunCommand("sudo mkdir \"" + mountPoint + "\"");
             this.client.RunCommand("sudo mount " + device + " \"" + mountPoint + "\"");
-            this.client.RunCommand("sudo chown -R ubuntu.ubuntu \"" + mountPoint + "\"");
+            this.client.RunCommand("sudo chown -R " + user + "." + user + " \"" + mountPoint + "\"");
+
+            this.client.RunCommand("[ -x \"" + mountPoint + "/ec2manager/setup\" ] && \"" + mountPoint + "/ec2manager/setup\"");
+
         }
 
         public void Dispose()

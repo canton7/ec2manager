@@ -8,6 +8,6 @@ namespace Ec2Manager
 {
     interface IMachineInteractionProvider
     {
-        void MountDevice(string device, string mountPoint);
+        void MountAndSetupDevice(string device, string mountPoint);
     }
 }
