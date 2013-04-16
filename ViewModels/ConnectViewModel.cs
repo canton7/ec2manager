@@ -1,7 +1,6 @@
 ﻿using Caliburn.Micro;
 using Ec2Manager.Classes;
 using Ec2Manager.Properties;
-using PropertyChanged;
 using System;
 using System.Collections.Generic;
 using System.ComponentModel.Composition;
@@ -11,7 +10,6 @@ using System.Threading.Tasks;
 
 namespace Ec2Manager.ViewModels
 {
-    [ImplementPropertyChanged]
     [Export]
     class ConnectViewModel : Screen
     {
@@ -30,17 +28,59 @@ namespace Ec2Manager.ViewModels
             new LabelledValue("High-CPU Extra Large", "c1.xlarge"),
         };
 
-        public string AwsAccessKey { get; set; }
-        public string AwsSecretKey { get; set; }
+        private string awsAccessKey;
+        public string AwsAccessKey
+        {
+            get { return this.awsAccessKey; }
+            set
+            {
+                this.awsAccessKey = value;
+                this.NotifyOfPropertyChange();
+                this.NotifyOfPropertyChange(() => CanCreate);
+            }
+        }
 
-        public string InstanceName { get; set; }
+        private string awsSecretKey;
+        public string AwsSecretKey
+        {
+            get { return this.awsSecretKey; }
+            set
+            {
+                this.awsSecretKey = value;
+                this.NotifyOfPropertyChange();
+                this.NotifyOfPropertyChange(() => CanCreate);
+            }
+        }
+
+        private string instanceName;
+        public string InstanceName
+        {
+            get { return this.instanceName; }
+            set
+            {
+                this.instanceName = value;
+                this.NotifyOfPropertyChange();
+                this.NotifyOfPropertyChange(() => CanCreate);
+            }
+        }
+
         public LabelledValue[] InstanceTypes
         {
             get { return instanceTypes; }
         }
         public LabelledValue ActiveInstanceType { get; set; }
 
-        public string AMI { get; set; }
+        private string ami;
+        public string AMI
+        {
+            get { return this.ami; }
+            set
+            {
+                this.ami = value;
+                this.NotifyOfPropertyChange();
+                this.NotifyOfPropertyChange(() => CanCreate);
+            }
+        }
 
         [ImportingConstructor]
         public ConnectViewModel()
@@ -55,7 +95,6 @@ namespace Ec2Manager.ViewModels
         {
             get
             {
-                return true;
                 return !string.IsNullOrWhiteSpace(this.AwsAccessKey) &&
                     !string.IsNullOrWhiteSpace(this.AwsSecretKey) &&
                     !string.IsNullOrWhiteSpace(this.InstanceName) &&
