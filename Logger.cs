@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.ComponentModel.Composition;
 using System.IO;
 using System.Linq;
 using System.Text;
@@ -7,13 +8,19 @@ using System.Threading.Tasks;
 
 namespace Ec2Manager
 {
-    class Logger
+    [Export]
+    public class Logger
     {
         public delegate void NewLogEntryEventHandler(object sender, NewLogEntryEventArgs e);
         public event NewLogEntryEventHandler NewLogEntry;
 
         public Logger()
         {
+        }
+
+        public void Log(string message)
+        {
+            this.newLogEntry(message);
         }
 
         public void LogFromStream(Stream stream, IAsyncResult asynch)

@@ -30,20 +30,20 @@ namespace Ec2Manager
             string accessKey = "xxx";
             string secretKey = "xxx";
 
-            var a = new Ec2Manager(accessKey, secretKey);
-            Task.Run(async () =>
-                {
-                    await a.CreateAsync();
+            //var a = new Ec2Manager(accessKey, secretKey, "some name");
+            //Task.Run(async () =>
+            //    {
+            //        await a.CreateAsync();
 
-                    using (var client = new InstanceManager(a.PublicIp, "ubuntu", a.PrivateKey, accessKey, secretKey))
-                    {
-                        client.Setup();
+            //        using (var client = new InstanceClient(a.PublicIp, "ubuntu", a.PrivateKey))
+            //        {
+            //            client.Setup();
 
-                        await a.MountDevice("snap-03b13e28", "/home/ubuntu/left4dead2", client);
-                    }
+            //            await a.MountDevice("snap-03b13e28", "/home/ubuntu/left4dead2", client);
+            //        }
 
-                    await a.DestroyAsync();
-               });
+            //        await a.DestroyAsync();
+            //   });
             
         }
     }

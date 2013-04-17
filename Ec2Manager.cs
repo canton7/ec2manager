@@ -10,7 +10,7 @@ using Caliburn.Micro;
 
 namespace Ec2Manager
 {
-    class Ec2Manager : PropertyChangedBase
+    public class Ec2Manager : PropertyChangedBase
     {
         private AmazonEC2Client client;
         private string uniqueKey;
@@ -21,22 +21,27 @@ namespace Ec2Manager
         private char nextVolumeMountPointSuffix = 'f';
         private static readonly char maxVolumeMountPointSuffix = 'p';
 
-        public string PrivateKey;
-        public string PublicIp;
+        public string PrivateKey { get; private set; }
+        public string PublicIp { get; private set; }
+        public string Name { get; set; }
+
+        public Logger Logger { get; set; }
 
         private string instanceState;
         public string InstanceState
         {
             get { return this.instanceState; }
-            set
+            private set
             {
                 this.instanceState = value;
                 NotifyOfPropertyChange(() => InstanceState);
             }
         }
 
-        public Ec2Manager(string accessKey, string secretKey)
+        public Ec2Manager(string accessKey, string secretKey, string name)
         {
+            this.Name = name;
+
             this.client = new AmazonEC2Client(accessKey, secretKey, RegionEndpoint.EUWest1);
             this.uniqueKey = Guid.NewGuid().ToString();
         }
@@ -75,8 +80,23 @@ namespace Ec2Manager
             return result;
         }
 
-        public async Task CreateAsync()
+        private void Log(string text)
         {
+            var logger = this.Logger;
+            if (logger != null)
+                logger.Log(text);
+        }
+
+        public async Task CreateAsync(string instanceAmi, string instanceSize)
+        {
+            this.Log("Starting instance creation process");
+
+            await Task.Delay(5000);
+
+            this.Log("Now we're getting somewhere");
+
+            return;
+
             var allocateResponse = this.client.AllocateAddress(new AllocateAddressRequest());
             this.PublicIp = allocateResponse.AllocateAddressResult.PublicIp;
 
@@ -115,8 +135,8 @@ namespace Ec2Manager
 
             var runInstanceRequest = new RunInstancesRequest()
             {
-                ImageId = "ami-5a60692e",
-                InstanceType = "m1.small",
+                ImageId = instanceAmi,
+                InstanceType = instanceSize,
                 MinCount = 1,
                 MaxCount = 1,
                 KeyName = "Ec2KeyPair-" + this.uniqueKey,

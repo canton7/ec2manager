@@ -6,7 +6,7 @@ using System.Threading.Tasks;
 
 namespace Ec2Manager
 {
-    interface IMachineInteractionProvider
+    public interface IMachineInteractionProvider
     {
         void MountAndSetupDevice(string device, string mountPoint);
     }

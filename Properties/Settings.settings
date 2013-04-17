@@ -5,5 +5,8 @@
     <Setting Name="DefaultAMI" Type="System.String" Scope="User">
       <Value Profile="(Default)">ami-5a60692e</Value>
     </Setting>
+    <Setting Name="DefaultLoginAs" Type="System.String" Scope="User">
+      <Value Profile="(Default)">ubuntu</Value>
+    </Setting>
   </Settings>
 </SettingsFile>

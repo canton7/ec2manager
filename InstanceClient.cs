@@ -9,20 +9,14 @@ using System.Threading.Tasks;
 
 namespace Ec2Manager
 {
-    class InstanceManager : IDisposable, IMachineInteractionProvider
+    public class InstanceClient : IDisposable, IMachineInteractionProvider
     {
         private SshClient client;
-        private string accessKey;
-        private string secretKey;
 
         private string user;
 
-        private static readonly string bucketName = "ec2-packates";
-
-        public InstanceManager(string host, string user, string key, string accessKey, string secretKey)
+        public InstanceClient(string host, string user, string key)
         {
-            this.accessKey = accessKey;
-            this.secretKey = secretKey;
             this.user = user;
 
             this.client = new SshClient(host, user, new PrivateKeyFile(new MemoryStream(Encoding.ASCII.GetBytes(key))));
@@ -40,26 +34,26 @@ namespace Ec2Manager
 
         public void Setup()
         {
-            SshCommand cmd;
+        //    SshCommand cmd;
 
-            this.SetupS3Cmd();
-            cmd = this.client.RunCommand("cat ~/.s3cmd");
-            Debug.Print(cmd.Result);
+        //    this.SetupS3Cmd();
+        //    cmd = this.client.RunCommand("cat ~/.s3cmd");
+        //    Debug.Print(cmd.Result);
 
-            cmd = this.client.RunCommand("s3cmd ls");
-            Debug.Print(cmd.Result);
+        //    cmd = this.client.RunCommand("s3cmd ls");
+        //    Debug.Print(cmd.Result);
 
-            cmd = this.client.RunCommand("sudo chown -R ubuntu.ubuntu /mnt");
+        //    cmd = this.client.RunCommand("sudo chown -R ubuntu.ubuntu /mnt");
         }
 
-        private void SetupS3Cmd()
-        {
-            this.client.RunCommand("sudo apt-get install s3cmd");
-            this.client.RunCommand("echo [default] > ~/.s3cfg");
-            this.client.RunCommand("echo access_key = " + this.accessKey + " >> ~/.s3cfg");
-            this.client.RunCommand("echo secret_key = " + this.secretKey + " >> ~/.s3cfg");
-            this.client.RunCommand("echo bucket_location = EU >> ~/.s3cfg");
-        }
+        //private void SetupS3Cmd()
+        //{
+        //    this.client.RunCommand("sudo apt-get install s3cmd");
+        //    this.client.RunCommand("echo [default] > ~/.s3cfg");
+        //    this.client.RunCommand("echo access_key = " + this.accessKey + " >> ~/.s3cfg");
+        //    this.client.RunCommand("echo secret_key = " + this.secretKey + " >> ~/.s3cfg");
+        //    this.client.RunCommand("echo bucket_location = EU >> ~/.s3cfg");
+        //}
 
         public void MountAndSetupDevice(string device, string mountPoint)
         {

@@ -69,10 +69,20 @@
       <SubType>Designer</SubType>
     </ApplicationDefinition>
     <Compile Include="Classes\LabelledValue.cs" />
+    <Compile Include="Classes\NotifyPropertyChangedExtensions.cs" />
+    <Compile Include="Events\CreateInstanceEvent.cs" />
     <Compile Include="ViewModels\ConnectViewModel.cs" />
+    <Compile Include="ViewModels\InstanceDetailsViewModel.cs" />
+    <Compile Include="ViewModels\InstanceViewModel.cs" />
     <Compile Include="ViewModels\ShellViewModel.cs" />
     <Compile Include="Views\ConnectView.xaml.cs">
       <DependentUpon>ConnectView.xaml</DependentUpon>
+    </Compile>
+    <Compile Include="Views\InstanceDetailsView.xaml.cs">
+      <DependentUpon>InstanceDetailsView.xaml</DependentUpon>
+    </Compile>
+    <Compile Include="Views\InstanceView.xaml.cs">
+      <DependentUpon>InstanceView.xaml</DependentUpon>
     </Compile>
     <Compile Include="Views\ShellView.xaml.cs">
       <DependentUpon>ShellView.xaml</DependentUpon>
@@ -88,13 +98,21 @@
     <Compile Include="AppBootstrapper.cs" />
     <Compile Include="Ec2Manager.cs" />
     <Compile Include="IMachineInteractionProvider.cs" />
-    <Compile Include="InstanceManager.cs" />
+    <Compile Include="InstanceClient.cs" />
     <Compile Include="Logger.cs" />
     <Compile Include="MainWindow.old.xaml.cs">
       <DependentUpon>MainWindow.old.xaml</DependentUpon>
       <SubType>Code</SubType>
     </Compile>
     <Page Include="Views\ConnectView.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Include="Views\InstanceDetailsView.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Include="Views\InstanceView.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>

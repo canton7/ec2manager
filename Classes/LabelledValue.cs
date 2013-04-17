@@ -6,7 +6,7 @@ using System.Threading.Tasks;
 
 namespace Ec2Manager.Classes
 {
-    class LabelledValue
+    public class LabelledValue
     {
         public string Label { get; set; }
         public string Value { get; set; }
