@@ -6,7 +6,7 @@
              mc:Ignorable="d" 
              d:DesignHeight="600" d:DesignWidth="600">
     <DockPanel>
-        <GroupBox Header="Instance Properties" DockPanel.Dock="Top">
+        <GroupBox Header="Instance Properties" DockPanel.Dock="Top" Padding="10">
             <Grid>
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition/>
@@ -17,9 +17,9 @@
                     <RowDefinition/>
                 </Grid.RowDefinitions>
                 
-                <TextBlock Grid.Row="0" Grid.Column="0" Text="{Binding InstanceName, StringFormat='Instance Name: {0}'}"/>
-                <TextBlock Grid.Row="0" Grid.Column="1">Etc etc...</TextBlock>
-                <Button Grid.Row="1" Grid.Column="2" HorizontalAlignment="Right">Terminate Instance</Button>
+                <TextBlock Grid.Row="0" Grid.Column="0" Text="{Binding Manager.Name, StringFormat='Name: {0}'}"/>
+                <TextBlock Grid.Row="0" Grid.Column="1" Text="{Binding Manager.InstanceState, StringFormat='State: {0}'}"/>
+                <Button Name="Terminate" Grid.Row="1" Grid.Column="2" HorizontalAlignment="Right">Terminate Instance</Button>
             </Grid>
         </GroupBox>
         

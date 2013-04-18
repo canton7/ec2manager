@@ -38,6 +38,16 @@ namespace Ec2Manager
             }
         }
 
+        private string securityGroupName
+        {
+            get { return "Ec2SecurityGroup-" + this.uniqueKey; }
+        }
+
+        private string keyPairName
+        {
+            get { return "Ec2KeyPair-" + this.uniqueKey; }
+        }
+
         public Ec2Manager(string accessKey, string secretKey, string name)
         {
             this.Name = name;
@@ -80,34 +90,31 @@ namespace Ec2Manager
             return result;
         }
 
-        private void Log(string text)
+        private void Log(string text, params string[] parameters)
         {
             var logger = this.Logger;
             if (logger != null)
-                logger.Log(text);
+                logger.Log(text, parameters);
         }
 
         public async Task CreateAsync(string instanceAmi, string instanceSize)
         {
             this.Log("Starting instance creation process");
 
-            await Task.Delay(5000);
-
-            this.Log("Now we're getting somewhere");
-
-            return;
-
+            this.Log("Allocating an IP address");
             var allocateResponse = this.client.AllocateAddress(new AllocateAddressRequest());
             this.PublicIp = allocateResponse.AllocateAddressResult.PublicIp;
+            this.Log("Ip address {0} allocated", this.PublicIp);
 
-            var newGroupRequest = new CreateSecurityGroupRequest()
+            this.Log("Creating a new security group: {0}", this.securityGroupName);
+            var createSecurityGroupResponse = this.client.CreateSecurityGroup(new CreateSecurityGroupRequest()
             {
-                GroupName = "Ec2SecurityGroup-" + this.uniqueKey,
-                GroupDescription = "Security groupf or HLDS stuff",
-            };
+                GroupName = this.securityGroupName,
+                GroupDescription = "Ec2Manager-created security group",
+            });
+            this.Log("Security group ID {0} created", createSecurityGroupResponse.CreateSecurityGroupResult.GroupId);
 
-            this.client.CreateSecurityGroup(newGroupRequest);
-
+            this.Log("Allowing inbound access on 22/tcp (SSH)");
             var ipPermission = new IpPermissionSpecification()
             {
                 IpProtocol = "tcp",
@@ -118,43 +125,52 @@ namespace Ec2Manager
 
             var ingressRequest = new AuthorizeSecurityGroupIngressRequest()
             {
-                GroupName = "Ec2SecurityGroup-" + this.uniqueKey,
+                GroupName = this.securityGroupName,
             };
             ingressRequest.IpPermissions.Add(ipPermission);
 
             this.client.AuthorizeSecurityGroupIngress(ingressRequest);
+            this.Log("Inbound access authorised");
 
-            var newKeyRequest = new CreateKeyPairRequest()
+            this.Log("Creating a new key pair: {0}", this.keyPairName);
+            var newKeyResponse = this.client.CreateKeyPair(new CreateKeyPairRequest()
             {
-                KeyName = "Ec2KeyPair-" + this.uniqueKey,
-            };
-
-            var newKeyResponse = this.client.CreateKeyPair(newKeyRequest);
+                KeyName = this.keyPairName,
+            });
             var keyPair = newKeyResponse.CreateKeyPairResult.KeyPair;
             this.PrivateKey = keyPair.KeyMaterial;
+            this.Log("Key pair created. Fingerprint {0}", keyPair.KeyFingerprint);
 
+            this.Log("Creating a new instance. AMI: {0}, size: {1}", instanceAmi, instanceSize);
             var runInstanceRequest = new RunInstancesRequest()
             {
                 ImageId = instanceAmi,
                 InstanceType = instanceSize,
                 MinCount = 1,
                 MaxCount = 1,
-                KeyName = "Ec2KeyPair-" + this.uniqueKey,
+                KeyName = this.keyPairName,
             };
-            runInstanceRequest.SecurityGroup.Add("Ec2SecurityGroup-" + this.uniqueKey);
+            runInstanceRequest.SecurityGroup.Add(this.securityGroupName);
 
             var runResponse = this.client.RunInstances(runInstanceRequest);
             this.reservationId = runResponse.RunInstancesResult.Reservation.ReservationId;
             var instances = runResponse.RunInstancesResult.Reservation.RunningInstance;
             this.instanceId = instances[0].InstanceId;
+            this.Log("New instance created. Reservation ID: {0}, Instance ID: {1}", this.reservationId, this.instanceId);
 
+            this.Log("Waiting for instance to reach 'running' state");
             await this.UntilStateAsync("running");
+            this.Log("Instance is now running");
 
+            this.Log("Assigning public IP {0} to instance", this.PublicIp);
             this.client.AssociateAddress(new AssociateAddressRequest() 
             {
                 InstanceId = this.instanceId,
                 PublicIp = this.PublicIp,
             });
+            this.Log("Public IP assigned");
+
+            this.Log("Instance is now ready for use");
         }
 
         public async Task MountDevice(string snapshotId, string mountPoint, IMachineInteractionProvider client)

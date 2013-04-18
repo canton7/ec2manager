@@ -1,26 +1,39 @@
-﻿using System;
+﻿using Caliburn.Micro;
+using System;
 using System.Collections.Generic;
 using System.ComponentModel.Composition;
 using System.IO;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using Caliburn.Micro;
 
 namespace Ec2Manager
 {
     [Export]
-    public class Logger
+    public class Logger : PropertyChangedBase
     {
-        public delegate void NewLogEntryEventHandler(object sender, NewLogEntryEventArgs e);
-        public event NewLogEntryEventHandler NewLogEntry;
+        private BindableCollection<LogEntry> entries = new BindableCollection<LogEntry>();
+        public BindableCollection<LogEntry> Entries
+        {
+            get { return this.entries; }
+        }
 
         public Logger()
         {
+            // Some users are dumb, and can't notice collection changes
+            this.Entries.CollectionChanged += (o, e) =>
+                this.NotifyOfPropertyChange(() => Entries);
         }
 
         public void Log(string message)
         {
             this.newLogEntry(message);
+        }
+
+        public void Log(string format, params string[] parameters)
+        {
+            this.newLogEntry(String.Format(format, parameters));
         }
 
         public void LogFromStream(Stream stream, IAsyncResult asynch)
@@ -39,17 +52,18 @@ namespace Ec2Manager
 
         private void newLogEntry(string text)
         {
-            var handler = this.NewLogEntry;
-            if (handler != null)
-                handler(this, new NewLogEntryEventArgs(text));
+            this.Entries.Add(new LogEntry(text));
         }
 
-        public class NewLogEntryEventArgs : EventArgs
+        public class LogEntry
         {
-            public string Text { get; private set; }
-            public NewLogEntryEventArgs(string text) : base()
+            public string Message { get; private set; }
+            public DateTime Time { get; private set; }
+
+            public LogEntry (string message)
 	        {
-                this.Text = text;
+                this.Message = message;
+                this.Time = DateTime.Now;
 	        }
         }
     }

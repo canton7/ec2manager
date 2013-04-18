@@ -70,6 +70,7 @@
     </ApplicationDefinition>
     <Compile Include="Classes\LabelledValue.cs" />
     <Compile Include="Classes\NotifyPropertyChangedExtensions.cs" />
+    <Compile Include="Converters\LogEntriesToTextConverter.cs" />
     <Compile Include="Events\CreateInstanceEvent.cs" />
     <Compile Include="ViewModels\ConnectViewModel.cs" />
     <Compile Include="ViewModels\InstanceDetailsViewModel.cs" />
