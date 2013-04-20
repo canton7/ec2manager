@@ -36,9 +36,10 @@ namespace Ec2Manager.ViewModels
             var creationTask = this.Manager.CreateAsync(this.InstanceAmi, this.InstanceSize);
         }
 
-        public void Terminate()
+        public async void Terminate()
         {
-            var terminationTask = this.Manager.DestroyAsync();
+            await this.Manager.DestroyAsync();
+            this.TryClose();
         }
     }
 }

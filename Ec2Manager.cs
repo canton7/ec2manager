@@ -173,8 +173,11 @@ namespace Ec2Manager
             this.Log("Instance is now ready for use");
         }
 
-        public async Task MountDevice(string snapshotId, string mountPoint, IMachineInteractionProvider client)
+        public async Task MountDeviceAsync(string snapshotId, string mountPoint, IMachineInteractionProvider client)
         {
+            this.Log("Starting device mount process. Snapshot ID: {0}, mount point: {1}", snapshotId, mountPoint);
+
+            this.Log("Creating EBS volume based on snapshot");
             var createVolumeResponse = this.client.CreateVolume(new CreateVolumeRequest()
             {
                 SnapshotId = snapshotId,
@@ -182,10 +185,13 @@ namespace Ec2Manager
                 AvailabilityZone = this.GetRunningInstance().Placement.AvailabilityZone,
             });
             var volumeId = createVolumeResponse.CreateVolumeResult.Volume.VolumeId;
+            this.Log("Volume ID {0} created", volumeId);
 
+            this.Log("Waiting for volume to reach the 'available' state");
             await this.UntilVolumeStateAsync(volumeId, "available");
 
             var device = this.GetNextDevice();
+            this.Log("Attaching volume to instance {0}, device {1}", this.instanceId, device);
             var attachVolumeResponse = this.client.AttachVolume(new AttachVolumeRequest()
             {
                 InstanceId = this.instanceId,
@@ -193,9 +199,13 @@ namespace Ec2Manager
                 Device = device,
             });
 
+            this.Log("Waiting for volume to reach the 'attached' state");
             await this.UntilVolumeAttachedStateAsync(volumeId, "attached");
 
-            client.MountAndSetupDevice(device, mountPoint);
+            this.Log("Mounting and setting up device");
+            client.MountAndSetupDevice(device, mountPoint, this.Logger);
+
+            this.Log("Volume successfully mounted");
         }
 
         private async Task UntilStateAsync(string state)
@@ -204,7 +214,7 @@ namespace Ec2Manager
 
             while (!gotToState)
             {
-                this.instanceState = this.GetRunningInstance().InstanceState.Name;
+                this.InstanceState = this.GetRunningInstance().InstanceState.Name;
 
                 if (this.InstanceState == state)
                 {
@@ -271,6 +281,8 @@ namespace Ec2Manager
 
         public async Task DestroyAsync()
         {
+            this.Log("Starting instance termination process");
+
             var instanceStatus = this.GetRunningInstance();
             var groupIds = instanceStatus.GroupId;
             var keyName = instanceStatus.KeyName;
@@ -279,8 +291,11 @@ namespace Ec2Manager
                 .Where(x => x.Attachment.Count == 1 && x.Attachment[0].InstanceId == this.instanceId)
                 .Select(x => x.VolumeId);
 
+            this.Log("Found uniquely attached volumes: {0}", string.Join(", ", volumes));
+
             foreach (var volume in volumes)
             {
+                this.Log("Detaching volume {0}", volume);
                 this.client.DetachVolume(new DetachVolumeRequest()
                 {
                     Force = true,
@@ -288,19 +303,23 @@ namespace Ec2Manager
                     VolumeId = volume,
                 });
 
+                this.Log("Waiting until volume becomes available");
                 await this.UntilVolumeAttachedStateAsync(volume, "available");
 
+                this.Log("Deleting volume {0}", volume);
                 this.client.DeleteVolume(new DeleteVolumeRequest()
                 {
                     VolumeId = volume,
                 });
             }
 
+            this.Log("Terminating instance");
             var termResponse = this.client.TerminateInstances(new TerminateInstancesRequest()
             {
                 InstanceId = new List<string>() { this.instanceId },
             });
 
+            this.Log("Waiting for instance to reach the 'terminated' state");
             await this.UntilStateAsync("terminated");
 
             // This has to be set after the instance has been terminated
@@ -308,8 +327,11 @@ namespace Ec2Manager
                 .Where(x => x.RunningInstance.All(y => y.InstanceState.Name != "terminated")).ToArray();
 
             var usedGroupIds = allInstances.SelectMany(x => x.GroupId).Distinct();
+            this.Log("Found security groups uniquely associated with instance: {0}", string.Join(", ", groupIds.Except(usedGroupIds)));
+
             foreach (var groupId in groupIds.Except(usedGroupIds))
             {
+                this.Log("Deleting security group {0}", groupId);
                 this.client.DeleteSecurityGroup(new DeleteSecurityGroupRequest()
                 {
                     GroupId = groupId,
@@ -319,16 +341,20 @@ namespace Ec2Manager
             var usedKeyNames = allInstances.SelectMany(x => x.RunningInstance.Select(y => y.KeyName)).Distinct();
             if (!usedKeyNames.Contains(keyName))
             {
+                this.Log("Deleting key pair: {0}", keyName);
                 this.client.DeleteKeyPair(new DeleteKeyPairRequest()
                 {
                     KeyName = keyName,
                 });
             }
 
+            this.Log("Releasing IP address {0}", this.PublicIp);
             this.client.ReleaseAddress(new ReleaseAddressRequest()
             {
                 PublicIp = this.PublicIp,
             });
+
+            this.Log("Instance successfully terminated");
         }
     }
 }

@@ -55,14 +55,20 @@ namespace Ec2Manager
         //    this.client.RunCommand("echo bucket_location = EU >> ~/.s3cfg");
         //}
 
-        public void MountAndSetupDevice(string device, string mountPoint)
+        public void MountAndSetupDevice(string device, string mountPoint, Logger logger)
         {
-            this.client.RunCommand("sudo mkdir \"" + mountPoint + "\"");
-            this.client.RunCommand("sudo mount " + device + " \"" + mountPoint + "\"");
-            this.client.RunCommand("sudo chown -R " + user + "." + user + " \"" + mountPoint + "\"");
+            this.RunAndLog("sudo mkdir \"" + mountPoint + "\"", logger);
+            this.RunAndLog("sudo mount " + device + " \"" + mountPoint + "\"", logger);
+            this.RunAndLog("sudo chown -R " + user + "." + user + " \"" + mountPoint + "\"", logger);
 
-            this.client.RunCommand("[ -x \"" + mountPoint + "/ec2manager/setup\" ] && \"" + mountPoint + "/ec2manager/setup\"");
+            this.RunAndLog("[ -x \"" + mountPoint + "/ec2manager/setup\" ] && \"" + mountPoint + "/ec2manager/setup\"", logger);
+        }
 
+        private void RunAndLog(string command, Logger logger)
+        {
+            logger.Log(command);
+            var cmd = this.client.RunCommand(command);
+            logger.Log(cmd.Result);
         }
 
         public void Dispose()
