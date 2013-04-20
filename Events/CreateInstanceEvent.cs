@@ -11,5 +11,7 @@ namespace Ec2Manager.Events
         public string InstanceAmi { get; set; }
         public string InstanceSize { get; set; }
         public Ec2Manager Manager { get; set; }
+        public string LoginAs { get; set; }
+        public string AvailabilityZone { get; set; }
     }
 }

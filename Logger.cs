@@ -7,10 +7,12 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using Caliburn.Micro;
+using System.Threading;
 
 namespace Ec2Manager
 {
     [Export]
+    [PartCreationPolicy(CreationPolicy.NonShared)]
     public class Logger : PropertyChangedBase
     {
         private BindableCollection<LogEntry> entries = new BindableCollection<LogEntry>();
@@ -42,17 +44,21 @@ namespace Ec2Manager
             {
                 while (!asynch.IsCompleted)
                 {
+                    Thread.Sleep(100);
                     var result = sr.ReadToEnd();
                     if (string.IsNullOrEmpty(result))
                         continue;
-                    this.newLogEntry(result);
+                    this.newLogEntry(result.Trim());
                 }
             }
         }
 
         private void newLogEntry(string text)
         {
-            this.Entries.Add(new LogEntry(text));
+            foreach (var entry in text.Split(new[] { "\r\n", "\n" }, StringSplitOptions.None))
+            {
+                this.Entries.Add(new LogEntry(entry));
+            }
         }
 
         public class LogEntry

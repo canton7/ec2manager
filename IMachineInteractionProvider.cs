@@ -1,4 +1,5 @@
-﻿using System;
+﻿using Ec2Manager.Classes;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -8,6 +9,7 @@ namespace Ec2Manager
 {
     public interface IMachineInteractionProvider
     {
-        void MountAndSetupDevice(string device, string mountPoint, Logger logger);
+        Task MountAndSetupDeviceAsync(string device, string mountPoint, Logger logger);
+        IEnumerable<PortRangeDescription> GetPortDescriptions(string mountPointDir, Logger logger);
     }
 }

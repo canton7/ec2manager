@@ -25,11 +25,16 @@
                     <TextBox Name="LoginAs" Width="150" Margin="15,0"/>
                 </StackPanel>
 
-                <StackPanel DockPanel.Dock="Top" Orientation="Horizontal">
+                <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Margin="0,0,0,20">
                     <TextBlock>Instance type:</TextBlock>
                     <ComboBox x:Name="InstanceTypes" DisplayMemberPath="Label" Margin="15,0" HorizontalAlignment="Stretch" Width="200"/>
                     <TextBlock>AMI:</TextBlock>
                     <TextBox Name="AMI" Width="150" Margin="15,0"></TextBox>
+                </StackPanel>
+                
+                <StackPanel DockPanel.Dock="Top" Orientation="Horizontal">
+                    <TextBlock>Availability Zone (empty for any):</TextBlock>
+                    <TextBox Name="AvailabilityZone" Width="100" Margin="15,0"/>
                 </StackPanel>
 
                 <Button Name="Create" DockPanel.Dock="Top" IsDefault="True" HorizontalAlignment="Center" VerticalAlignment="Top" Margin="0,20,0,0" Padding="20,5">Create Instance</Button>

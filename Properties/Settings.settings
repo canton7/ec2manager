@@ -9,10 +9,10 @@
       <Value Profile="(Default)">ubuntu</Value>
     </Setting>
     <Setting Name="DefaultAwsAccessKey" Type="System.String" Scope="User">
-      <Value Profile="(Default)" />
+      <Value Profile="(Default)"></Value>
     </Setting>
     <Setting Name="DefaultAwsSecretKey" Type="System.String" Scope="User">
-      <Value Profile="(Default)" />
+      <Value Profile="(Default)"></Value>
     </Setting>
   </Settings>
 </SettingsFile>

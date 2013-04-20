@@ -7,6 +7,8 @@ using Amazon.EC2;
 using Amazon;
 using Amazon.EC2.Model;
 using Caliburn.Micro;
+using System.IO;
+using Ec2Manager.Classes;
 
 namespace Ec2Manager
 {
@@ -97,7 +99,7 @@ namespace Ec2Manager
                 logger.Log(text, parameters);
         }
 
-        public async Task CreateAsync(string instanceAmi, string instanceSize)
+        public async Task CreateAsync(string instanceAmi, string instanceSize, string availabilityZone = null)
         {
             this.Log("Starting instance creation process");
 
@@ -151,6 +153,13 @@ namespace Ec2Manager
                 KeyName = this.keyPairName,
             };
             runInstanceRequest.SecurityGroup.Add(this.securityGroupName);
+            if (!string.IsNullOrWhiteSpace(availabilityZone))
+            {
+                runInstanceRequest.Placement = new Placement()
+                {
+                    AvailabilityZone = availabilityZone,
+                };
+            }
 
             var runResponse = this.client.RunInstances(runInstanceRequest);
             this.reservationId = runResponse.RunInstancesResult.Reservation.ReservationId;
@@ -173,12 +182,10 @@ namespace Ec2Manager
             this.Log("Instance is now ready for use");
         }
 
-        public async Task MountDevice(string volumeId, string mountPoint, IMachineInteractionProvider client)
+        public async Task<string> MountVolumeAsync(string volumeId, IMachineInteractionProvider client)
         {
-            this.Log("Waiting for volume to reach the 'available' state");
-            await this.UntilVolumeStateAsync(volumeId, "available");
-
             var device = this.GetNextDevice();
+            var deviceMountPoint = Path.GetFileName(device);
             this.Log("Attaching volume to instance {0}, device {1}", this.instanceId, device);
             var attachVolumeResponse = this.client.AttachVolume(new AttachVolumeRequest()
             {
@@ -191,14 +198,39 @@ namespace Ec2Manager
             await this.UntilVolumeAttachedStateAsync(volumeId, "attached");
 
             this.Log("Mounting and setting up device");
-            client.MountAndSetupDevice(device, mountPoint, this.Logger);
+            await client.MountAndSetupDeviceAsync(device, deviceMountPoint, this.Logger);
+
+            this.Log("Retriving port settings");
+            var portSettings = client.GetPortDescriptions(deviceMountPoint, this.Logger).ToArray();
+            this.Log(String.Join<PortRangeDescription>(", ", portSettings));
+
+            if (portSettings.Length > 0)
+            {
+                this.Log("Authorising inbound access on these ports");
+                var ipPermissions = portSettings.Select(x => new IpPermissionSpecification()
+                {
+                    FromPort = x.FromPort,
+                    ToPort = x.ToPort,
+                    IpProtocol = x.Proto,
+                    IpRanges = new List<string>() { "0.0.0.0/0" },
+                });
+                var ingressRequest = new AuthorizeSecurityGroupIngressRequest()
+                {
+                    GroupName = this.securityGroupName,
+                };
+                ingressRequest.IpPermissions.AddRange(ipPermissions);
+                this.client.AuthorizeSecurityGroupIngress(ingressRequest);
+                this.Log("Inbound access authorised");
+            }
 
             this.Log("Volume successfully mounted");
+
+            return deviceMountPoint;
         }
 
-        public async Task MountDeviceFromSnapshotAsync(string snapshotId, string mountPoint, IMachineInteractionProvider client)
+        public async Task<string> MountVolumeFromSnapshotAsync(string snapshotId, IMachineInteractionProvider client)
         {
-            this.Log("Starting device mount process. Snapshot ID: {0}, mount point: {1}", snapshotId, mountPoint);
+            this.Log("Starting device mount process. Snapshot ID: {0}", snapshotId);
 
             this.Log("Creating EBS volume based on snapshot");
             var createVolumeResponse = this.client.CreateVolume(new CreateVolumeRequest()
@@ -210,7 +242,20 @@ namespace Ec2Manager
             var volumeId = createVolumeResponse.CreateVolumeResult.Volume.VolumeId;
             this.Log("Volume ID {0} created", volumeId);
 
-            await this.MountDevice(volumeId, mountPoint, client);
+            this.Log("Tagging volume, so we know we can remove it later");
+            this.client.CreateTags(new CreateTagsRequest()
+            {
+                ResourceId = new List<string>() { volumeId },
+                Tag = new List<Tag>()
+                {
+                    new Tag() { Key = "CreatedByEc2Manager", Value = "true" },
+                },
+            });
+
+            this.Log("Waiting for volume to reach the 'available' state");
+            await this.UntilVolumeStateAsync(volumeId, "available");
+
+            return await this.MountVolumeAsync(volumeId, client);
         }
 
         private async Task UntilStateAsync(string state)
@@ -295,11 +340,21 @@ namespace Ec2Manager
             var volumes = this.client.DescribeVolumes(new DescribeVolumesRequest()).DescribeVolumesResult.Volume
                 .Where(x => x.Attachment.Count == 1 && x.Attachment[0].InstanceId == this.instanceId)
                 .Select(x => x.VolumeId);
+            var volumeTags = this.client.DescribeTags(new DescribeTagsRequest()
+                {
+                    Filter = new List<Filter>()
+                    {
+                        new Filter() { Name = "resource-type", Value = new List<string>() { "volume " } },
+                    },
+                }).DescribeTagsResult.ResourceTag;
 
             this.Log("Found uniquely attached volumes: {0}", string.Join(", ", volumes));
 
             foreach (var volume in volumes)
             {
+                if (!volumeTags.Any(x => x.Key == "CreatedByEc2Manager" && x.ResourceId == volume))
+                    continue;
+
                 this.Log("Detaching volume {0}", volume);
                 this.client.DetachVolume(new DetachVolumeRequest()
                 {

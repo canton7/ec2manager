@@ -95,6 +95,17 @@ namespace Ec2Manager.ViewModels
             }
         }
 
+        private string availabilityZone;
+        public string AvailabilityZone
+        {
+            get { return this.availabilityZone; }
+            set
+            {
+                this.availabilityZone = value;
+                this.NotifyOfPropertyChange();
+            }
+        }
+
         private IEventAggregator events;
 
         [ImportingConstructor]
@@ -126,6 +137,8 @@ namespace Ec2Manager.ViewModels
                 InstanceAmi = this.AMI,
                 InstanceSize = this.ActiveInstanceType.Value,
                 Manager = manager,
+                LoginAs = this.LoginAs,
+                AvailabilityZone = this.AvailabilityZone,
             });
         }
     }

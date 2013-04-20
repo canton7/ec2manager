@@ -6,6 +6,7 @@ using System.ComponentModel.Composition;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using Ec2Manager.Classes;
 
 namespace Ec2Manager.ViewModels
 {
@@ -28,6 +29,8 @@ namespace Ec2Manager.ViewModels
             instanceViewModel.Manager = message.Manager;
             instanceViewModel.InstanceAmi = message.InstanceAmi;
             instanceViewModel.InstanceSize = message.InstanceSize;
+            instanceViewModel.LoginAs = message.LoginAs;
+            instanceViewModel.AvailabilityZone = message.AvailabilityZone;
 
             this.ActivateItem(instanceViewModel);
         }
