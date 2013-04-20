@@ -5,6 +5,7 @@ using System.ComponentModel.Composition;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using Ec2Manager.Classes;
 
 namespace Ec2Manager.ViewModels
 {
@@ -33,7 +34,15 @@ namespace Ec2Manager.ViewModels
 
             this.DisplayName = this.Manager.Name;
             this.Manager.Logger = this.logger;
+
+            this.Manager.Bind(s => s.InstanceState, (o, e) => this.NotifyOfPropertyChange(() => CanTerminate));
+
             var creationTask = this.Manager.CreateAsync(this.InstanceAmi, this.InstanceSize);
+        }
+
+        public bool CanTerminate
+        {
+            get { return this.Manager.InstanceState == "running"; }
         }
 
         public async void Terminate()

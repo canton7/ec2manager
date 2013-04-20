@@ -8,5 +8,11 @@
     <Setting Name="DefaultLoginAs" Type="System.String" Scope="User">
       <Value Profile="(Default)">ubuntu</Value>
     </Setting>
+    <Setting Name="DefaultAwsAccessKey" Type="System.String" Scope="User">
+      <Value Profile="(Default)" />
+    </Setting>
+    <Setting Name="DefaultAwsSecretKey" Type="System.String" Scope="User">
+      <Value Profile="(Default)" />
+    </Setting>
   </Settings>
 </SettingsFile>

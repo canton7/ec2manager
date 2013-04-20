@@ -32,7 +32,7 @@
                     <TextBox Name="AMI" Width="150" Margin="15,0"></TextBox>
                 </StackPanel>
 
-                <Button Name="Create" DockPanel.Dock="Top" HorizontalAlignment="Center" VerticalAlignment="Top" Margin="0,20,0,0" Padding="20,5">Create Instance</Button>
+                <Button Name="Create" DockPanel.Dock="Top" IsDefault="True" HorizontalAlignment="Center" VerticalAlignment="Top" Margin="0,20,0,0" Padding="20,5">Create Instance</Button>
             </DockPanel>
         </GroupBox>
     </DockPanel>

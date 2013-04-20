@@ -173,20 +173,8 @@ namespace Ec2Manager
             this.Log("Instance is now ready for use");
         }
 
-        public async Task MountDeviceAsync(string snapshotId, string mountPoint, IMachineInteractionProvider client)
+        public async Task MountDevice(string volumeId, string mountPoint, IMachineInteractionProvider client)
         {
-            this.Log("Starting device mount process. Snapshot ID: {0}, mount point: {1}", snapshotId, mountPoint);
-
-            this.Log("Creating EBS volume based on snapshot");
-            var createVolumeResponse = this.client.CreateVolume(new CreateVolumeRequest()
-            {
-                SnapshotId = snapshotId,
-                VolumeType = "standard",
-                AvailabilityZone = this.GetRunningInstance().Placement.AvailabilityZone,
-            });
-            var volumeId = createVolumeResponse.CreateVolumeResult.Volume.VolumeId;
-            this.Log("Volume ID {0} created", volumeId);
-
             this.Log("Waiting for volume to reach the 'available' state");
             await this.UntilVolumeStateAsync(volumeId, "available");
 
@@ -206,6 +194,23 @@ namespace Ec2Manager
             client.MountAndSetupDevice(device, mountPoint, this.Logger);
 
             this.Log("Volume successfully mounted");
+        }
+
+        public async Task MountDeviceFromSnapshotAsync(string snapshotId, string mountPoint, IMachineInteractionProvider client)
+        {
+            this.Log("Starting device mount process. Snapshot ID: {0}, mount point: {1}", snapshotId, mountPoint);
+
+            this.Log("Creating EBS volume based on snapshot");
+            var createVolumeResponse = this.client.CreateVolume(new CreateVolumeRequest()
+            {
+                SnapshotId = snapshotId,
+                VolumeType = "standard",
+                AvailabilityZone = this.GetRunningInstance().Placement.AvailabilityZone,
+            });
+            var volumeId = createVolumeResponse.CreateVolumeResult.Volume.VolumeId;
+            this.Log("Volume ID {0} created", volumeId);
+
+            await this.MountDevice(volumeId, mountPoint, client);
         }
 
         private async Task UntilStateAsync(string state)

@@ -29,7 +29,7 @@ namespace Ec2Manager.ViewModels
             new LabelledValue("High-CPU Extra Large", "c1.xlarge"),
         };
 
-        private string awsAccessKey;
+        private string awsAccessKey = Settings.Default.DefaultAwsAccessKey;
         public string AwsAccessKey
         {
             get { return this.awsAccessKey; }
@@ -41,7 +41,7 @@ namespace Ec2Manager.ViewModels
             }
         }
 
-        private string awsSecretKey;
+        private string awsSecretKey = Settings.Default.DefaultAwsSecretKey;
         public string AwsSecretKey
         {
             get { return this.awsSecretKey; }

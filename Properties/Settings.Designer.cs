@@ -46,5 +46,29 @@ namespace Ec2Manager.Properties {
                 this["DefaultLoginAs"] = value;
             }
         }
+        
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("")]
+        public string DefaultAwsAccessKey {
+            get {
+                return ((string)(this["DefaultAwsAccessKey"]));
+            }
+            set {
+                this["DefaultAwsAccessKey"] = value;
+            }
+        }
+        
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("")]
+        public string DefaultAwsSecretKey {
+            get {
+                return ((string)(this["DefaultAwsSecretKey"]));
+            }
+            set {
+                this["DefaultAwsSecretKey"] = value;
+            }
+        }
     }
 }
