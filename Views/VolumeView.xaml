@@ -4,20 +4,23 @@
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              xmlns:conv="clr-namespace:Ec2Manager.Converters"
+             xmlns:supp="clr-namespace:Ec2Manager.Support"
              mc:Ignorable="d" 
              d:DesignHeight="400" d:DesignWidth="600">
     <DockPanel>
-        <GroupBox Header="Launch Game" DockPanel.Dock="Top" Padding="10" Margin="0,0,0,20">
+        <GroupBox Header="Launch Game" DockPanel.Dock="Top" Padding="10">
             <Grid>
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="Auto"/>
                     <ColumnDefinition/>
                     <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="Auto"/>
                 </Grid.ColumnDefinitions>
                 
                 <TextBlock Grid.Column="0">Run Command: </TextBlock>
-                <TextBox Name="RunCommand" Grid.Column="1" Margin="10,0"/>
-                <Button Name="StartGame" Grid.Column="2">Launch Game</Button>
+                <TextBox Name="RunCommand" Grid.Column="1" Margin="10,0" TextWrapping="Wrap"/>
+                <Button Name="StartGame" Grid.Column="2" Margin="5,0">Launch Game</Button>
+                <Button Name="StopGame" Grid.Column="3" Margin="5,0">Stop Game</Button>
             </Grid>
         </GroupBox>
         
@@ -25,6 +28,10 @@
             <TextBlock Name="UserInstruction" TextWrapping="Wrap"/>
         </GroupBox>
         
-        <TextBox DockPanel.Dock="Top" ScrollViewer.VerticalScrollBarVisibility="Auto" ScrollViewer.HorizontalScrollBarVisibility="Auto" Text="{Binding Logger.Entries, Mode=OneWay, Converter={x:Static conv:LogEntriesToTextConverter.Instance}}"/>
+        <TextBox DockPanel.Dock="Top"
+                 supp:TextBoxUtilities.AlwaysScrollToEnd="True"
+                 ScrollViewer.VerticalScrollBarVisibility="Auto"
+                 ScrollViewer.HorizontalScrollBarVisibility="Auto"
+                 Text="{Binding Logger.Entries, Mode=OneWay, Converter={x:Static conv:LogEntriesToTextConverter.Instance}}"/>
     </DockPanel>
 </UserControl>

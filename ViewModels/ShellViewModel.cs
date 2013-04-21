@@ -23,16 +23,12 @@ namespace Ec2Manager.ViewModels
             this.ActivateItem(connectModel);
         }
 
-        public void Handle(CreateInstanceEvent message)
+        public async void Handle(CreateInstanceEvent message)
         {
             var instanceViewModel = IoC.Get<InstanceViewModel>();
-            instanceViewModel.Manager = message.Manager;
-            instanceViewModel.InstanceAmi = message.InstanceAmi;
-            instanceViewModel.InstanceSize = message.InstanceSize;
-            instanceViewModel.LoginAs = message.LoginAs;
-            instanceViewModel.AvailabilityZone = message.AvailabilityZone;
-
             this.ActivateItem(instanceViewModel);
+
+            await instanceViewModel.Setup(message.Manager, message.InstanceAmi, message.InstanceSize, message.LoginAs, message.AvailabilityZone);
         }
     }
 }

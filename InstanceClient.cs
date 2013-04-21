@@ -6,6 +6,7 @@ using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 
 namespace Ec2Manager
@@ -22,32 +23,38 @@ namespace Ec2Manager
             get { return "/home/" + this.user + "/"; }
         }
 
-        public InstanceClient(string host, string user, string key, Logger logger)
+        public InstanceClient(string host, string user, string key)
         {
             this.host = host;
             this.user = user;
             this.key = key;
+        }
 
-            logger.Log("Establishing connection with {0}@{1}", user, host);
-            this.client = new SshClient(host, user, new PrivateKeyFile(new MemoryStream(Encoding.ASCII.GetBytes(key))));
-            while (!this.client.IsConnected)
-            {
-                try
+        public Task ConnectAsync(Logger logger)
+        {
+            return Task.Run(() =>
                 {
-                    this.client.Connect();
-                }
-                catch (System.Net.Sockets.SocketException)
-                {
-                }
-            }
-            logger.Log("Connected");
+                    logger.Log("Establishing connection with {0}@{1}", user, host);
+                    this.client = new SshClient(host, user, new PrivateKeyFile(new MemoryStream(Encoding.ASCII.GetBytes(key))));
+                    while (!this.client.IsConnected)
+                    {
+                        try
+                        {
+                            this.client.Connect();
+                        }
+                        catch (System.Net.Sockets.SocketException)
+                        {
+                        }
+                    }
+                    logger.Log("Connected");
+                });
         }
 
         public async Task MountAndSetupDeviceAsync(string device, string mountPointDir, Logger logger)
         {
             var mountPoint = this.mountBase + mountPointDir;
             this.RunAndLog("sudo mkdir \"" + mountPoint + "\"", logger);
-            this.RunAndLog("sudo mount " + device + " \"" + mountPoint + "\"", logger);
+            this.RunAndLog("sudo mount " + device + " \"" + mountPoint + "\"", logger, false, 5);
             this.RunAndLog("sudo chown -R " + user + "." + user + " \"" + mountPoint + "\"", logger);
 
             await this.RunAndLogStreamAsync("[ -x \"" + mountPoint + "/ec2manager/setup\" ] && \"" + mountPoint + "/ec2manager/setup\"", logger);
@@ -107,10 +114,10 @@ namespace Ec2Manager
             return this.client.RunCommand("[ -r \"" + mountPoint + "/ec2manager/runcmd\" ] && cat \"" + mountPoint + "/ec2manager/runcmd\"").Result.Trim();
         }
 
-        public async Task RunCommandAsync(string from, string command, Logger logger)
+        public async Task RunCommandAsync(string from, string command, Logger logger, CancellationToken? cancellationToken = null)
         {
             var cmd = "cd \"" + from + "\" && " + command + "";
-            await this.RunInShell(cmd, logger);
+            await this.RunInShell(cmd, logger, cancellationToken);
         }
 
         public string GetUserInstruction(string mountPointDir, Logger logger)
@@ -120,10 +127,23 @@ namespace Ec2Manager
             return this.client.RunCommand("[ -r \"" + mountPoint + "/ec2manager/user_instruction\" ] && cat \"" + mountPoint + "/ec2manager/user_instruction\"").Result.Trim();
         }
 
-        private void RunAndLog(string command, Logger logger, bool logResult = false)
+        private void RunAndLog(string command, Logger logger, bool logResult = false, int retryTimes = 0)
         {
             logger.Log(command);
             var cmd = this.client.RunCommand(command);
+
+            for (int i = 0; i < retryTimes + 1; i++)
+            {
+                if (cmd.ExitStatus == 0)
+                {
+                    break;
+                }
+                else
+                {
+                    logger.Log("Error: {0}", cmd.Error);
+                    System.Threading.Thread.Sleep(1000);
+                }
+            }
 
             if (logResult)
                 logger.Log(cmd.Result);
@@ -147,21 +167,27 @@ namespace Ec2Manager
         {
             Action runAction = () =>
                 {
-                    var stream = this.client.CreateShellStream("xterm", 80, 24, 800, 600, 1024);
-                    var reader = new StreamReader(stream);
-                    var writer = new StreamWriter(stream);
-                    writer.AutoFlush = true;
-
-                    reader.ReadToEnd();
-                    writer.WriteLine(command);
-
-                    while (true)
+                    using (var stream = this.client.CreateShellStream("xterm", 80, 24, 800, 600, 1024))
                     {
-                        var result = reader.ReadToEnd().Trim();
-                        if (!string.IsNullOrEmpty(result))
-                            logger.Log(result);
+                        var reader = new StreamReader(stream);
+                        var writer = new StreamWriter(stream);
+                        writer.AutoFlush = true;
 
-                        System.Threading.Thread.Sleep(100);
+                        reader.ReadToEnd();
+                        writer.WriteLine(command);
+
+                        while (true)
+                        {
+                            // Command is cancelled by stream being disposed
+                            if (cancellationToken.HasValue)
+                                cancellationToken.Value.ThrowIfCancellationRequested();
+
+                            var result = reader.ReadToEnd().Trim();
+                            if (!string.IsNullOrEmpty(result))
+                                logger.Log(result);
+
+                            System.Threading.Thread.Sleep(100);
+                        }
                     }
                 };
 

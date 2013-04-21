@@ -22,12 +22,13 @@ namespace Ec2Manager
         // We can mount on xvdf -> xvdp
         private char nextVolumeMountPointSuffix = 'f';
         private static readonly char maxVolumeMountPointSuffix = 'p';
+        private object volumeMountPointLock = new object();
 
         public string PrivateKey { get; private set; }
         public string PublicIp { get; private set; }
         public string Name { get; set; }
 
-        public Logger Logger { get; set; }
+        public Logger DefaultLogger { get; set; }
 
         private string instanceState;
         public string InstanceState
@@ -60,19 +61,26 @@ namespace Ec2Manager
 
         private RunningInstance GetRunningInstance()
         {
-            var describeInstancesRequest = new DescribeInstancesRequest()
-            {
-                InstanceId = new List<string>(){ this.instanceId },
-            };
-
+            bool worked = false;
             DescribeInstancesResponse describeInstancesResponse = null;
 
-            try
+            var describeInstancesRequest = new DescribeInstancesRequest()
             {
-                describeInstancesResponse = this.client.DescribeInstances(describeInstancesRequest);
-            }
-            catch (AmazonEC2Exception e)
-            {
+                InstanceId = new List<string>() { this.instanceId },
+            };
+
+            while (!worked)
+            {  
+                try
+                {
+                    describeInstancesResponse = this.client.DescribeInstances(describeInstancesRequest);
+                    worked = true;
+                }
+                catch (AmazonEC2Exception e)
+                {
+                    if (e.ErrorCode != "InvalidInstanceID.NotFound")
+                        throw;
+                }
             }
 
             return describeInstancesResponse.DescribeInstancesResult.Reservation
@@ -84,39 +92,38 @@ namespace Ec2Manager
 
         private string GetNextDevice()
         {
-            if (this.nextVolumeMountPointSuffix > maxVolumeMountPointSuffix)
-                throw new Exception("Run out of mount points. You have too many volumes mounted!");
+            string result;
+            lock (this.volumeMountPointLock)
+            {
+                if (this.nextVolumeMountPointSuffix > maxVolumeMountPointSuffix)
+                    throw new Exception("Run out of mount points. You have too many volumes mounted!");
 
-            var result = "/dev/xvd" + this.nextVolumeMountPointSuffix;
-            this.nextVolumeMountPointSuffix++;
+                result = "/dev/xvd" + this.nextVolumeMountPointSuffix;
+                this.nextVolumeMountPointSuffix++;
+            }
             return result;
         }
 
-        private void Log(string text, params string[] parameters)
+        public async Task CreateAsync(string instanceAmi, string instanceSize, string availabilityZone = null, Logger logger = null)
         {
-            var logger = this.Logger;
-            if (logger != null)
-                logger.Log(text, parameters);
-        }
+            logger = logger ?? this.DefaultLogger;
 
-        public async Task CreateAsync(string instanceAmi, string instanceSize, string availabilityZone = null)
-        {
-            this.Log("Starting instance creation process");
+            logger.Log("Starting instance creation process");
 
-            this.Log("Allocating an IP address");
+            logger.Log("Allocating an IP address");
             var allocateResponse = this.client.AllocateAddress(new AllocateAddressRequest());
             this.PublicIp = allocateResponse.AllocateAddressResult.PublicIp;
-            this.Log("Ip address {0} allocated", this.PublicIp);
+            logger.Log("Ip address {0} allocated", this.PublicIp);
 
-            this.Log("Creating a new security group: {0}", this.securityGroupName);
+            logger.Log("Creating a new security group: {0}", this.securityGroupName);
             var createSecurityGroupResponse = this.client.CreateSecurityGroup(new CreateSecurityGroupRequest()
             {
                 GroupName = this.securityGroupName,
                 GroupDescription = "Ec2Manager-created security group",
             });
-            this.Log("Security group ID {0} created", createSecurityGroupResponse.CreateSecurityGroupResult.GroupId);
+            logger.Log("Security group ID {0} created", createSecurityGroupResponse.CreateSecurityGroupResult.GroupId);
 
-            this.Log("Allowing inbound access on 22/tcp (SSH)");
+            logger.Log("Allowing inbound access on 22/tcp (SSH)");
             var ipPermission = new IpPermissionSpecification()
             {
                 IpProtocol = "tcp",
@@ -132,18 +139,18 @@ namespace Ec2Manager
             ingressRequest.IpPermissions.Add(ipPermission);
 
             this.client.AuthorizeSecurityGroupIngress(ingressRequest);
-            this.Log("Inbound access authorised");
+            logger.Log("Inbound access authorised");
 
-            this.Log("Creating a new key pair: {0}", this.keyPairName);
+            logger.Log("Creating a new key pair: {0}", this.keyPairName);
             var newKeyResponse = this.client.CreateKeyPair(new CreateKeyPairRequest()
             {
                 KeyName = this.keyPairName,
             });
             var keyPair = newKeyResponse.CreateKeyPairResult.KeyPair;
             this.PrivateKey = keyPair.KeyMaterial;
-            this.Log("Key pair created. Fingerprint {0}", keyPair.KeyFingerprint);
+            logger.Log("Key pair created. Fingerprint {0}", keyPair.KeyFingerprint);
 
-            this.Log("Creating a new instance. AMI: {0}, size: {1}", instanceAmi, instanceSize);
+            logger.Log("Creating a new instance. AMI: {0}, size: {1}", instanceAmi, instanceSize);
             var runInstanceRequest = new RunInstancesRequest()
             {
                 ImageId = instanceAmi,
@@ -165,28 +172,30 @@ namespace Ec2Manager
             this.reservationId = runResponse.RunInstancesResult.Reservation.ReservationId;
             var instances = runResponse.RunInstancesResult.Reservation.RunningInstance;
             this.instanceId = instances[0].InstanceId;
-            this.Log("New instance created. Reservation ID: {0}, Instance ID: {1}", this.reservationId, this.instanceId);
+            logger.Log("New instance created. Reservation ID: {0}, Instance ID: {1}", this.reservationId, this.instanceId);
 
-            this.Log("Waiting for instance to reach 'running' state");
+            logger.Log("Waiting for instance to reach 'running' state");
             await this.UntilStateAsync("running");
-            this.Log("Instance is now running");
+            logger.Log("Instance is now running");
 
-            this.Log("Assigning public IP {0} to instance", this.PublicIp);
+            logger.Log("Assigning public IP {0} to instance", this.PublicIp);
             this.client.AssociateAddress(new AssociateAddressRequest() 
             {
                 InstanceId = this.instanceId,
                 PublicIp = this.PublicIp,
             });
-            this.Log("Public IP assigned");
+            logger.Log("Public IP assigned");
 
-            this.Log("Instance is now ready for use");
+            logger.Log("Instance is now ready for use");
         }
 
-        public async Task<string> MountVolumeAsync(string volumeId, IMachineInteractionProvider client)
+        public async Task<string> MountVolumeAsync(string volumeId, IMachineInteractionProvider client, Logger logger = null)
         {
+            logger = logger ?? this.DefaultLogger;
+
             var device = this.GetNextDevice();
             var deviceMountPoint = Path.GetFileName(device);
-            this.Log("Attaching volume to instance {0}, device {1}", this.instanceId, device);
+            logger.Log("Attaching volume to instance {0}, device {1}", this.instanceId, device);
             var attachVolumeResponse = this.client.AttachVolume(new AttachVolumeRequest()
             {
                 InstanceId = this.instanceId,
@@ -194,19 +203,19 @@ namespace Ec2Manager
                 Device = device,
             });
 
-            this.Log("Waiting for volume to reach the 'attached' state");
+            logger.Log("Waiting for volume to reach the 'attached' state");
             await this.UntilVolumeAttachedStateAsync(volumeId, "attached");
 
-            this.Log("Mounting and setting up device");
-            await client.MountAndSetupDeviceAsync(device, deviceMountPoint, this.Logger);
+            logger.Log("Mounting and setting up device");
+            await client.MountAndSetupDeviceAsync(device, deviceMountPoint, this.DefaultLogger);
 
-            this.Log("Retriving port settings");
-            var portSettings = client.GetPortDescriptions(deviceMountPoint, this.Logger).ToArray();
-            this.Log(String.Join<PortRangeDescription>(", ", portSettings));
+            logger.Log("Retriving port settings");
+            var portSettings = client.GetPortDescriptions(deviceMountPoint, this.DefaultLogger).ToArray();
+            logger.Log(String.Join<PortRangeDescription>(", ", portSettings));
 
             if (portSettings.Length > 0)
             {
-                this.Log("Authorising inbound access on these ports");
+                logger.Log("Authorising inbound access on these ports");
                 var ipPermissions = portSettings.Select(x => new IpPermissionSpecification()
                 {
                     FromPort = x.FromPort,
@@ -220,19 +229,21 @@ namespace Ec2Manager
                 };
                 ingressRequest.IpPermissions.AddRange(ipPermissions);
                 this.client.AuthorizeSecurityGroupIngress(ingressRequest);
-                this.Log("Inbound access authorised");
+                logger.Log("Inbound access authorised");
             }
 
-            this.Log("Volume successfully mounted");
+            logger.Log("Volume successfully mounted");
 
             return deviceMountPoint;
         }
 
-        public async Task<string> MountVolumeFromSnapshotAsync(string snapshotId, IMachineInteractionProvider client)
+        public async Task<string> MountVolumeFromSnapshotAsync(string snapshotId, IMachineInteractionProvider client, Logger logger = null)
         {
-            this.Log("Starting device mount process. Snapshot ID: {0}", snapshotId);
+            logger = logger ?? this.DefaultLogger;
 
-            this.Log("Creating EBS volume based on snapshot");
+            logger.Log("Starting device mount process. Snapshot ID: {0}", snapshotId);
+
+            logger.Log("Creating EBS volume based on snapshot");
             var createVolumeResponse = this.client.CreateVolume(new CreateVolumeRequest()
             {
                 SnapshotId = snapshotId,
@@ -240,9 +251,9 @@ namespace Ec2Manager
                 AvailabilityZone = this.GetRunningInstance().Placement.AvailabilityZone,
             });
             var volumeId = createVolumeResponse.CreateVolumeResult.Volume.VolumeId;
-            this.Log("Volume ID {0} created", volumeId);
+            logger.Log("Volume ID {0} created", volumeId);
 
-            this.Log("Tagging volume, so we know we can remove it later");
+            logger.Log("Tagging volume, so we know we can remove it later");
             this.client.CreateTags(new CreateTagsRequest()
             {
                 ResourceId = new List<string>() { volumeId },
@@ -252,7 +263,7 @@ namespace Ec2Manager
                 },
             });
 
-            this.Log("Waiting for volume to reach the 'available' state");
+            logger.Log("Waiting for volume to reach the 'available' state");
             await this.UntilVolumeStateAsync(volumeId, "available");
 
             return await this.MountVolumeAsync(volumeId, client);
@@ -329,9 +340,11 @@ namespace Ec2Manager
             }
         }
 
-        public async Task DestroyAsync()
+        public async Task DestroyAsync(Logger logger = null)
         {
-            this.Log("Starting instance termination process");
+            logger = logger ?? this.DefaultLogger;
+
+            logger.Log("Starting instance termination process");
 
             var instanceStatus = this.GetRunningInstance();
             var groupIds = instanceStatus.GroupId;
@@ -348,14 +361,14 @@ namespace Ec2Manager
                     },
                 }).DescribeTagsResult.ResourceTag;
 
-            this.Log("Found uniquely attached volumes: {0}", string.Join(", ", volumes));
+            logger.Log("Found uniquely attached volumes: {0}", string.Join(", ", volumes));
 
             foreach (var volume in volumes)
             {
                 if (!volumeTags.Any(x => x.Key == "CreatedByEc2Manager" && x.ResourceId == volume))
                     continue;
 
-                this.Log("Detaching volume {0}", volume);
+                logger.Log("Detaching volume {0}", volume);
                 this.client.DetachVolume(new DetachVolumeRequest()
                 {
                     Force = true,
@@ -363,23 +376,23 @@ namespace Ec2Manager
                     VolumeId = volume,
                 });
 
-                this.Log("Waiting until volume becomes available");
+                logger.Log("Waiting until volume becomes available");
                 await this.UntilVolumeAttachedStateAsync(volume, "available");
 
-                this.Log("Deleting volume {0}", volume);
+                logger.Log("Deleting volume {0}", volume);
                 this.client.DeleteVolume(new DeleteVolumeRequest()
                 {
                     VolumeId = volume,
                 });
             }
 
-            this.Log("Terminating instance");
+            logger.Log("Terminating instance");
             var termResponse = this.client.TerminateInstances(new TerminateInstancesRequest()
             {
                 InstanceId = new List<string>() { this.instanceId },
             });
 
-            this.Log("Waiting for instance to reach the 'terminated' state");
+            logger.Log("Waiting for instance to reach the 'terminated' state");
             await this.UntilStateAsync("terminated");
 
             // This has to be set after the instance has been terminated
@@ -387,11 +400,11 @@ namespace Ec2Manager
                 .Where(x => x.RunningInstance.All(y => y.InstanceState.Name != "terminated")).ToArray();
 
             var usedGroupIds = allInstances.SelectMany(x => x.GroupId).Distinct();
-            this.Log("Found security groups uniquely associated with instance: {0}", string.Join(", ", groupIds.Except(usedGroupIds)));
+            logger.Log("Found security groups uniquely associated with instance: {0}", string.Join(", ", groupIds.Except(usedGroupIds)));
 
             foreach (var groupId in groupIds.Except(usedGroupIds))
             {
-                this.Log("Deleting security group {0}", groupId);
+                logger.Log("Deleting security group {0}", groupId);
                 this.client.DeleteSecurityGroup(new DeleteSecurityGroupRequest()
                 {
                     GroupId = groupId,
@@ -401,20 +414,20 @@ namespace Ec2Manager
             var usedKeyNames = allInstances.SelectMany(x => x.RunningInstance.Select(y => y.KeyName)).Distinct();
             if (!usedKeyNames.Contains(keyName))
             {
-                this.Log("Deleting key pair: {0}", keyName);
+                logger.Log("Deleting key pair: {0}", keyName);
                 this.client.DeleteKeyPair(new DeleteKeyPairRequest()
                 {
                     KeyName = keyName,
                 });
             }
 
-            this.Log("Releasing IP address {0}", this.PublicIp);
+            logger.Log("Releasing IP address {0}", this.PublicIp);
             this.client.ReleaseAddress(new ReleaseAddressRequest()
             {
                 PublicIp = this.PublicIp,
             });
 
-            this.Log("Instance successfully terminated");
+            logger.Log("Instance successfully terminated");
         }
     }
 }

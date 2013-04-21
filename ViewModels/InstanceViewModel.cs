@@ -22,12 +22,8 @@ namespace Ec2Manager.ViewModels
                 VolumeType.CustomVolume("Custom Volume"),
             };
 
-        public Ec2Manager Manager { get; set; }
-        public string InstanceSize { get; set; }
-        public string InstanceAmi { get; set; }
-        public string LoginAs { get; set; }
-        public string AvailabilityZone { get; set; }
-        public InstanceClient Client { get; set; }
+        public Ec2Manager Manager { get; private set; }
+        public InstanceClient Client { get; private set; }
 
         private Logger logger;
 
@@ -68,12 +64,12 @@ namespace Ec2Manager.ViewModels
             this.ActivateItem(instanceDetailsModel);
         }
 
-        protected override void OnInitialize()
+        public async Task Setup(Ec2Manager manager, string instanceAmi, string instanceSize, string loginAs, string availabilityZone)
         {
-            base.OnInitialize();
+            this.Manager = manager;
 
             this.DisplayName = this.Manager.Name;
-            this.Manager.Logger = this.logger;
+            this.Manager.DefaultLogger = this.logger;
 
             this.Manager.Bind(s => s.InstanceState, (o, e) =>
                 {
@@ -82,12 +78,10 @@ namespace Ec2Manager.ViewModels
                     this.NotifyOfPropertyChange(() => CanSavePrivateKey);
                 });
 
-            Task.Run(async () =>
-                {
-                    await this.Manager.CreateAsync(this.InstanceAmi, this.InstanceSize, this.AvailabilityZone);
-                    this.Client = new InstanceClient(this.Manager.PublicIp, this.LoginAs, this.Manager.PrivateKey, this.logger);
-                    this.NotifyOfPropertyChange(() => CanMountVolume);
-                });
+            await this.Manager.CreateAsync(instanceAmi, instanceSize, availabilityZone);
+            this.Client = new InstanceClient(this.Manager.PublicIp, loginAs, this.Manager.PrivateKey);
+            await this.Client.ConnectAsync(this.logger);
+            this.NotifyOfPropertyChange(() => CanMountVolume);
         }
 
         public bool CanTerminate
@@ -112,27 +106,27 @@ namespace Ec2Manager.ViewModels
         }
         public async void MountVolume()
         {
-            string mountPointDir;
+            var volumeViewModel = IoC.Get<VolumeViewModel>();
+            bool volumeNotSnapshot = false;
+            string volumeId;
 
             if (this.SelectedVolumeType.IsCustomVolume)
             {
-                mountPointDir = await this.Manager.MountVolumeAsync(this.CustomVolumeSnapshotId, this.Client);
+                volumeNotSnapshot = true;
+                volumeId = this.CustomVolumeSnapshotId;
             }
             else if (this.SelectedVolumeType.IsCustomSnapshot)
             {
-                mountPointDir = await this.Manager.MountVolumeFromSnapshotAsync(this.CustomVolumeSnapshotId, this.Client);
+                volumeId = this.CustomVolumeSnapshotId;
             }
             else
             {
-                mountPointDir = await this.Manager.MountVolumeFromSnapshotAsync(this.SelectedVolumeType.SnapshotId, this.Client);
+                volumeId = this.SelectedVolumeType.SnapshotId;
             }
 
-            var volumeViewModel = IoC.Get<VolumeViewModel>();
-            volumeViewModel.Client = this.Client;
-            volumeViewModel.Manager = this.Manager;
-            volumeViewModel.MountPointDir = mountPointDir;
-            volumeViewModel.VolumeName = this.SelectedVolumeType.Name;
             this.ActivateItem(volumeViewModel);
+
+            await volumeViewModel.Setup(this.Manager, this.Client, this.SelectedVolumeType.Name, volumeId, volumeNotSnapshot);
         }
 
         public bool CanSavePrivateKey
