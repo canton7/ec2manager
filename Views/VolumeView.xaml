@@ -21,6 +21,10 @@
             </Grid>
         </GroupBox>
         
-        <TextBox DockPanel.Dock="Top" Text="{Binding Logger.Entries, Mode=OneWay, Converter={x:Static conv:LogEntriesToTextConverter.Instance}}"/>
+        <GroupBox Header="User Instruction" DockPanel.Dock="Top" Padding="10">
+            <TextBlock Name="UserInstruction" TextWrapping="Wrap"/>
+        </GroupBox>
+        
+        <TextBox DockPanel.Dock="Top" ScrollViewer.VerticalScrollBarVisibility="Auto" ScrollViewer.HorizontalScrollBarVisibility="Auto" Text="{Binding Logger.Entries, Mode=OneWay, Converter={x:Static conv:LogEntriesToTextConverter.Instance}}"/>
     </DockPanel>
 </UserControl>

@@ -13,7 +13,9 @@ namespace Ec2Manager
     public class InstanceClient : IDisposable, IMachineInteractionProvider
     {
         private SshClient client;
+        private string host;
         private string user;
+        private string key;
 
         private string mountBase
         {
@@ -22,7 +24,9 @@ namespace Ec2Manager
 
         public InstanceClient(string host, string user, string key, Logger logger)
         {
+            this.host = host;
             this.user = user;
+            this.key = key;
 
             logger.Log("Establishing connection with {0}@{1}", user, host);
             this.client = new SshClient(host, user, new PrivateKeyFile(new MemoryStream(Encoding.ASCII.GetBytes(key))));
@@ -106,7 +110,14 @@ namespace Ec2Manager
         public async Task RunCommandAsync(string from, string command, Logger logger)
         {
             var cmd = "cd \"" + from + "\" && " + command + "";
-            await this.RunAndLogStreamAsync(cmd, logger, true);
+            await this.RunInShell(cmd, logger);
+        }
+
+        public string GetUserInstruction(string mountPointDir, Logger logger)
+        {
+            var mountPoint = this.mountBase + mountPointDir;
+
+            return this.client.RunCommand("[ -r \"" + mountPoint + "/ec2manager/user_instruction\" ] && cat \"" + mountPoint + "/ec2manager/user_instruction\"").Result.Trim();
         }
 
         private void RunAndLog(string command, Logger logger, bool logResult = false)
@@ -124,12 +135,40 @@ namespace Ec2Manager
                 logger.Log(command);
 
             return Task.Run(() =>
+            {
+                var cmd = this.client.CreateCommand(command);
+                var result = cmd.BeginExecute();
+                logger.LogFromStream(cmd.OutputStream, result);
+                cmd.EndExecute(result);
+            });
+        }
+
+        private Task RunInShell(string command, Logger logger, System.Threading.CancellationToken? cancellationToken = null)
+        {
+            Action runAction = () =>
                 {
-                    var cmd = this.client.CreateCommand(command);
-                    var result = cmd.BeginExecute();
-                    logger.LogFromStream(cmd.OutputStream, result);
-                    cmd.EndExecute(result);
-                });
+                    var stream = this.client.CreateShellStream("xterm", 80, 24, 800, 600, 1024);
+                    var reader = new StreamReader(stream);
+                    var writer = new StreamWriter(stream);
+                    writer.AutoFlush = true;
+
+                    reader.ReadToEnd();
+                    writer.WriteLine(command);
+
+                    while (true)
+                    {
+                        var result = reader.ReadToEnd().Trim();
+                        if (!string.IsNullOrEmpty(result))
+                            logger.Log(result);
+
+                        System.Threading.Thread.Sleep(100);
+                    }
+                };
+
+            if (cancellationToken.HasValue)
+                return Task.Run(runAction, cancellationToken.Value);
+            else
+                return Task.Run(runAction);
         }
 
         public void Dispose()

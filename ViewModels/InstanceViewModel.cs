@@ -17,7 +17,7 @@ namespace Ec2Manager.ViewModels
     {
         private static readonly VolumeType[] volumeTypes = new[]
             {
-                new VolumeType("Left4Dead2", "left4dead2"),
+                new VolumeType("theSnapshotName", "Left 4 Dead 2"),
                 VolumeType.CustomSnapshot("Custom Snapshot"),
                 VolumeType.CustomVolume("Custom Volume"),
             };
@@ -127,10 +127,12 @@ namespace Ec2Manager.ViewModels
                 mountPointDir = await this.Manager.MountVolumeFromSnapshotAsync(this.SelectedVolumeType.SnapshotId, this.Client);
             }
 
-            var instanceViewModel = IoC.Get<VolumeViewModel>();
-            instanceViewModel.Client = this.Client;
-            instanceViewModel.MountPointDir = mountPointDir;
-            this.ActivateItem(instanceViewModel);
+            var volumeViewModel = IoC.Get<VolumeViewModel>();
+            volumeViewModel.Client = this.Client;
+            volumeViewModel.Manager = this.Manager;
+            volumeViewModel.MountPointDir = mountPointDir;
+            volumeViewModel.VolumeName = this.SelectedVolumeType.Name;
+            this.ActivateItem(volumeViewModel);
         }
 
         public bool CanSavePrivateKey

@@ -14,27 +14,10 @@ namespace Ec2Manager.ViewModels
     {
         public Logger Logger { get; private set; }
 
-        private InstanceClient client;
-        public InstanceClient Client
-        {
-            get { return this.client; }
-            set
-            {
-                this.client = value;
-                this.NotifyOfPropertyChange();
-            }
-        }
-
-        private string mountPointDir;
-        public string MountPointDir
-        {
-            get { return this.mountPointDir; }
-            set
-            {
-                this.mountPointDir = value;
-                this.NotifyOfPropertyChange();
-            }
-        }
+        public InstanceClient Client { get; set; }
+        public Ec2Manager Manager { get; set; }
+        public string MountPointDir { get; set; }
+        public string VolumeName { get; set; }
 
         private string runCommand;
         public string RunCommand
@@ -43,6 +26,17 @@ namespace Ec2Manager.ViewModels
             set
             {
                 this.runCommand = value;
+                this.NotifyOfPropertyChange();
+            }
+        }
+
+        private string userInstruction;
+        public string UserInstruction
+        {
+            get { return this.userInstruction; }
+            private set
+            {
+                this.userInstruction = value;
                 this.NotifyOfPropertyChange();
             }
         }
@@ -57,11 +51,14 @@ namespace Ec2Manager.ViewModels
         {
             base.OnInitialize();
 
+            this.DisplayName = this.VolumeName;
             this.RunCommand = this.Client.GetRunCommand(this.MountPointDir, this.Logger);
+            this.UserInstruction = this.Client.GetUserInstruction(this.MountPointDir, this.Logger).Replace("<PUBLIC-IP>", this.Manager.PublicIp);
         }
 
         public async void StartGame()
         {
+            this.Logger.Log("Starting to launch game...");
             await this.Client.RunCommandAsync(this.MountPointDir, this.RunCommand, this.Logger);
         }
     }

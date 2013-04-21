@@ -69,6 +69,7 @@
       <Generator>MSBuild:Compile</Generator>
       <SubType>Designer</SubType>
     </ApplicationDefinition>
+    <Compile Include="Support\TextBoxUtilities.cs" />
     <Compile Include="Classes\LabelledValue.cs" />
     <Compile Include="Classes\NotifyPropertyChangedExtensions.cs" />
     <Compile Include="Classes\PortRangeDescription.cs" />
