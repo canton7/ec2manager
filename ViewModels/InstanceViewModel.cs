@@ -8,6 +8,7 @@ using System.Threading.Tasks;
 using Ec2Manager.Classes;
 using Microsoft.Win32;
 using System.IO;
+using Ec2Manager.Configuration;
 
 namespace Ec2Manager.ViewModels
 {
@@ -15,9 +16,9 @@ namespace Ec2Manager.ViewModels
     [PartCreationPolicy(CreationPolicy.NonShared)]
     public class InstanceViewModel : Conductor<IScreen>.Collection.OneActive
     {
-        private static readonly VolumeType[] volumeTypes = new[]
+        private static readonly List<VolumeType> defaultVolumeTypes = new List<VolumeType>
             {
-                new VolumeType("theSnapshotName", "Left 4 Dead 2"),
+                //new VolumeType("theSnapshotName", "Left 4 Dead 2"),
                 VolumeType.CustomSnapshot("Custom Snapshot"),
                 VolumeType.CustomVolume("Custom Volume"),
             };
@@ -26,12 +27,14 @@ namespace Ec2Manager.ViewModels
         public InstanceClient Client { get; private set; }
 
         private Logger logger;
+        private Config config;
 
-        public VolumeType[] VolumeTypes
+        private List<VolumeType> volumeTypes = new List<VolumeType>() { new VolumeType("", "Loading...") };
+        public List<VolumeType> VolumeTypes
         {
-            get { return volumeTypes; }
+            get { return volumeTypes.Concat(defaultVolumeTypes).ToList(); }
         }
-        private VolumeType selectedVolumeType = volumeTypes[0];
+        private VolumeType selectedVolumeType = defaultVolumeTypes[0];
         public VolumeType SelectedVolumeType
         {
             get { return this.selectedVolumeType; }
@@ -56,9 +59,11 @@ namespace Ec2Manager.ViewModels
         }
 
         [ImportingConstructor]
-        public InstanceViewModel(InstanceDetailsViewModel instanceDetailsModel, Logger logger)
+        public InstanceViewModel(InstanceDetailsViewModel instanceDetailsModel, Logger logger, Config config)
         {
             this.logger = logger;
+            this.config = config;
+
             instanceDetailsModel.Logger = logger;
 
             this.ActivateItem(instanceDetailsModel);
@@ -78,10 +83,24 @@ namespace Ec2Manager.ViewModels
                     this.NotifyOfPropertyChange(() => CanSavePrivateKey);
                 });
 
-            await this.Manager.CreateAsync(instanceAmi, instanceSize, availabilityZone);
-            this.Client = new InstanceClient(this.Manager.PublicIp, loginAs, this.Manager.PrivateKey);
-            await this.Client.ConnectAsync(this.logger);
-            this.NotifyOfPropertyChange(() => CanMountVolume);
+            var createTask = Task.Run(async () =>
+                {
+                    await this.Manager.CreateAsync(instanceAmi, instanceSize, availabilityZone);
+                    this.Client = new InstanceClient(this.Manager.PublicIp, loginAs, this.Manager.PrivateKey);
+                    await this.Client.ConnectAsync(this.logger);
+                    this.NotifyOfPropertyChange(() => CanMountVolume);
+                });
+
+            var volumesTask = Task.Run(async () =>
+                {
+                    var snapshots = await this.config.GetSnapshotConfigAsync();
+                    this.volumeTypes.Clear();
+                    this.volumeTypes.AddRange(snapshots.Snapshots.Select(x => new VolumeType(x.SnapshotId, x.Name)));
+                    this.SelectedVolumeType = this.volumeTypes[0];
+                    this.NotifyOfPropertyChange(() => VolumeTypes);
+                });
+
+            await Task.WhenAll(createTask, volumesTask);
         }
 
         public bool CanTerminate

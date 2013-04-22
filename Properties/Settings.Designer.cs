@@ -70,5 +70,17 @@ namespace Ec2Manager.Properties {
                 this["DefaultAwsSecretKey"] = value;
             }
         }
+        
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("http://canton7-ec2.s3.amazonaws.com/snapshot-config.xml")]
+        public string SnapshotConfigUrl {
+            get {
+                return ((string)(this["SnapshotConfigUrl"]));
+            }
+            set {
+                this["SnapshotConfigUrl"] = value;
+            }
+        }
     }
 }
