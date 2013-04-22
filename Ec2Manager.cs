@@ -123,20 +123,28 @@ namespace Ec2Manager
             });
             logger.Log("Security group ID {0} created", createSecurityGroupResponse.CreateSecurityGroupResult.GroupId);
 
-            logger.Log("Allowing inbound access on 22/tcp (SSH)");
-            var ipPermission = new IpPermissionSpecification()
-            {
-                IpProtocol = "tcp",
-                FromPort = 22,
-                ToPort = 22,
-            };
-            ipPermission.IpRanges.Add("0.0.0.0/0");
-
+            logger.Log("Allowing inbound access on 22/tcp (SSH) and ping");
             var ingressRequest = new AuthorizeSecurityGroupIngressRequest()
             {
                 GroupName = this.securityGroupName,
+                IpPermissions = new List<IpPermissionSpecification>()
+                {
+                    new IpPermissionSpecification()
+                    {
+                        IpProtocol = "tcp",
+                        FromPort = 22,
+                        ToPort = 22,
+                        IpRanges = new List<string>() { "0.0.0.0/0" },
+                    },
+                    new IpPermissionSpecification()
+                    {
+                        IpProtocol = "icmp",
+                        FromPort = -1,
+                        ToPort = -1,
+                        IpRanges = new List<string>() { "0.0.0.0/0" },
+                    },
+                },
             };
-            ingressRequest.IpPermissions.Add(ipPermission);
 
             this.client.AuthorizeSecurityGroupIngress(ingressRequest);
             logger.Log("Inbound access authorised");
