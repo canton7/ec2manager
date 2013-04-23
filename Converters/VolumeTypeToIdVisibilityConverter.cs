@@ -1,4 +1,5 @@
 ﻿using Ec2Manager.Classes;
+using Ec2Manager.Configuration;
 using Ec2Manager.ViewModels;
 using System;
 using System.Collections.Generic;

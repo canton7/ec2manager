@@ -17,6 +17,7 @@ namespace Ec2Manager
         private string host;
         private string user;
         private string key;
+        private AsyncSemaphore setupCmdLock = new AsyncSemaphore(1, 1);
 
         private string mountBase
         {
@@ -57,7 +58,11 @@ namespace Ec2Manager
             this.RunAndLog("sudo mount " + device + " \"" + mountPoint + "\"", logger, false, 5);
             this.RunAndLog("sudo chown -R " + user + "." + user + " \"" + mountPoint + "\"", logger);
 
-            await this.RunAndLogStreamAsync("[ -x \"" + mountPoint + "/ec2manager/setup\" ] && \"" + mountPoint + "/ec2manager/setup\"", logger);
+            await this.setupCmdLock.WaitAsync();
+            {
+                await this.RunAndLogStreamAsync("[ -x \"" + mountPoint + "/ec2manager/setup\" ] && \"" + mountPoint + "/ec2manager/setup\"", logger);
+            }
+            this.setupCmdLock.Release();
         }
 
         public IEnumerable<PortRangeDescription> GetPortDescriptions(string mountPointDir, Logger logger)

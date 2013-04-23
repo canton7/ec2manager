@@ -19,8 +19,7 @@ namespace Ec2Manager.ViewModels
         private static readonly List<VolumeType> defaultVolumeTypes = new List<VolumeType>
             {
                 //new VolumeType("theSnapshotName", "Left 4 Dead 2"),
-                VolumeType.CustomSnapshot("Custom Snapshot"),
-                VolumeType.CustomVolume("Custom Volume"),
+                VolumeType.Custom("Custom Snapshot or Volume"),
             };
 
         public Ec2Manager Manager { get; private set; }
@@ -29,12 +28,12 @@ namespace Ec2Manager.ViewModels
         private Logger logger;
         private Config config;
 
-        private List<VolumeType> volumeTypes = new List<VolumeType>() { new VolumeType("", "Loading...") };
+        private List<VolumeType> volumeTypes = new List<VolumeType>() { new VolumeType(null, "Loading...") };
         public List<VolumeType> VolumeTypes
         {
             get { return volumeTypes.Concat(defaultVolumeTypes).ToList(); }
         }
-        private VolumeType selectedVolumeType = defaultVolumeTypes[0];
+        private VolumeType selectedVolumeType;
         public VolumeType SelectedVolumeType
         {
             get { return this.selectedVolumeType; }
@@ -66,6 +65,7 @@ namespace Ec2Manager.ViewModels
 
             instanceDetailsModel.Logger = logger;
 
+            this.SelectedVolumeType = this.VolumeTypes[0];
             this.ActivateItem(instanceDetailsModel);
         }
 
@@ -95,7 +95,7 @@ namespace Ec2Manager.ViewModels
                 {
                     var snapshots = await this.config.GetSnapshotConfigAsync();
                     this.volumeTypes.Clear();
-                    this.volumeTypes.AddRange(snapshots.Snapshots.Select(x => new VolumeType(x.SnapshotId, x.Name)));
+                    this.volumeTypes.AddRange(snapshots);
                     this.SelectedVolumeType = this.volumeTypes[0];
                     this.NotifyOfPropertyChange(() => VolumeTypes);
                 });
@@ -120,21 +120,16 @@ namespace Ec2Manager.ViewModels
             get
             {
                 return this.Manager.InstanceState == "running" && this.Client != null &&
+                    (this.SelectedVolumeType.IsCustom == true || this.SelectedVolumeType.SnapshotId != null) &&
                     (!this.selectedVolumeType.IsCustom || !string.IsNullOrWhiteSpace(this.CustomVolumeSnapshotId));
             }
         }
         public async void MountVolume()
         {
             var volumeViewModel = IoC.Get<VolumeViewModel>();
-            bool volumeNotSnapshot = false;
             string volumeId;
 
-            if (this.SelectedVolumeType.IsCustomVolume)
-            {
-                volumeNotSnapshot = true;
-                volumeId = this.CustomVolumeSnapshotId;
-            }
-            else if (this.SelectedVolumeType.IsCustomSnapshot)
+            if (this.SelectedVolumeType.IsCustom)
             {
                 volumeId = this.CustomVolumeSnapshotId;
             }
@@ -145,7 +140,7 @@ namespace Ec2Manager.ViewModels
 
             this.ActivateItem(volumeViewModel);
 
-            await volumeViewModel.Setup(this.Manager, this.Client, this.SelectedVolumeType.Name, volumeId, volumeNotSnapshot);
+            await volumeViewModel.Setup(this.Manager, this.Client, this.SelectedVolumeType.Name, volumeId);
         }
 
         public bool CanSavePrivateKey
@@ -164,50 +159,6 @@ namespace Ec2Manager.ViewModels
                 string fileName = dialog.FileName;
                 File.WriteAllText(fileName, this.Manager.PrivateKey);
             }
-        }
-    }
-
-    public class VolumeType
-    {
-        public string SnapshotId { get; set; }
-        public string Name { get; set; }
-        public bool IsCustomVolume { get; set; }
-        public bool IsCustomSnapshot { get; set; }
-        public bool IsCustom
-        {
-            get { return this.IsCustomSnapshot || this.IsCustomVolume; }
-        }
-
-        public VolumeType()
-        {
-        }
-
-        public VolumeType(string snapshotId, string name)
-        {
-            this.SnapshotId = snapshotId;
-            this.Name = name;
-            this.IsCustomVolume = false;
-            this.IsCustomSnapshot = false;
-        }
-
-        public static VolumeType CustomVolume(string name)
-        {
-            return new VolumeType()
-            {
-                Name = name,
-                IsCustomSnapshot = false,
-                IsCustomVolume = true,
-            };
-        }
-
-        public static VolumeType CustomSnapshot(string name)
-        {
-            return new VolumeType()
-            {
-                Name = name,
-                IsCustomSnapshot = true,
-                IsCustomVolume = false,
-            };
         }
     }
 }

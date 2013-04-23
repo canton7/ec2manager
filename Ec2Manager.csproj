@@ -70,9 +70,9 @@
       <SubType>Designer</SubType>
     </ApplicationDefinition>
     <Compile Include="Classes\AsyncLazy.cs" />
+    <Compile Include="Classes\AsyncSemaphore.cs" />
     <Compile Include="Configuration\Config.cs" />
-    <Compile Include="Configuration\Snapshot.cs" />
-    <Compile Include="Configuration\SnapshotConfig.cs" />
+    <Compile Include="Configuration\VolumeType.cs" />
     <Compile Include="Support\TextBoxUtilities.cs" />
     <Compile Include="Classes\LabelledValue.cs" />
     <Compile Include="Classes\NotifyPropertyChangedExtensions.cs" />

@@ -24,11 +24,11 @@ namespace Ec2Manager.Configuration
 
         public string SnapshotConfigFile
         {
-            get { return Path.Combine(this.ConfigDir, "snapshot-config.xml"); }
+            get { return Path.Combine(this.ConfigDir, "snapshot-config.txt"); }
         }
 
-        private AsyncLazy<SnapshotConfig> snapshotConfig;
-        public Task<SnapshotConfig> GetSnapshotConfigAsync()
+        private AsyncLazy<IEnumerable<VolumeType>> snapshotConfig;
+        public Task<IEnumerable<VolumeType>> GetSnapshotConfigAsync()
         {
             return this.snapshotConfig.Value;
         }
@@ -39,30 +39,35 @@ namespace Ec2Manager.Configuration
         {
             Directory.CreateDirectory(this.ConfigDir);
 
-            this.snapshotConfig = new AsyncLazy<SnapshotConfig>(async () =>
+            this.snapshotConfig = new AsyncLazy<IEnumerable<VolumeType>>(async () =>
                 {
-                    SnapshotConfig webConfig;
-                    SnapshotConfig localConfig;
+                    var config = new List<VolumeType>();
                     try
                     {
-                        WebClient client = new WebClient();
-                        webConfig = SnapshotConfig.FromString(await client.DownloadStringTaskAsync(Settings.Default.SnapshotConfigUrl));
-                    }
-                    catch (WebException)
-                    {
-                        webConfig = new SnapshotConfig();
-                    }
-
-                    try
-                    {
-                        localConfig = SnapshotConfig.FromFile(this.SnapshotConfigFile);
+                        config.AddRange(File.ReadAllLines(this.SnapshotConfigFile).Where(x => !x.StartsWith(";") && !string.IsNullOrWhiteSpace(x)).Select(x =>
+                        {
+                            var parts = x.Split(new[] { ':' });
+                            return new VolumeType(parts[0].Trim(), parts[1].Trim());
+                        }));
                     }
                     catch (FileNotFoundException)
                     {
-                        localConfig = new SnapshotConfig();
                     }
 
-                    return new SnapshotConfig(webConfig.Snapshots.Concat(localConfig.Snapshots));
+                    try
+                    {
+                        WebClient client = new WebClient();
+                        config.AddRange((await client.DownloadStringTaskAsync(Settings.Default.SnapshotConfigUrl)).Split(new[] { "\n", "\r\n" }, StringSplitOptions.RemoveEmptyEntries).Where(x => !x.StartsWith(";")).Select(x =>
+                        {
+                            var parts = x.Split(new[] { ':' });
+                            return new VolumeType(parts[0].Trim(), parts[1].Trim());
+                        }));
+                    }
+                    catch (WebException)
+                    {
+                    }
+
+                    return config;
                 });
         }
     }

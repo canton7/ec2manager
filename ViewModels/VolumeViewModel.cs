@@ -62,22 +62,14 @@ namespace Ec2Manager.ViewModels
             this.Logger = logger;
         }
 
-        public async Task Setup(Ec2Manager manager, InstanceClient client, string volumeName, string volumeId, bool volumeNotSnapshot)
+        public async Task Setup(Ec2Manager manager, InstanceClient client, string volumeName, string volumeId)
         {
             this.Client = client;
             this.Manager = manager;
 
             this.DisplayName = volumeName;
 
-            if (volumeNotSnapshot)
-            {
-                this.MountPointDir = await this.Manager.MountVolumeAsync(volumeId, this.Client, this.Logger);
-            }
-            else
-            {
-                this.MountPointDir = await this.Manager.MountVolumeFromSnapshotAsync(volumeId, this.Client, this.Logger);
-            }
-
+            this.MountPointDir = await this.Manager.MountVolumeAsync(volumeId, this.Client, this.Logger);
             this.VolumeState = "mounted";
             this.RunCommand = this.Client.GetRunCommand(this.MountPointDir, this.Logger);
             this.UserInstruction = this.Client.GetUserInstruction(this.MountPointDir, this.Logger).Replace("<PUBLIC-IP>", this.Manager.PublicIp);
@@ -110,6 +102,7 @@ namespace Ec2Manager.ViewModels
             this.Logger.Log("Stopping game...");
             this.gameCts.Cancel();
             this.VolumeState = "mounted";
+            this.Logger.Log("Game stopped");
         }
     }
 }

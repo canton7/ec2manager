@@ -194,12 +194,17 @@ namespace Ec2Manager
             });
             logger.Log("Public IP assigned");
 
-            logger.Log("Instance is now ready for use");
+            logger.Log("Instance has been created");
         }
 
         public async Task<string> MountVolumeAsync(string volumeId, IMachineInteractionProvider client, Logger logger = null)
         {
             logger = logger ?? this.DefaultLogger;
+
+            if (volumeId.StartsWith("snap-"))
+                volumeId = await this.CreateVolumeFromSnapshot(volumeId, client, logger);
+            else if (!volumeId.StartsWith("vol-"))
+                throw new Exception("Volume ID must start with vol- or snap-");
 
             var device = this.GetNextDevice();
             var deviceMountPoint = Path.GetFileName(device);
@@ -215,10 +220,10 @@ namespace Ec2Manager
             await this.UntilVolumeAttachedStateAsync(volumeId, "attached");
 
             logger.Log("Mounting and setting up device");
-            await client.MountAndSetupDeviceAsync(device, deviceMountPoint, this.DefaultLogger);
+            await client.MountAndSetupDeviceAsync(device, deviceMountPoint, logger);
 
             logger.Log("Retriving port settings");
-            var portSettings = client.GetPortDescriptions(deviceMountPoint, this.DefaultLogger).ToArray();
+            var portSettings = client.GetPortDescriptions(deviceMountPoint, logger).ToArray();
             logger.Log(String.Join<PortRangeDescription>(", ", portSettings));
 
             if (portSettings.Length > 0)
@@ -236,7 +241,16 @@ namespace Ec2Manager
                     GroupName = this.securityGroupName,
                 };
                 ingressRequest.IpPermissions.AddRange(ipPermissions);
-                this.client.AuthorizeSecurityGroupIngress(ingressRequest);
+                try
+                {
+                    this.client.AuthorizeSecurityGroupIngress(ingressRequest);
+                }
+                catch (AmazonEC2Exception e)
+                {
+                    // Duplicate port settings are just fine
+                    if (e.ErrorCode != "InvalidPermission.Duplicate")
+                        throw;
+                }
                 logger.Log("Inbound access authorised");
             }
 
@@ -245,7 +259,7 @@ namespace Ec2Manager
             return deviceMountPoint;
         }
 
-        public async Task<string> MountVolumeFromSnapshotAsync(string snapshotId, IMachineInteractionProvider client, Logger logger = null)
+        public async Task<string> CreateVolumeFromSnapshot(string snapshotId, IMachineInteractionProvider client, Logger logger = null)
         {
             logger = logger ?? this.DefaultLogger;
 
@@ -274,7 +288,7 @@ namespace Ec2Manager
             logger.Log("Waiting for volume to reach the 'available' state");
             await this.UntilVolumeStateAsync(volumeId, "available");
 
-            return await this.MountVolumeAsync(volumeId, client);
+            return volumeId;
         }
 
         private async Task UntilStateAsync(string state)
@@ -360,22 +374,13 @@ namespace Ec2Manager
             // This excludes volumes attached to other machines as well
             var volumes = this.client.DescribeVolumes(new DescribeVolumesRequest()).DescribeVolumesResult.Volume
                 .Where(x => x.Attachment.Count == 1 && x.Attachment[0].InstanceId == this.instanceId)
+                .Where(x => x.Tag.Any(y => y.Key == "CreatedByEc2Manager"))
                 .Select(x => x.VolumeId);
-            var volumeTags = this.client.DescribeTags(new DescribeTagsRequest()
-                {
-                    Filter = new List<Filter>()
-                    {
-                        new Filter() { Name = "resource-type", Value = new List<string>() { "volume " } },
-                    },
-                }).DescribeTagsResult.ResourceTag;
 
             logger.Log("Found uniquely attached volumes: {0}", string.Join(", ", volumes));
 
             foreach (var volume in volumes)
             {
-                if (!volumeTags.Any(x => x.Key == "CreatedByEc2Manager" && x.ResourceId == volume))
-                    continue;
-
                 logger.Log("Detaching volume {0}", volume);
                 this.client.DetachVolume(new DetachVolumeRequest()
                 {
