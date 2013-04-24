@@ -51,12 +51,15 @@ namespace Ec2Manager
             get { return "Ec2KeyPair-" + this.uniqueKey; }
         }
 
-        public Ec2Manager(string accessKey, string secretKey, string name)
+        public Ec2Manager(string accessKey, string secretKey)
         {
-            this.Name = name;
-
             this.client = new AmazonEC2Client(accessKey, secretKey, RegionEndpoint.EUWest1);
             this.uniqueKey = Guid.NewGuid().ToString();
+        }
+
+        public Ec2Manager(string accessKey, string secretKey, string instanceId) : this(accessKey, secretKey)
+        {
+            this.instanceId = instanceId;
         }
 
         private RunningInstance GetRunningInstance()
@@ -182,6 +185,17 @@ namespace Ec2Manager
             this.instanceId = instances[0].InstanceId;
             logger.Log("New instance created. Reservation ID: {0}, Instance ID: {1}", this.reservationId, this.instanceId);
 
+            logger.Log("Tagging instance");
+            this.client.CreateTags(new CreateTagsRequest()
+            {
+                ResourceId = new List<string>() { this.instanceId },
+                Tag = new List<Tag>()
+                {
+                    new Tag() { Key = "CreatedByEc2Manager", Value = "true" },
+                    new Tag() { Key = "Name", Value = this.Name },
+                },
+            });
+
             logger.Log("Waiting for instance to reach 'running' state");
             await this.UntilStateAsync("running");
             logger.Log("Instance is now running");
@@ -291,6 +305,14 @@ namespace Ec2Manager
             return volumeId;
         }
 
+        public IEnumerable<Tuple<string, string>> ListInstances()
+        {
+            var instances = this.client.DescribeInstances(new DescribeInstancesRequest()).DescribeInstancesResult.Reservation
+                .SelectMany(reservation => reservation.RunningInstance.Where(instance => instance.InstanceState.Name == "running" && instance.Tag.Any(tag => tag.Key == "CreatedByEc2Manager")));
+
+           return instances.Select(x => new Tuple<string, string>(x.InstanceId, (x.Tag.FirstOrDefault(tag => tag.Key == "Name") ?? new Tag() { Value = "No Name" }).Value));
+        }
+
         private async Task UntilStateAsync(string state)
         {
             bool gotToState = false;
@@ -377,8 +399,9 @@ namespace Ec2Manager
                 .Where(x => x.Tag.Any(y => y.Key == "CreatedByEc2Manager"))
                 .Select(x => x.VolumeId);
 
+            // Detach the volumes in parallel, since it takes a nice long time
             logger.Log("Found uniquely attached volumes: {0}", string.Join(", ", volumes));
-
+            var waitUntilDetachedTasks = new List<Task>();
             foreach (var volume in volumes)
             {
                 logger.Log("Detaching volume {0}", volume);
@@ -389,9 +412,14 @@ namespace Ec2Manager
                     VolumeId = volume,
                 });
 
-                logger.Log("Waiting until volume becomes available");
-                await this.UntilVolumeAttachedStateAsync(volume, "available");
+                waitUntilDetachedTasks.Add(this.UntilVolumeAttachedStateAsync(volume, "available"));
+            }
 
+            logger.Log("Waiting until volume(s) become(s) available");
+            await Task.WhenAll(waitUntilDetachedTasks);
+
+            foreach (var volume in volumes)
+            {
                 logger.Log("Deleting volume {0}", volume);
                 this.client.DeleteVolume(new DeleteVolumeRequest()
                 {

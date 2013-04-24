@@ -73,7 +73,7 @@ namespace Ec2Manager.Properties {
         
         [global::System.Configuration.UserScopedSettingAttribute()]
         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
-        [global::System.Configuration.DefaultSettingValueAttribute("http://canton7-ec2.s3.amazonaws.com/snapshot-config.txt")]
+        [global::System.Configuration.DefaultSettingValueAttribute("http://canton7-ec2manager.s3.amazonaws.com/snapshot-config.txt")]
         public string SnapshotConfigUrl {
             get {
                 return ((string)(this["SnapshotConfigUrl"]));

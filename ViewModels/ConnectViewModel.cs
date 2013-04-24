@@ -38,6 +38,8 @@ namespace Ec2Manager.ViewModels
                 this.awsAccessKey = value;
                 this.NotifyOfPropertyChange();
                 this.NotifyOfPropertyChange(() => CanCreate);
+                this.NotifyOfPropertyChange(() => CanRefreshTerminatableInstances);
+                this.NotifyOfPropertyChange(() => CanTerminateInstance);
             }
         }
 
@@ -50,6 +52,8 @@ namespace Ec2Manager.ViewModels
                 this.awsSecretKey = value;
                 this.NotifyOfPropertyChange();
                 this.NotifyOfPropertyChange(() => CanCreate);
+                this.NotifyOfPropertyChange(() => CanRefreshTerminatableInstances);
+                this.NotifyOfPropertyChange(() => CanTerminateInstance);
             }
         }
 
@@ -106,6 +110,30 @@ namespace Ec2Manager.ViewModels
             }
         }
 
+        private LabelledValue[] terminatableInstances = new[] { new LabelledValue("Press Refresh", null) };
+        public LabelledValue[] TerminatableInstances
+        {
+            get { return this.terminatableInstances; }
+            set
+            {
+                this.terminatableInstances = value;
+                this.NotifyOfPropertyChange();
+            }
+        }
+
+        private LabelledValue activeTerminatableInstance;
+        public LabelledValue ActiveTerminatableInstance
+        {
+            get { return this.activeTerminatableInstance; }
+            set
+            {
+                this.activeTerminatableInstance = value;
+                this.NotifyOfPropertyChange();
+                this.NotifyOfPropertyChange(() => CanTerminateInstance);
+            }
+        }
+
+
         private IEventAggregator events;
 
         [ImportingConstructor]
@@ -115,6 +143,7 @@ namespace Ec2Manager.ViewModels
 
             this.DisplayName = "Create New Instance";
             this.ActiveInstanceType = this.InstanceTypes[0];
+            this.ActiveTerminatableInstance = this.TerminatableInstances[0];
         }
 
 
@@ -131,7 +160,8 @@ namespace Ec2Manager.ViewModels
         }
         public void Create()
         {
-            var manager = new Ec2Manager(this.AwsAccessKey, this.AwsSecretKey, this.InstanceName);
+            var manager = new Ec2Manager(this.AwsAccessKey, this.AwsSecretKey);
+            manager.Name = this.InstanceName;
             events.Publish(new CreateInstanceEvent()
             {
                 InstanceAmi = this.AMI,
@@ -140,6 +170,39 @@ namespace Ec2Manager.ViewModels
                 LoginAs = this.LoginAs,
                 AvailabilityZone = this.AvailabilityZone,
             });
+        }
+
+        public bool CanRefreshTerminatableInstances
+        {
+            get
+            {
+                return !string.IsNullOrWhiteSpace(this.awsAccessKey) &&
+                    !string.IsNullOrWhiteSpace(this.AwsSecretKey);
+            }
+        }
+        public void RefreshTerminatableInstances()
+        {
+            var manager = new Ec2Manager(this.AwsAccessKey, this.AwsSecretKey);
+            this.TerminatableInstances = manager.ListInstances().Select(x => new LabelledValue(x.Item2, x.Item1)).ToArray();
+            if (this.TerminatableInstances.Length == 0)
+            {
+                this.TerminatableInstances = new[] { new LabelledValue("No Running Instances", null) };
+            }
+            this.ActiveTerminatableInstance = this.TerminatableInstances[0];
+        }
+
+        public bool CanTerminateInstance
+        {
+            get
+            {
+                return !string.IsNullOrWhiteSpace(this.awsAccessKey) &&
+                    !string.IsNullOrWhiteSpace(this.AwsSecretKey) &&
+                    this.ActiveTerminatableInstance != null && !string.IsNullOrEmpty(this.ActiveTerminatableInstance.Value);
+            }
+        }
+        public void TerminateInstance()
+        {
+
         }
     }
 }
