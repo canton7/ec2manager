@@ -16,7 +16,6 @@ namespace Ec2Manager
     {
         private AmazonEC2Client client;
         private string uniqueKey;
-        private string reservationId;
         private string instanceId;
 
         // We can mount on xvdf -> xvdp
@@ -87,8 +86,7 @@ namespace Ec2Manager
             }
 
             return describeInstancesResponse.DescribeInstancesResult.Reservation
-                .Where(x => x.ReservationId == this.reservationId)
-                .FirstOrDefault().RunningInstance
+                .SelectMany(x => x.RunningInstance)
                 .Where(x => x.InstanceId == this.instanceId)
                 .FirstOrDefault();
         }
@@ -180,11 +178,15 @@ namespace Ec2Manager
             }
 
             var runResponse = this.client.RunInstances(runInstanceRequest);
-            this.reservationId = runResponse.RunInstancesResult.Reservation.ReservationId;
             var instances = runResponse.RunInstancesResult.Reservation.RunningInstance;
             this.instanceId = instances[0].InstanceId;
-            logger.Log("New instance created. Reservation ID: {0}, Instance ID: {1}", this.reservationId, this.instanceId);
+            logger.Log("New instance created. Instance ID: {0}", this.instanceId);
 
+            logger.Log("Waiting for instance to reach 'running' state");
+            await this.UntilStateAsync("running");
+            logger.Log("Instance is now running");
+
+            // Sometimes it takes a little while for the instance to appear, as recognised by this request
             logger.Log("Tagging instance");
             this.client.CreateTags(new CreateTagsRequest()
             {
@@ -195,10 +197,6 @@ namespace Ec2Manager
                     new Tag() { Key = "Name", Value = this.Name },
                 },
             });
-
-            logger.Log("Waiting for instance to reach 'running' state");
-            await this.UntilStateAsync("running");
-            logger.Log("Instance is now running");
 
             logger.Log("Assigning public IP {0} to instance", this.PublicIp);
             this.client.AssociateAddress(new AssociateAddressRequest() 
@@ -399,6 +397,22 @@ namespace Ec2Manager
                 .Where(x => x.Tag.Any(y => y.Key == "CreatedByEc2Manager"))
                 .Select(x => x.VolumeId);
 
+
+            // Public IPs are a limited resource and people are impatient. Make sure we release
+            // the IP before they get too bored
+            if (this.PublicIp != null)
+            {
+                logger.Log("Releasing IP address {0}", this.PublicIp);
+                this.client.DisassociateAddress(new DisassociateAddressRequest()
+                {
+                    PublicIp = this.PublicIp,
+                });
+                this.client.ReleaseAddress(new ReleaseAddressRequest()
+                {
+                    PublicIp = this.PublicIp,
+                });
+            }
+
             // Detach the volumes in parallel, since it takes a nice long time
             logger.Log("Found uniquely attached volumes: {0}", string.Join(", ", volumes));
             var waitUntilDetachedTasks = new List<Task>();
@@ -461,12 +475,6 @@ namespace Ec2Manager
                     KeyName = keyName,
                 });
             }
-
-            logger.Log("Releasing IP address {0}", this.PublicIp);
-            this.client.ReleaseAddress(new ReleaseAddressRequest()
-            {
-                PublicIp = this.PublicIp,
-            });
 
             logger.Log("Instance successfully terminated");
         }

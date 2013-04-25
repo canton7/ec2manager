@@ -162,7 +162,7 @@ namespace Ec2Manager.ViewModels
         {
             var manager = new Ec2Manager(this.AwsAccessKey, this.AwsSecretKey);
             manager.Name = this.InstanceName;
-            events.Publish(new CreateInstanceEvent()
+            this.events.Publish(new CreateInstanceEvent()
             {
                 InstanceAmi = this.AMI,
                 InstanceSize = this.ActiveInstanceType.Value,
@@ -202,7 +202,11 @@ namespace Ec2Manager.ViewModels
         }
         public void TerminateInstance()
         {
-
+            var manager = new Ec2Manager(this.AwsAccessKey, this.AwsSecretKey, this.ActiveTerminatableInstance.Value);
+            events.Publish(new TerminateInstanceEvent()
+            {
+                Manager = manager,
+            });
         }
     }
 }

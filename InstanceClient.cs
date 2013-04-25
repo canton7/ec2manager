@@ -54,9 +54,9 @@ namespace Ec2Manager
         public async Task MountAndSetupDeviceAsync(string device, string mountPointDir, Logger logger)
         {
             var mountPoint = this.mountBase + mountPointDir;
-            this.RunAndLog("sudo mkdir \"" + mountPoint + "\"", logger);
-            this.RunAndLog("sudo mount " + device + " \"" + mountPoint + "\"", logger, false, 5);
-            this.RunAndLog("sudo chown -R " + user + "." + user + " \"" + mountPoint + "\"", logger);
+            await this.RunAndLogAsync("sudo mkdir \"" + mountPoint + "\"", logger);
+            await this.RunAndLogAsync("sudo mount " + device + " \"" + mountPoint + "\"", logger, false, 5);
+            await this.RunAndLogAsync("sudo chown -R " + user + "." + user + " \"" + mountPoint + "\"", logger);
 
             await this.setupCmdLock.WaitAsync();
             {
@@ -132,7 +132,12 @@ namespace Ec2Manager
             return this.client.RunCommand("[ -r \"" + mountPoint + "/ec2manager/user_instruction\" ] && cat \"" + mountPoint + "/ec2manager/user_instruction\"").Result.Trim();
         }
 
-        private void RunAndLog(string command, Logger logger, bool logResult = false, int retryTimes = 0)
+        public string GetUptime()
+        {
+            return this.client.RunCommand("uptime").Result.Trim();
+        }
+
+        private async Task RunAndLogAsync(string command, Logger logger, bool logResult = false, int retryTimes = 0)
         {
             logger.Log(command);
             var cmd = this.client.RunCommand(command);
@@ -146,7 +151,7 @@ namespace Ec2Manager
                 else
                 {
                     logger.Log("Error: {0}", cmd.Error);
-                    System.Threading.Thread.Sleep(1000);
+                    await Task.Delay(1000);
                 }
             }
 

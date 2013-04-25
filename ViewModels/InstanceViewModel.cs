@@ -9,6 +9,7 @@ using Ec2Manager.Classes;
 using Microsoft.Win32;
 using System.IO;
 using Ec2Manager.Configuration;
+using System.Windows.Threading;
 
 namespace Ec2Manager.ViewModels
 {
@@ -27,6 +28,18 @@ namespace Ec2Manager.ViewModels
 
         private Logger logger;
         private Config config;
+        private DispatcherTimer uptimeTimer = new DispatcherTimer();
+
+        private string uptime;
+        public string Uptime
+        {
+            get { return this.uptime; }
+            set
+            {
+                this.uptime = value;
+                this.NotifyOfPropertyChange();
+            }
+        }
 
         private List<VolumeType> volumeTypes = new List<VolumeType>() { new VolumeType(null, "Loading...") };
         public List<VolumeType> VolumeTypes
@@ -62,6 +75,8 @@ namespace Ec2Manager.ViewModels
         {
             this.logger = logger;
             this.config = config;
+            this.uptimeTimer.Interval = TimeSpan.FromSeconds(3);
+            this.uptimeTimer.Tick += (o, e) => this.Uptime = this.Client.GetUptime();
 
             instanceDetailsModel.Logger = logger;
 
@@ -69,7 +84,7 @@ namespace Ec2Manager.ViewModels
             this.ActivateItem(instanceDetailsModel);
         }
 
-        public async Task Setup(Ec2Manager manager, string instanceAmi, string instanceSize, string loginAs, string availabilityZone)
+        public async Task SetupAsync(Ec2Manager manager, string instanceAmi, string instanceSize, string loginAs, string availabilityZone)
         {
             this.Manager = manager;
 
@@ -101,6 +116,7 @@ namespace Ec2Manager.ViewModels
                 });
 
             await Task.WhenAll(createTask, volumesTask);
+            this.uptimeTimer.Start();
         }
 
         public bool CanTerminate
@@ -111,6 +127,7 @@ namespace Ec2Manager.ViewModels
         public async void Terminate()
         {
             this.ActivateItem(this.Items[0]);
+            this.uptimeTimer.Stop();
             await this.Manager.DestroyAsync();
             this.TryClose();
         }

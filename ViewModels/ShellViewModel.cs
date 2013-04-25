@@ -11,7 +11,7 @@ using Ec2Manager.Classes;
 namespace Ec2Manager.ViewModels
 {
     [Export]
-    class ShellViewModel : Conductor<IScreen>.Collection.OneActive, IHandle<CreateInstanceEvent>
+    class ShellViewModel : Conductor<IScreen>.Collection.OneActive, IHandle<CreateInstanceEvent>, IHandle<TerminateInstanceEvent>
     {
         [ImportingConstructor]
         public ShellViewModel(ConnectViewModel connectModel, IEventAggregator events)
@@ -28,7 +28,15 @@ namespace Ec2Manager.ViewModels
             var instanceViewModel = IoC.Get<InstanceViewModel>();
             this.ActivateItem(instanceViewModel);
 
-            await instanceViewModel.Setup(message.Manager, message.InstanceAmi, message.InstanceSize, message.LoginAs, message.AvailabilityZone);
+            await instanceViewModel.SetupAsync(message.Manager, message.InstanceAmi, message.InstanceSize, message.LoginAs, message.AvailabilityZone);
+        }
+
+        public async void Handle(TerminateInstanceEvent message)
+        {
+            var terminateViewModel = IoC.Get<TerminateInstanceViewModel>();
+            this.ActivateItem(terminateViewModel);
+
+            await terminateViewModel.SetupAsync(message.Manager);
         }
     }
 }
