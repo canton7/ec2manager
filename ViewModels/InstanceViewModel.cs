@@ -10,6 +10,7 @@ using Microsoft.Win32;
 using System.IO;
 using Ec2Manager.Configuration;
 using System.Windows.Threading;
+using System.Windows;
 
 namespace Ec2Manager.ViewModels
 {
@@ -115,7 +116,18 @@ namespace Ec2Manager.ViewModels
                     this.NotifyOfPropertyChange(() => VolumeTypes);
                 });
 
-            await Task.WhenAll(createTask, volumesTask);
+            try
+            {
+                await Task.WhenAll(createTask, volumesTask);
+            }
+            catch (Exception e)
+            {
+                this.logger.Log("Error occurred: {0}", e.Message);
+                MessageBox.Show(Application.Current.MainWindow, "Error occurred: " + e.Message, "Error occurred", MessageBoxButton.OK, MessageBoxImage.Error);
+                this.TryClose();
+                return;
+            }
+
             this.uptimeTimer.Start();
         }
 
