@@ -9,6 +9,7 @@ using System.ComponentModel.Composition.Hosting;
 using System.ComponentModel.Composition.Primitives;
 using Ec2Manager.ViewModels;
 using System.Diagnostics;
+using System.Windows;
 
 namespace Ec2Manager
 {
@@ -44,7 +45,8 @@ namespace Ec2Manager
         {
             base.OnUnhandledException(sender, e);
 
-            Debug.Print(e.Exception.Message);
+            MessageBox.Show(Application.Current.MainWindow, "Error occurred: " + e.Exception.InnerException.Message, "Error occurred", MessageBoxButton.OK, MessageBoxImage.Error);
+            e.Handled = true;
         }
 
         protected override IEnumerable<object> GetAllInstances(Type service)
