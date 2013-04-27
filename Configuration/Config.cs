@@ -42,16 +42,13 @@ namespace Ec2Manager.Configuration
             this.snapshotConfig = new AsyncLazy<IEnumerable<VolumeType>>(async () =>
                 {
                     var config = new List<VolumeType>();
-                    try
+                    if (File.Exists(this.SnapshotConfigFile))
                     {
                         config.AddRange(File.ReadAllLines(this.SnapshotConfigFile).Where(x => !x.StartsWith(";") && !string.IsNullOrWhiteSpace(x)).Select(x =>
                         {
-                            var parts = x.Split(new[] { ':' });
+                            var parts = x.Split(new[] { ' ' }, 2);
                             return new VolumeType(parts[0].Trim(), parts[1].Trim());
                         }));
-                    }
-                    catch (FileNotFoundException)
-                    {
                     }
 
                     try
@@ -59,7 +56,7 @@ namespace Ec2Manager.Configuration
                         WebClient client = new WebClient();
                         config.AddRange((await client.DownloadStringTaskAsync(Settings.Default.SnapshotConfigUrl)).Split(new[] { "\n", "\r\n" }, StringSplitOptions.RemoveEmptyEntries).Where(x => !x.StartsWith(";")).Select(x =>
                         {
-                            var parts = x.Split(new[] { ':' });
+                            var parts = x.Split(new[] { ' ' }, 2);
                             return new VolumeType(parts[0].Trim(), parts[1].Trim());
                         }));
                     }

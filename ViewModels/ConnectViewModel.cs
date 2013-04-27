@@ -28,6 +28,13 @@ namespace Ec2Manager.ViewModels
             new LabelledValue("High-CPU Medium", "c1.medium"),
             new LabelledValue("High-CPU Extra Large", "c1.xlarge"),
         };
+        private static readonly LabelledValue[] availabilityZones = new LabelledValue[]
+        {
+            new LabelledValue("Any", null),
+            new LabelledValue("eu-west-1a", "eu-west-1a"),
+            new LabelledValue("eu-west-1b", "eu-west-1b"),
+            new LabelledValue("eu-west-1c", "eu-west-1c"),
+        };
 
         private string awsAccessKey = Settings.Default.DefaultAwsAccessKey;
         public string AwsAccessKey
@@ -99,13 +106,18 @@ namespace Ec2Manager.ViewModels
             }
         }
 
-        private string availabilityZone;
-        public string AvailabilityZone
+        public LabelledValue[] AvailabilityZones
         {
-            get { return this.availabilityZone; }
+            get { return availabilityZones; }
+        }
+
+        private LabelledValue selectedAvailabilityZone = availabilityZones[0];
+        public LabelledValue SelectedAvailabilityZone
+        {
+            get { return this.selectedAvailabilityZone; }
             set
             {
-                this.availabilityZone = value;
+                this.selectedAvailabilityZone = value;
                 this.NotifyOfPropertyChange();
             }
         }
@@ -142,7 +154,7 @@ namespace Ec2Manager.ViewModels
             this.events = events;
 
             this.DisplayName = "Create New Instance";
-            this.ActiveInstanceType = this.InstanceTypes[0];
+            this.ActiveInstanceType = this.InstanceTypes.FirstOrDefault(x => x.Value == "t1.micro");
             this.ActiveTerminatableInstance = this.TerminatableInstances[0];
         }
 
@@ -168,7 +180,7 @@ namespace Ec2Manager.ViewModels
                 InstanceSize = this.ActiveInstanceType.Value,
                 Manager = manager,
                 LoginAs = this.LoginAs,
-                AvailabilityZone = this.AvailabilityZone,
+                AvailabilityZone = this.SelectedAvailabilityZone.Value,
             });
         }
 
@@ -203,10 +215,16 @@ namespace Ec2Manager.ViewModels
         public void TerminateInstance()
         {
             var manager = new Ec2Manager(this.AwsAccessKey, this.AwsSecretKey, this.ActiveTerminatableInstance.Value);
+            manager.Name = this.ActiveTerminatableInstance.Label;
             events.Publish(new TerminateInstanceEvent()
             {
                 Manager = manager,
             });
+        }
+
+        public void ShowCredentials()
+        {
+            System.Diagnostics.Process.Start(Settings.Default.AwsCredentialsUrl);
         }
     }
 }

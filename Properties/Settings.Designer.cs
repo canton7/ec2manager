@@ -25,7 +25,7 @@ namespace Ec2Manager.Properties {
         
         [global::System.Configuration.UserScopedSettingAttribute()]
         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
-        [global::System.Configuration.DefaultSettingValueAttribute("ami-5a60692e")]
+        [global::System.Configuration.DefaultSettingValueAttribute("ami-3d160149")]
         public string DefaultAMI {
             get {
                 return ((string)(this["DefaultAMI"]));
@@ -80,6 +80,18 @@ namespace Ec2Manager.Properties {
             }
             set {
                 this["SnapshotConfigUrl"] = value;
+            }
+        }
+        
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("https://portal.aws.amazon.com/gp/aws/securityCredentials")]
+        public string AwsCredentialsUrl {
+            get {
+                return ((string)(this["AwsCredentialsUrl"]));
+            }
+            set {
+                this["AwsCredentialsUrl"] = value;
             }
         }
     }

@@ -3,7 +3,7 @@
   <Profiles />
   <Settings>
     <Setting Name="DefaultAMI" Type="System.String" Scope="User">
-      <Value Profile="(Default)">ami-5a60692e</Value>
+      <Value Profile="(Default)">ami-3d160149</Value>
     </Setting>
     <Setting Name="DefaultLoginAs" Type="System.String" Scope="User">
       <Value Profile="(Default)">ubuntu</Value>
@@ -16,6 +16,9 @@
     </Setting>
     <Setting Name="SnapshotConfigUrl" Type="System.String" Scope="User">
       <Value Profile="(Default)">http://canton7-ec2manager.s3.amazonaws.com/snapshot-config.txt</Value>
+    </Setting>
+    <Setting Name="AwsCredentialsUrl" Type="System.String" Scope="User">
+      <Value Profile="(Default)">https://portal.aws.amazon.com/gp/aws/securityCredentials</Value>
     </Setting>
   </Settings>
 </SettingsFile>

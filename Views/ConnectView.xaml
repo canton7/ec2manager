@@ -4,17 +4,24 @@
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              xmlns:cal="http://www.caliburnproject.org"
+             xmlns:supp="clr-namespace:Ec2Manager.Support"
              mc:Ignorable="d" 
              d:DesignHeight="500" d:DesignWidth="600"
              Padding="20">
     <DockPanel>
         <GroupBox Header="Credentials" DockPanel.Dock="Top" VerticalAlignment="Top" Padding="10">
-            <StackPanel Orientation="Horizontal">
-                <TextBlock>Access Key:</TextBlock>
-                <TextBox Name="AwsAccessKey" Width="150" Margin="15,0"/>
-                <TextBlock>Secret Key:</TextBlock>
-                <TextBox Name="AwsSecretKey" Width="150" Margin="15,0"/>
-            </StackPanel>
+            <DockPanel>
+                <StackPanel DockPanel.Dock="Top" Orientation="Horizontal">
+                    <TextBlock>Access Key:</TextBlock>
+                    <TextBox Name="AwsAccessKey" Width="150" Margin="15,0"/>
+                    <TextBlock>Secret Key:</TextBlock>
+                    <TextBox Name="AwsSecretKey" Width="150" Margin="15,0"/>
+                </StackPanel>
+
+                <TextBlock Margin="0,10,0,0">Forgotten your credentials? <Hyperlink supp:HyperlinkUtilities.Action="ShowCredentials">Find them here</Hyperlink>.</TextBlock>
+            </DockPanel>
+            
+            
         </GroupBox>
 
         <GroupBox Header="Create Instance" DockPanel.Dock="Top" VerticalAlignment="Top" Padding="10">
@@ -34,8 +41,8 @@
                 </StackPanel>
                 
                 <StackPanel DockPanel.Dock="Top" Orientation="Horizontal">
-                    <TextBlock>Availability Zone (empty for any):</TextBlock>
-                    <TextBox Name="AvailabilityZone" Width="100" Margin="15,0"/>
+                    <TextBlock>Availability Zone:</TextBlock>
+                    <ComboBox x:Name="AvailabilityZones" Width="100" Margin="15,0" DisplayMemberPath="Label" />
                 </StackPanel>
 
                 <Button Name="Create" DockPanel.Dock="Top" IsDefault="True" HorizontalAlignment="Center" VerticalAlignment="Top" Margin="0,20,0,0" Padding="20,5">Create Instance</Button>

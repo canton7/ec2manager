@@ -43,9 +43,7 @@ namespace Ec2Manager
                         {
                             this.client.Connect();
                         }
-                        catch (System.Net.Sockets.SocketException)
-                        {
-                        }
+                        catch (System.Net.Sockets.SocketException) { }
                     }
                     logger.Log("Connected");
                 });
@@ -142,7 +140,7 @@ namespace Ec2Manager
             logger.Log(command);
             var cmd = this.client.RunCommand(command);
 
-            for (int i = 0; i < retryTimes + 1; i++)
+            for (int i = 0; ; i++)
             {
                 if (cmd.ExitStatus == 0)
                 {
@@ -150,13 +148,15 @@ namespace Ec2Manager
                 }
                 else
                 {
-                    logger.Log("Error: {0}", cmd.Error);
-                    await Task.Delay(1000);
+                    logger.Log("Error: {0}. Retrying in 5 seconds", cmd.Error);
+                    if (i == retryTimes)
+                        throw new Exception(string.Format("Command {0} failed with error {1}", command, cmd.Error));
+                    await Task.Delay(5000);
                 }
             }
 
             if (logResult)
-                logger.Log(cmd.Result);
+                logger.Log(cmd.Result.TrimEnd());
         }
 
         private Task RunAndLogStreamAsync(string command, Logger logger, bool logCommand = false)
@@ -192,7 +192,7 @@ namespace Ec2Manager
                             if (cancellationToken.HasValue)
                                 cancellationToken.Value.ThrowIfCancellationRequested();
 
-                            var result = reader.ReadToEnd().Trim();
+                            var result = reader.ReadToEnd().TrimEnd();
                             if (!string.IsNullOrEmpty(result))
                                 logger.Log(result);
 

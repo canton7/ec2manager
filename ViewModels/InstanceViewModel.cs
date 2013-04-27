@@ -169,7 +169,16 @@ namespace Ec2Manager.ViewModels
 
             this.ActivateItem(volumeViewModel);
 
-            await volumeViewModel.Setup(this.Manager, this.Client, this.SelectedVolumeType.Name, volumeId);
+            try
+            {
+                await volumeViewModel.Setup(this.Manager, this.Client, this.SelectedVolumeType.Name, volumeId);
+            }
+            catch (Exception e)
+            {
+                this.logger.Log("Error occurred: {0}", e.Message);
+                MessageBox.Show(Application.Current.MainWindow, "Error occurred: " + e.Message, "Error occurred", MessageBoxButton.OK, MessageBoxImage.Error);
+                volumeViewModel.TryClose();
+            }
         }
 
         public bool CanSavePrivateKey

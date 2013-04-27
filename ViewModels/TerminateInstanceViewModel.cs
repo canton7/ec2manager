@@ -38,14 +38,15 @@ namespace Ec2Manager.ViewModels
         public TerminateInstanceViewModel(Logger logger)
         {
             this.Logger = logger;
-
             this.DisplayName = "Terminating Instance";
         }
 
         public async Task SetupAsync(Ec2Manager manager)
         {
             this.Manager = manager;
+            this.DisplayName = "Terminating " + this.Manager.Name;
             await this.Manager.DestroyAsync(this.Logger);
+            this.TryClose();
         }
     }
 }

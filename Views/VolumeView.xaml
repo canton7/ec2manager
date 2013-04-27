@@ -25,7 +25,7 @@
         </GroupBox>
         
         <GroupBox Header="User Instruction" DockPanel.Dock="Top" Padding="10">
-            <TextBlock Name="UserInstruction" TextWrapping="Wrap"/>
+            <TextBox Name="UserInstruction" Background="Transparent" BorderThickness="0" IsReadOnly="True" TextWrapping="Wrap"/>
         </GroupBox>
         
         <TextBox DockPanel.Dock="Top"
