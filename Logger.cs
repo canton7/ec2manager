@@ -12,7 +12,7 @@ namespace Ec2Manager
 {
     [Export]
     [PartCreationPolicy(CreationPolicy.NonShared)]
-    public class Logger : PropertyChangedBase
+    public class Logger : PropertyChangedBase, ILogger
     {
         private BindableCollection<LogEntry> entries = new BindableCollection<LogEntry>();
         public BindableCollection<LogEntry> Entries
@@ -58,18 +58,6 @@ namespace Ec2Manager
             {
                 this.Entries.Add(new LogEntry(entry));
             }
-        }
-
-        public class LogEntry
-        {
-            public string Message { get; private set; }
-            public DateTime Time { get; private set; }
-
-            public LogEntry (string message)
-	        {
-                this.Message = message;
-                this.Time = DateTime.Now;
-	        }
         }
     }
 }

@@ -14,7 +14,7 @@ namespace Ec2Manager.Converters
 
         public object Convert(object value, Type targetType, object parameter, System.Globalization.CultureInfo culture)
         {
-            var entries = value as BindableCollection<Logger.LogEntry>;
+            var entries = value as BindableCollection<LogEntry>;
             if (entries == null)
                 return null;
 

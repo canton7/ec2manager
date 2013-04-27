@@ -95,6 +95,7 @@
     <Compile Include="Configuration\Config.cs" />
     <Compile Include="Configuration\VolumeType.cs" />
     <Compile Include="Events\TerminateInstanceEvent.cs" />
+    <Compile Include="ILogger.cs" />
     <Compile Include="Support\HyperlinkUtilities.cs" />
     <Compile Include="Support\TextBoxUtilities.cs" />
     <Compile Include="Classes\LabelledValue.cs" />

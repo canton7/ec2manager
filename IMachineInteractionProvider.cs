@@ -9,7 +9,7 @@ namespace Ec2Manager
 {
     public interface IMachineInteractionProvider
     {
-        Task MountAndSetupDeviceAsync(string device, string mountPoint, Logger logger);
-        IEnumerable<PortRangeDescription> GetPortDescriptions(string mountPointDir, Logger logger);
+        Task MountAndSetupDeviceAsync(string device, string mountPoint, ILogger logger);
+        IEnumerable<PortRangeDescription> GetPortDescriptions(string mountPointDir, ILogger logger);
     }
 }

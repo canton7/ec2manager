@@ -31,7 +31,7 @@ namespace Ec2Manager
             this.key = key;
         }
 
-        public Task ConnectAsync(Logger logger)
+        public Task ConnectAsync(ILogger logger)
         {
             return Task.Run(() =>
                 {
@@ -49,7 +49,7 @@ namespace Ec2Manager
                 });
         }
 
-        public async Task MountAndSetupDeviceAsync(string device, string mountPointDir, Logger logger)
+        public async Task MountAndSetupDeviceAsync(string device, string mountPointDir, ILogger logger)
         {
             var mountPoint = this.mountBase + mountPointDir;
             await this.RunAndLogAsync("sudo mkdir \"" + mountPoint + "\"", logger);
@@ -63,7 +63,7 @@ namespace Ec2Manager
             this.setupCmdLock.Release();
         }
 
-        public IEnumerable<PortRangeDescription> GetPortDescriptions(string mountPointDir, Logger logger)
+        public IEnumerable<PortRangeDescription> GetPortDescriptions(string mountPointDir, ILogger logger)
         {
             var mountPoint = this.mountBase + mountPointDir;
 
@@ -110,20 +110,20 @@ namespace Ec2Manager
                 });
         }
 
-        public string GetRunCommand(string mountPointDir, Logger logger)
+        public string GetRunCommand(string mountPointDir, ILogger logger)
         {
             var mountPoint = this.mountBase + mountPointDir;
 
             return this.client.RunCommand("[ -r \"" + mountPoint + "/ec2manager/runcmd\" ] && cat \"" + mountPoint + "/ec2manager/runcmd\"").Result.Trim();
         }
 
-        public async Task RunCommandAsync(string from, string command, Logger logger, CancellationToken? cancellationToken = null)
+        public async Task RunCommandAsync(string from, string command, ILogger logger, CancellationToken? cancellationToken = null)
         {
             var cmd = "cd \"" + from + "\" && " + command + "";
             await this.RunInShell(cmd, logger, cancellationToken);
         }
 
-        public string GetUserInstruction(string mountPointDir, Logger logger)
+        public string GetUserInstruction(string mountPointDir, ILogger logger)
         {
             var mountPoint = this.mountBase + mountPointDir;
 
@@ -135,7 +135,7 @@ namespace Ec2Manager
             return this.client.RunCommand("uptime").Result.Trim();
         }
 
-        private async Task RunAndLogAsync(string command, Logger logger, bool logResult = false, int retryTimes = 0)
+        private async Task RunAndLogAsync(string command, ILogger logger, bool logResult = false, int retryTimes = 0)
         {
             logger.Log(command);
             var cmd = this.client.RunCommand(command);
@@ -159,7 +159,7 @@ namespace Ec2Manager
                 logger.Log(cmd.Result.TrimEnd());
         }
 
-        private Task RunAndLogStreamAsync(string command, Logger logger, bool logCommand = false)
+        private Task RunAndLogStreamAsync(string command, ILogger logger, bool logCommand = false)
         {
             if (logCommand)
                 logger.Log(command);
@@ -173,7 +173,7 @@ namespace Ec2Manager
             });
         }
 
-        private Task RunInShell(string command, Logger logger, System.Threading.CancellationToken? cancellationToken = null)
+        private Task RunInShell(string command, ILogger logger, System.Threading.CancellationToken? cancellationToken = null)
         {
             Action runAction = () =>
                 {
