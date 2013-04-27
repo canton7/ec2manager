@@ -32,3 +32,6 @@ obj/
 #NuGet
 packages/
 
+#Installer
+installer/*.exe
+
