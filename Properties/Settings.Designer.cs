@@ -73,13 +73,25 @@ namespace Ec2Manager.Properties {
         
         [global::System.Configuration.UserScopedSettingAttribute()]
         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
-        [global::System.Configuration.DefaultSettingValueAttribute("Testy")]
+        [global::System.Configuration.DefaultSettingValueAttribute("")]
         public string HomePageUrl {
             get {
                 return ((string)(this["HomePageUrl"]));
             }
             set {
                 this["HomePageUrl"] = value;
+            }
+        }
+        
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("https://console.aws.amazon.com/ec2/home?region=eu-west-1")]
+        public string Ec2ConsoleUrl {
+            get {
+                return ((string)(this["Ec2ConsoleUrl"]));
+            }
+            set {
+                this["Ec2ConsoleUrl"] = value;
             }
         }
     }

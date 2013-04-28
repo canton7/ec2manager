@@ -15,7 +15,10 @@
       <Value Profile="(Default)">https://portal.aws.amazon.com/gp/aws/securityCredentials</Value>
     </Setting>
     <Setting Name="HomePageUrl" Type="System.String" Scope="User">
-      <Value Profile="(Default)">Testy</Value>
+      <Value Profile="(Default)" />
+    </Setting>
+    <Setting Name="Ec2ConsoleUrl" Type="System.String" Scope="User">
+      <Value Profile="(Default)">https://console.aws.amazon.com/ec2/home?region=eu-west-1</Value>
     </Setting>
   </Settings>
 </SettingsFile>

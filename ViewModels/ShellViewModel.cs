@@ -9,6 +9,8 @@ using System.Threading.Tasks;
 using Ec2Manager.Classes;
 using System.Windows;
 using Ec2Manager.Configuration;
+using Ec2Manager.Properties;
+using System.Diagnostics;
 
 namespace Ec2Manager.ViewModels
 {
@@ -64,6 +66,11 @@ namespace Ec2Manager.ViewModels
         public void ShowSettings()
         {
             this.windowManager.ShowDialog(IoC.Get<SettingsViewModel>());
+        }
+
+        public void ShowEc2Console()
+        {
+            Process.Start(Settings.Default.Ec2ConsoleUrl);
         }
 
         public void ShowAbout()
