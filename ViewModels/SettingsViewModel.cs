@@ -1,5 +1,6 @@
 ﻿using Caliburn.Micro;
 using Ec2Manager.Configuration;
+using Ec2Manager.Properties;
 using System;
 using System.Collections.Generic;
 using System.ComponentModel.Composition;
@@ -34,6 +35,11 @@ namespace Ec2Manager.ViewModels
         public void Cancel()
         {
             this.config.DiscardMainConfig();
+        }
+
+        public void ShowCredentials()
+        {
+            System.Diagnostics.Process.Start(Settings.Default.AwsCredentialsUrl);
         }
     }
 }

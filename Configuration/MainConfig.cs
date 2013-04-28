@@ -36,8 +36,8 @@ namespace Ec2Manager.Configuration
             }
         }
 
-        public string DefaultAwsAccessKey { get; set; }
-        public string DefaultAwsSecretKey { get; set; }
+        public string AwsAccessKey { get; set; }
+        public string AwsSecretKey { get; set; }
         
         public string DefaultAmi { get; set; }
         // If they don't change it, use the one from App.config. This allows us to change the default easily

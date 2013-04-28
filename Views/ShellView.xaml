@@ -8,7 +8,7 @@
     <DockPanel>
         <Menu IsMainMenu="True" DockPanel.Dock="Top">
             <MenuItem Header="_File">
-                <MenuItem x:Name="ShowSettings" Header="Set _Default Settings"/>
+                <MenuItem x:Name="ShowSettings" Header="_Settings"/>
                 <MenuItem x:Name="TryClose" Header="_Exit"/>
             </MenuItem>
         </Menu>

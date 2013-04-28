@@ -89,6 +89,11 @@ namespace Ec2Manager.Configuration
             }
         }
 
+        public bool NeedToUpdateMainConfig()
+        {
+            return string.IsNullOrWhiteSpace(this.MainConfig.AwsAccessKey) || string.IsNullOrWhiteSpace(this.MainConfig.AwsSecretKey);
+        }
+
         public void SaveMainConfig()
         {
             this.MainConfig.SaveToFile(this.MainConfigFile);

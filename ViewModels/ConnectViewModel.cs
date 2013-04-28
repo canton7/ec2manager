@@ -39,35 +39,7 @@ namespace Ec2Manager.ViewModels
 
         private Config config;
 
-        private string awsAccessKey;
-        public string AwsAccessKey
-        {
-            get { return this.awsAccessKey; }
-            set
-            {
-                this.awsAccessKey = value;
-                this.NotifyOfPropertyChange();
-                this.NotifyOfPropertyChange(() => CanCreate);
-                this.NotifyOfPropertyChange(() => CanRefreshTerminatableInstances);
-                this.NotifyOfPropertyChange(() => CanTerminateInstance);
-            }
-        }
-
-        private string awsSecretKey;
-        public string AwsSecretKey
-        {
-            get { return this.awsSecretKey; }
-            set
-            {
-                this.awsSecretKey = value;
-                this.NotifyOfPropertyChange();
-                this.NotifyOfPropertyChange(() => CanCreate);
-                this.NotifyOfPropertyChange(() => CanRefreshTerminatableInstances);
-                this.NotifyOfPropertyChange(() => CanTerminateInstance);
-            }
-        }
-
-        private string instanceName;
+        private string instanceName = "My Server";
         public string InstanceName
         {
             get { return this.instanceName; }
@@ -157,7 +129,13 @@ namespace Ec2Manager.ViewModels
             this.config = config;
             this.events = events;
 
-            this.config.Bind(s => s.MainConfig, (o, e) => this.LoadFromConfig());
+            this.config.Bind(s => s.MainConfig, (o, e) => 
+                {
+                    this.LoadFromConfig();
+                    this.NotifyOfPropertyChange(() => CanCreate);
+                    this.NotifyOfPropertyChange(() => CanRefreshTerminatableInstances);
+                    this.NotifyOfPropertyChange(() => CanTerminateInstance);
+                });
 
             this.DisplayName = "Create New Instance";
             this.LoadFromConfig();
@@ -168,8 +146,6 @@ namespace Ec2Manager.ViewModels
 
         private void LoadFromConfig()
         {
-            this.AwsAccessKey = this.config.MainConfig.DefaultAwsAccessKey;
-            this.AwsSecretKey = this.config.MainConfig.DefaultAwsSecretKey;
             this.AMI = this.config.MainConfig.DefaultAmi;
             this.LoginAs = this.config.MainConfig.DefaultLogonUser;
         }
@@ -178,8 +154,8 @@ namespace Ec2Manager.ViewModels
         {
             get
             {
-                return !string.IsNullOrWhiteSpace(this.AwsAccessKey) &&
-                    !string.IsNullOrWhiteSpace(this.AwsSecretKey) &&
+                return !string.IsNullOrWhiteSpace(this.config.MainConfig.AwsAccessKey) &&
+                    !string.IsNullOrWhiteSpace(this.config.MainConfig.AwsSecretKey) &&
                     !string.IsNullOrWhiteSpace(this.InstanceName) &&
                     !string.IsNullOrWhiteSpace(this.LoginAs) &&
                     !string.IsNullOrWhiteSpace(this.AMI);
@@ -187,7 +163,7 @@ namespace Ec2Manager.ViewModels
         }
         public void Create()
         {
-            var manager = new Ec2Manager(this.AwsAccessKey, this.AwsSecretKey);
+            var manager = new Ec2Manager(this.config.MainConfig.AwsAccessKey, this.config.MainConfig.AwsSecretKey);
             manager.Name = this.InstanceName;
             this.events.Publish(new CreateInstanceEvent()
             {
@@ -203,13 +179,13 @@ namespace Ec2Manager.ViewModels
         {
             get
             {
-                return !string.IsNullOrWhiteSpace(this.awsAccessKey) &&
-                    !string.IsNullOrWhiteSpace(this.AwsSecretKey);
+                return !string.IsNullOrWhiteSpace(this.config.MainConfig.AwsAccessKey) &&
+                    !string.IsNullOrWhiteSpace(this.config.MainConfig.AwsSecretKey);
             }
         }
         public void RefreshTerminatableInstances()
         {
-            var manager = new Ec2Manager(this.AwsAccessKey, this.AwsSecretKey);
+            var manager = new Ec2Manager(this.config.MainConfig.AwsAccessKey, this.config.MainConfig.AwsSecretKey);
             this.TerminatableInstances = manager.ListInstances().Select(x => new LabelledValue(x.Item2, x.Item1)).ToArray();
             if (this.TerminatableInstances.Length == 0)
             {
@@ -222,24 +198,19 @@ namespace Ec2Manager.ViewModels
         {
             get
             {
-                return !string.IsNullOrWhiteSpace(this.awsAccessKey) &&
-                    !string.IsNullOrWhiteSpace(this.AwsSecretKey) &&
+                return !string.IsNullOrWhiteSpace(this.config.MainConfig.AwsAccessKey) &&
+                    !string.IsNullOrWhiteSpace(this.config.MainConfig.AwsSecretKey) &&
                     this.ActiveTerminatableInstance != null && !string.IsNullOrEmpty(this.ActiveTerminatableInstance.Value);
             }
         }
         public void TerminateInstance()
         {
-            var manager = new Ec2Manager(this.AwsAccessKey, this.AwsSecretKey, this.ActiveTerminatableInstance.Value);
+            var manager = new Ec2Manager(this.config.MainConfig.AwsAccessKey, this.config.MainConfig.AwsSecretKey, this.ActiveTerminatableInstance.Value);
             manager.Name = this.ActiveTerminatableInstance.Label;
             events.Publish(new TerminateInstanceEvent()
             {
                 Manager = manager,
             });
-        }
-
-        public void ShowCredentials()
-        {
-            System.Diagnostics.Process.Start(Settings.Default.AwsCredentialsUrl);
         }
     }
 }
