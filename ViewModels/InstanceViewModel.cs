@@ -157,21 +157,24 @@ namespace Ec2Manager.ViewModels
         {
             var volumeViewModel = IoC.Get<VolumeViewModel>();
             string volumeId;
+            string volumeName;
 
             if (this.SelectedVolumeType.IsCustom)
             {
                 volumeId = this.CustomVolumeSnapshotId;
+                volumeName = this.CustomVolumeSnapshotId;
             }
             else
             {
                 volumeId = this.SelectedVolumeType.SnapshotId;
+                volumeName = this.selectedVolumeType.Name;
             }
 
             this.ActivateItem(volumeViewModel);
 
             try
             {
-                await volumeViewModel.Setup(this.Manager, this.Client, this.SelectedVolumeType.Name, volumeId);
+                await volumeViewModel.Setup(this.Manager, this.Client, volumeName, volumeId);
             }
             catch (Exception e)
             {
