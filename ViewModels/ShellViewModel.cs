@@ -11,16 +11,24 @@ using Ec2Manager.Classes;
 namespace Ec2Manager.ViewModels
 {
     [Export]
-    class ShellViewModel : Conductor<IScreen>.Collection.OneActive, IHandle<CreateInstanceEvent>, IHandle<TerminateInstanceEvent>
+    public class ShellViewModel : Conductor<IScreen>.Collection.OneActive, IHandle<CreateInstanceEvent>, IHandle<TerminateInstanceEvent>
     {
+        private IWindowManager windowManager;
+
         [ImportingConstructor]
-        public ShellViewModel(ConnectViewModel connectModel, IEventAggregator events)
+        public ShellViewModel(ConnectViewModel connectModel, IEventAggregator events, IWindowManager windowManager)
         {
             this.DisplayName = "Ec2Manager";
+            this.windowManager = windowManager;
 
             events.Subscribe(this);
 
             this.ActivateItem(connectModel);
+        }
+
+        public void ShowSettings()
+        {
+            this.windowManager.ShowDialog(IoC.Get<SettingsViewModel>());
         }
 
         public async void Handle(CreateInstanceEvent message)

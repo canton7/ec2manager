@@ -1,5 +1,6 @@
 ﻿using Caliburn.Micro;
 using Ec2Manager.Classes;
+using Ec2Manager.Configuration;
 using Ec2Manager.Events;
 using Ec2Manager.Properties;
 using System;
@@ -36,7 +37,9 @@ namespace Ec2Manager.ViewModels
             new LabelledValue("eu-west-1c", "eu-west-1c"),
         };
 
-        private string awsAccessKey = Settings.Default.DefaultAwsAccessKey;
+        private Config config;
+
+        private string awsAccessKey;
         public string AwsAccessKey
         {
             get { return this.awsAccessKey; }
@@ -50,7 +53,7 @@ namespace Ec2Manager.ViewModels
             }
         }
 
-        private string awsSecretKey = Settings.Default.DefaultAwsSecretKey;
+        private string awsSecretKey;
         public string AwsSecretKey
         {
             get { return this.awsSecretKey; }
@@ -76,7 +79,7 @@ namespace Ec2Manager.ViewModels
             }
         }
 
-        private string loginAs = Settings.Default.DefaultLoginAs;
+        private string loginAs;
         public string LoginAs
         {
             get { return this.loginAs; }
@@ -94,7 +97,7 @@ namespace Ec2Manager.ViewModels
         }
         public LabelledValue ActiveInstanceType { get; set; }
 
-        private string ami = Settings.Default.DefaultAMI;
+        private string ami;
         public string AMI
         {
             get { return this.ami; }
@@ -149,15 +152,27 @@ namespace Ec2Manager.ViewModels
         private IEventAggregator events;
 
         [ImportingConstructor]
-        public ConnectViewModel(IEventAggregator events)
+        public ConnectViewModel(Config config, IEventAggregator events)
         {
+            this.config = config;
             this.events = events;
 
+            this.config.Bind(s => s.MainConfig, (o, e) => this.LoadFromConfig());
+
             this.DisplayName = "Create New Instance";
+            this.LoadFromConfig();
+
             this.ActiveInstanceType = this.InstanceTypes.FirstOrDefault(x => x.Value == "t1.micro");
             this.ActiveTerminatableInstance = this.TerminatableInstances[0];
         }
 
+        private void LoadFromConfig()
+        {
+            this.AwsAccessKey = this.config.MainConfig.DefaultAwsAccessKey;
+            this.AwsSecretKey = this.config.MainConfig.DefaultAwsSecretKey;
+            this.AMI = this.config.MainConfig.DefaultAmi;
+            this.LoginAs = this.config.MainConfig.DefaultLogonUser;
+        }
 
         public bool CanCreate
         {

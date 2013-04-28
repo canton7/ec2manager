@@ -1,4 +1,5 @@
-﻿using Ec2Manager.Classes;
+﻿using Caliburn.Micro;
+using Ec2Manager.Classes;
 using Ec2Manager.Properties;
 using System;
 using System.Collections.Generic;
@@ -13,7 +14,7 @@ namespace Ec2Manager.Configuration
 {
     [Export]
     [PartCreationPolicy(CreationPolicy.Shared)]
-    public class Config
+    public class Config : PropertyChangedBase 
     {
         private readonly string appDataFolder = "Ec2Manager"; 
 
@@ -21,6 +22,13 @@ namespace Ec2Manager.Configuration
         {
             get { return Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), appDataFolder); }
         }
+
+        public string MainConfigFile
+        {
+            get { return Path.Combine(this.ConfigDir, "config.xml"); }
+        }
+
+        public MainConfig MainConfig { get; private set; }
 
         public string SnapshotConfigFile
         {
@@ -33,11 +41,12 @@ namespace Ec2Manager.Configuration
             return this.snapshotConfig.Value;
         }
 
-
         [ImportingConstructor]
         public Config()
         {
             Directory.CreateDirectory(this.ConfigDir);
+
+            this.LoadMainConfig();
 
             this.snapshotConfig = new AsyncLazy<IEnumerable<VolumeType>>(async () =>
                 {
@@ -66,6 +75,29 @@ namespace Ec2Manager.Configuration
 
                     return config;
                 });
+        }
+
+        private void LoadMainConfig()
+        {
+            if (File.Exists(this.MainConfigFile))
+            {
+                this.MainConfig = MainConfig.FromFile(this.MainConfigFile);
+            }
+            else
+            {
+                this.MainConfig = new MainConfig();
+            }
+        }
+
+        public void SaveMainConfig()
+        {
+            this.MainConfig.SaveToFile(this.MainConfigFile);
+            this.NotifyOfPropertyChange(() => MainConfig);
+        }
+
+        public void DiscardMainConfig()
+        {
+            this.LoadMainConfig();
         }
     }
 }

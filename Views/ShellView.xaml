@@ -5,7 +5,14 @@
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
              mc:Ignorable="d"
              Width="600" Height="600">
-    <Grid>
-        <TabControl Name="Items"/>
-    </Grid>
+    <DockPanel>
+        <Menu IsMainMenu="True" DockPanel.Dock="Top">
+            <MenuItem Header="_File">
+                <MenuItem x:Name="ShowSettings" Header="Set _Default Settings"/>
+                <MenuItem x:Name="TryClose" Header="_Exit"/>
+            </MenuItem>
+        </Menu>
+
+        <TabControl Name="Items" DockPanel.Dock="Top"/>
+    </DockPanel>
 </Window>
