@@ -45,7 +45,8 @@ namespace Ec2Manager
         {
             base.OnUnhandledException(sender, e);
 
-            MessageBox.Show(Application.Current.MainWindow, "Error occurred: " + e.Exception.InnerException.Message, "Error occurred", MessageBoxButton.OK, MessageBoxImage.Error);
+            string message = e.Exception.InnerException == null ? e.Exception.Message : e.Exception.InnerException.Message;
+            MessageBox.Show(Application.Current.MainWindow, "Error occurred: " + message, "Error occurred", MessageBoxButton.OK, MessageBoxImage.Error);
             e.Handled = true;
         }
 

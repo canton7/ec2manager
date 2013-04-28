@@ -9,6 +9,7 @@ using Amazon.EC2.Model;
 using Caliburn.Micro;
 using System.IO;
 using Ec2Manager.Classes;
+using System.Threading;
 
 namespace Ec2Manager
 {
@@ -115,12 +116,15 @@ namespace Ec2Manager
             return result;
         }
 
-        private async Task UntilStateAsync(string state)
+        private async Task UntilStateAsync(string state, CancellationToken? cancellationToken = null)
         {
             bool gotToState = false;
 
             while (!gotToState)
             {
+                if (cancellationToken.HasValue && cancellationToken.Value.IsCancellationRequested)
+                    break;
+
                 this.InstanceState = this.GetRunningInstance().InstanceState.Name;
 
                 if (this.InstanceState == state)
@@ -285,7 +289,21 @@ namespace Ec2Manager
             });
 
             logger.Log("Waiting for instance to reach 'running' state");
-            await this.UntilStateAsync( "running");
+            // Sometimes (I have no idea why) AWS reports the instance as pending when the console shows it running
+            // The observed fix is to restart it
+            CancellationTokenSource cts = new CancellationTokenSource(TimeSpan.FromSeconds(45));
+            await this.UntilStateAsync("running", cts.Token);
+            if (cts.IsCancellationRequested)
+            {
+                logger.Log("The instance is taking a long time to come up. This happens sometimes.");
+                logger.Log("Sometimes issuing a reboot fixes it, so trying that...");
+                this.client.RebootInstances(new RebootInstancesRequest() 
+                {
+                    InstanceId = new List<string>() { this.instanceId },
+                });
+                await this.UntilStateAsync("running");
+            }
+
             logger.Log("Instance is now running");
         }
 

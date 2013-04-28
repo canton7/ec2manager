@@ -8,19 +8,19 @@
              mc:Ignorable="d" 
              d:DesignHeight="400" d:DesignWidth="600">
     <DockPanel>
-        <GroupBox Header="Launch Game" DockPanel.Dock="Top" Padding="10">
+        <GroupBox Header="Launch Service" DockPanel.Dock="Top" Padding="10">
             <Grid>
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="Auto"/>
                     <ColumnDefinition/>
-                    <ColumnDefinition Width="Auto"/>
-                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="80"/>
+                    <ColumnDefinition Width="80"/>
                 </Grid.ColumnDefinitions>
                 
-                <TextBlock Grid.Column="0">Run Command: </TextBlock>
+                <TextBlock Grid.Column="0">Command:</TextBlock>
                 <TextBox Name="RunCommand" Grid.Column="1" Margin="10,0" TextWrapping="Wrap"/>
-                <Button Name="StartGame" Grid.Column="2" Margin="5,0">Launch Game</Button>
-                <Button Name="StopGame" Grid.Column="3" Margin="5,0">Stop Game</Button>
+                <Button Name="StartGame" Grid.Column="2" Margin="5,0">Launch</Button>
+                <Button Name="StopGame" Grid.Column="3" Margin="5,0">Stop</Button>
             </Grid>
         </GroupBox>
         
