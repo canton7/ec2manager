@@ -70,5 +70,17 @@ namespace Ec2Manager.Properties {
                 this["AwsCredentialsUrl"] = value;
             }
         }
+        
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("Testy")]
+        public string HomePageUrl {
+            get {
+                return ((string)(this["HomePageUrl"]));
+            }
+            set {
+                this["HomePageUrl"] = value;
+            }
+        }
     }
 }

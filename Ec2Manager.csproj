@@ -119,6 +119,7 @@
     <Compile Include="Converters\LogEntriesToTextConverter.cs" />
     <Compile Include="Converters\VolumeTypeToIdVisibilityConverter.cs" />
     <Compile Include="Events\CreateInstanceEvent.cs" />
+    <Compile Include="ViewModels\AboutViewModel.cs" />
     <Compile Include="ViewModels\ConnectViewModel.cs" />
     <Compile Include="ViewModels\InstanceDetailsViewModel.cs" />
     <Compile Include="ViewModels\InstanceViewModel.cs" />
@@ -126,6 +127,9 @@
     <Compile Include="ViewModels\ShellViewModel.cs" />
     <Compile Include="ViewModels\TerminateInstanceViewModel.cs" />
     <Compile Include="ViewModels\VolumeViewModel.cs" />
+    <Compile Include="Views\AboutView.xaml.cs">
+      <DependentUpon>AboutView.xaml</DependentUpon>
+    </Compile>
     <Compile Include="Views\ConnectView.xaml.cs">
       <DependentUpon>ConnectView.xaml</DependentUpon>
     </Compile>
@@ -156,6 +160,10 @@
     <Compile Include="IMachineInteractionProvider.cs" />
     <Compile Include="InstanceClient.cs" />
     <Compile Include="Logger.cs" />
+    <Page Include="Views\AboutView.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
     <Page Include="Views\ConnectView.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>

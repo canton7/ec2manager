@@ -11,6 +11,9 @@
                 <MenuItem x:Name="ShowSettings" Header="_Settings"/>
                 <MenuItem x:Name="TryClose" Header="_Exit"/>
             </MenuItem>
+            <MenuItem Header="_Help">
+                <MenuItem x:Name="ShowAbout" Header="_About"/>
+            </MenuItem>
         </Menu>
 
         <TabControl Name="Items" DockPanel.Dock="Top"/>

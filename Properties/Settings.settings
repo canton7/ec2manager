@@ -14,5 +14,8 @@
     <Setting Name="AwsCredentialsUrl" Type="System.String" Scope="User">
       <Value Profile="(Default)">https://portal.aws.amazon.com/gp/aws/securityCredentials</Value>
     </Setting>
+    <Setting Name="HomePageUrl" Type="System.String" Scope="User">
+      <Value Profile="(Default)">Testy</Value>
+    </Setting>
   </Settings>
 </SettingsFile>

@@ -66,6 +66,15 @@ namespace Ec2Manager.ViewModels
             this.windowManager.ShowDialog(IoC.Get<SettingsViewModel>());
         }
 
+        public void ShowAbout()
+        {
+            this.windowManager.ShowDialog(IoC.Get<AboutViewModel>(), settings: new Dictionary<string, object>
+                {
+                    { "WindowStyle", WindowStyle.None },
+                    { "ShowInTaskbar", false},
+                });
+        }
+
         public async void Handle(CreateInstanceEvent message)
         {
             var instanceViewModel = IoC.Get<InstanceViewModel>();
