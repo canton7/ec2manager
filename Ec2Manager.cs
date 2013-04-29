@@ -527,7 +527,7 @@ namespace Ec2Manager
             logger.Log("Instance has been created");
         }
 
-        public async Task<string> MountVolumeAsync(string volumeId, IMachineInteractionProvider client, ILogger logger = null)
+        public async Task<string> MountVolumeAsync(string volumeId, IMachineInteractionProvider client, string name = null, ILogger logger = null)
         {
             logger = logger ?? this.DefaultLogger;
             bool weCreatedVolume = false;
@@ -537,7 +537,7 @@ namespace Ec2Manager
                 weCreatedVolume = true;
                 try
                 {
-                    volumeId = await this.CreateVolumeFromSnapshot(volumeId, client, logger);
+                    volumeId = await this.CreateVolumeFromSnapshot(volumeId, client, name, logger);
                 }
                 catch (AmazonEC2Exception e)
                 {
@@ -582,7 +582,7 @@ namespace Ec2Manager
             return deviceMountPoint;
         }
 
-        public async Task<string> CreateVolumeFromSnapshot(string snapshotId, IMachineInteractionProvider client, ILogger logger = null)
+        public async Task<string> CreateVolumeFromSnapshot(string snapshotId, IMachineInteractionProvider client, string name = null, ILogger logger = null)
         {
             logger = logger ?? this.DefaultLogger;
 
@@ -605,6 +605,7 @@ namespace Ec2Manager
                 Tag = new List<Tag>()
                 {
                     new Tag() { Key = "CreatedByEc2Manager", Value = "true" },
+                    new Tag() { Key = "Name", Value = name ?? "Unnamed" },
                 },
             });
 

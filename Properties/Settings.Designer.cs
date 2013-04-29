@@ -61,7 +61,7 @@ namespace Ec2Manager.Properties {
         
         [global::System.Configuration.UserScopedSettingAttribute()]
         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
-        [global::System.Configuration.DefaultSettingValueAttribute("https://portal.aws.amazon.com/gp/aws/securityCredentials")]
+        [global::System.Configuration.DefaultSettingValueAttribute("https://portal.aws.amazon.com/gp/aws/securityCredentials?#access_credentials")]
         public string AwsCredentialsUrl {
             get {
                 return ((string)(this["AwsCredentialsUrl"]));

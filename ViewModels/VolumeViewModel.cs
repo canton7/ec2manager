@@ -69,7 +69,7 @@ namespace Ec2Manager.ViewModels
 
             this.DisplayName = volumeName;
 
-            this.MountPointDir = await this.Manager.MountVolumeAsync(volumeId, this.Client, this.Logger);
+            this.MountPointDir = await this.Manager.MountVolumeAsync(volumeId, this.Client, this.Manager.Name + " - " + volumeName, this.Logger);
             this.VolumeState = "mounted";
             this.RunCommand = this.Client.GetRunCommand(this.MountPointDir, this.Logger);
             this.UserInstruction = this.Client.GetUserInstruction(this.MountPointDir, this.Logger).Replace("<PUBLIC-IP>", this.Manager.PublicIp);
