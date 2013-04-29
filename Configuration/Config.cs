@@ -7,6 +7,7 @@ using System.ComponentModel.Composition;
 using System.IO;
 using System.Linq;
 using System.Net;
+using System.Reflection;
 using System.Text;
 using System.Threading.Tasks;
 
@@ -20,7 +21,14 @@ namespace Ec2Manager.Configuration
 
         public string ConfigDir
         {
-            get { return Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), appDataFolder); }
+            get
+            {
+                var executableDirectory = Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location);
+                if (executableDirectory.StartsWith(Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles)))
+                    return Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), appDataFolder);
+                else
+                    return Path.Combine(executableDirectory, "config");
+            }
         }
 
         public string MainConfigFile
