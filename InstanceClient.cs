@@ -1,4 +1,5 @@
-﻿using Ec2Manager.Classes;
+﻿using Caliburn.Micro;
+using Ec2Manager.Classes;
 using Renci.SshNet;
 using System;
 using System.Collections.Generic;
@@ -11,13 +12,24 @@ using System.Threading.Tasks;
 
 namespace Ec2Manager
 {
-    public class InstanceClient : IDisposable, IMachineInteractionProvider
+    public class InstanceClient : PropertyChangedBase, IDisposable, IMachineInteractionProvider
     {
         private SshClient client;
         private string host;
         private string user;
         private string key;
         private AsyncSemaphore setupCmdLock = new AsyncSemaphore(1, 1);
+
+        private bool isConnected = false;
+        public bool IsConnected
+        {
+            get { return this.isConnected; }
+            set
+            {
+                this.isConnected = value;
+                this.NotifyOfPropertyChange();
+            }
+        }
 
         private string mountBase
         {
@@ -45,6 +57,7 @@ namespace Ec2Manager
                         }
                         catch (System.Net.Sockets.SocketException) { }
                     }
+                    this.IsConnected = true;
                     logger.Log("Connected");
                 });
         }
@@ -175,7 +188,7 @@ namespace Ec2Manager
 
         private Task RunInShell(string command, string sessionName, ILogger logger, System.Threading.CancellationToken? cancellationToken = null)
         {
-            Action runAction = () =>
+            System.Action runAction = () =>
                 {
                     using (var stream = this.client.CreateShellStream("xterm", 80, 24, 800, 600, 1024))
                     {

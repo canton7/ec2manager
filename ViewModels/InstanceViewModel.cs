@@ -103,6 +103,8 @@ namespace Ec2Manager.ViewModels
                 {
                     await this.Manager.CreateAsync(instanceAmi, instanceSize, availabilityZone);
                     this.Client = new InstanceClient(this.Manager.PublicIp, loginAs, this.Manager.PrivateKey);
+                    this.Client.Bind(s => s.IsConnected, (o, e) => this.NotifyOfPropertyChange(() => CanMountVolume);
+
                     await this.Client.ConnectAsync(this.logger);
                     this.NotifyOfPropertyChange(() => CanMountVolume);
                 });
@@ -150,7 +152,8 @@ namespace Ec2Manager.ViewModels
             {
                 return this.Manager.InstanceState == "running" && this.Client != null &&
                     (this.SelectedVolumeType.IsCustom == true || this.SelectedVolumeType.SnapshotId != null) &&
-                    (!this.selectedVolumeType.IsCustom || !string.IsNullOrWhiteSpace(this.CustomVolumeSnapshotId));
+                    (!this.selectedVolumeType.IsCustom || !string.IsNullOrWhiteSpace(this.CustomVolumeSnapshotId)) &&
+                    this.Client.IsConnected;
             }
         }
         public async void MountVolume()
