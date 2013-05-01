@@ -117,10 +117,10 @@ namespace Ec2Manager
             return this.client.RunCommand("[ -r \"" + mountPoint + "/ec2manager/runcmd\" ] && cat \"" + mountPoint + "/ec2manager/runcmd\"").Result.Trim();
         }
 
-        public async Task RunCommandAsync(string from, string command, ILogger logger, CancellationToken? cancellationToken = null)
+        public async Task RunCommandAsync(string from, string command, string sessionName, ILogger logger, CancellationToken? cancellationToken = null)
         {
             var cmd = "cd \"" + from + "\" && " + command + "";
-            await this.RunInShell(cmd, logger, cancellationToken);
+            await this.RunInShell(cmd, sessionName, logger, cancellationToken);
         }
 
         public string GetUserInstruction(string mountPointDir, ILogger logger)
@@ -173,7 +173,7 @@ namespace Ec2Manager
             });
         }
 
-        private Task RunInShell(string command, ILogger logger, System.Threading.CancellationToken? cancellationToken = null)
+        private Task RunInShell(string command, string sessionName, ILogger logger, System.Threading.CancellationToken? cancellationToken = null)
         {
             Action runAction = () =>
                 {
@@ -184,13 +184,19 @@ namespace Ec2Manager
                         writer.AutoFlush = true;
 
                         reader.ReadToEnd();
+                        // Start a new screen session, with A as the control character (as we can't send meta-characters like ctrl)
+                        writer.WriteLine("screen -eAa -S " + sessionName);
+                        reader.ReadToEnd();
                         writer.WriteLine(command);
 
                         while (true)
                         {
                             // Command is cancelled by stream being disposed
-                            if (cancellationToken.HasValue)
+                            if (cancellationToken.HasValue && cancellationToken.Value.IsCancellationRequested)
+                            {
+                                writer.WriteLine("A:kill");
                                 cancellationToken.Value.ThrowIfCancellationRequested();
+                            }
 
                             var result = reader.ReadToEnd().TrimEnd();
                             if (!string.IsNullOrEmpty(result))

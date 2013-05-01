@@ -87,7 +87,7 @@ namespace Ec2Manager.ViewModels
             this.Logger.Log("Starting to launch game...");
             this.VolumeState = "started";
             this.gameCts = new CancellationTokenSource();
-            var runTask = this.Client.RunCommandAsync(this.MountPointDir, this.RunCommand, this.Logger, this.gameCts.Token);
+            var runTask = this.Client.RunCommandAsync(this.MountPointDir, this.RunCommand, this.MountPointDir, this.Logger, this.gameCts.Token);
         }
 
         public bool CanStopGame

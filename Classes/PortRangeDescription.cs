@@ -21,6 +21,11 @@ namespace Ec2Manager.Classes
 
         public override string ToString()
         {
+            if (this.Proto == "icmp")
+                return "ping";
+            if (this.FromPort == this.ToPort)
+                return this.FromPort + "/" + this.Proto;
+
             return this.FromPort + "-" + this.ToPort + "/" + this.Proto;
         }
     }

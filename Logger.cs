@@ -14,6 +14,8 @@ namespace Ec2Manager
     [PartCreationPolicy(CreationPolicy.NonShared)]
     public class Logger : PropertyChangedBase, ILogger
     {
+        private const int maxLogEntries = 200;
+
         private BindableCollection<LogEntry> entries = new BindableCollection<LogEntry>();
         public BindableCollection<LogEntry> Entries
         {
@@ -56,7 +58,27 @@ namespace Ec2Manager
         {
             foreach (var entry in text.Split(new[] { "\r\n", "\n" }, StringSplitOptions.None))
             {
-                this.Entries.Add(new LogEntry(entry));
+                // Don't let the log grow too big
+                if (this.Entries.Count > maxLogEntries)
+                {
+                    this.Entries.RemoveAt(0);
+                }
+
+                // Logic to display 'last message repeated n times'
+                if (this.Entries.Count > 1 && entry == this.Entries[this.Entries.Count - 1].Message)
+                {
+                    this.Entries.Add(new LogEntry(1));
+                }
+                else if (this.Entries.Count > 2 && entry == this.Entries[this.Entries.Count - 2].Message && this.Entries[this.Entries.Count - 1].RepititionCount > 0)
+                {
+                    int prevRepitition = this.Entries[this.Entries.Count - 1].RepititionCount;
+                    this.Entries.RemoveAt(this.Entries.Count - 1);
+                    this.Entries.Add(new LogEntry(prevRepitition + 1));
+                }
+                else
+                {
+                    this.Entries.Add(new LogEntry(entry));
+                }
             }
         }
     }
