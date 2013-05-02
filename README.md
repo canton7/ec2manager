@@ -67,11 +67,24 @@ If you read the 'How does it work' section above, you'll know that volumes are e
 The snapshot can contain almost anything, and you're free to create your own (covered later on).
 For now, however, select one of the snapshots I maintain, and click `Mount Volume`.
 
-This will take a small amount of time,
+This will take a small amount of time.
+When it's mounted, necessary packages will be installed, ports opened, and the default command to run loaded.
+Customise this to your needs, then click `Launch` to run it.
 
+Feel free to mount more volumes and run more commands.
 
 SSHing into your instance
 -------------------------
+
+Once you've created and connected to an instance, you have the option of saving the private key used to log into the instance.
+This is in OpenSSH format, so you can use it directly with OpenSSH clients.
+If you want to use it with [PuTTY](http://the.earth.li/~sgtatham/putty/latest/x86/putty.exe), you'll need to convert this key to PuTTY's format using [PuTTYgen](http://the.earth.li/~sgtatham/putty/latest/x86/puttygen.exe).
+Go to Conversions -> Import Key, and browse to the key you saved from Ec2Manager.
+Then click `Save Private Key`, click `Yes`, and save this somewhere.
+
+Next, fire up PuTTY, and in the Host Name box put `username@public-ip`, where `username` is from the `Login as` box in Ec2Manager, and `public-ip` is from the `IP` field in the header of instance's tab in Ec2Manager, for example `ubuntu@123.456.789.012`.
+Go to Connection -> SSH -> Auth, and browse to the key you saved a second ago in the `Private key file for authentication` box.
+Click open!
 
 Creating new Snapshots
 ----------------------
