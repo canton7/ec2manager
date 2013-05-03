@@ -60,6 +60,7 @@ Section
   File "..\bin\Release\System.Windows.Interactivity.dll"
   File "..\bin\Release\icon.ico"
   File "..\Bin\Release\LICENSE.txt"
+  File "..\Bin\Release\README.md"
 
   ;Store installation folder
   WriteRegStr HKCU "Ec2Manager" "" $INSTDIR
