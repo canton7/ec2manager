@@ -1,0 +1,24 @@
+﻿<?xml version='1.0' encoding='utf-8'?>
+<SettingsFile xmlns="http://schemas.microsoft.com/VisualStudio/2004/01/settings" CurrentProfile="(Default)" GeneratedClassNamespace="Ec2Manager.Properties" GeneratedClassName="Settings">
+  <Profiles />
+  <Settings>
+    <Setting Name="DefaultAMI" Type="System.String" Scope="User">
+      <Value Profile="(Default)">ami-3d160149</Value>
+    </Setting>
+    <Setting Name="DefaultLogonUser" Type="System.String" Scope="User">
+      <Value Profile="(Default)">ubuntu</Value>
+    </Setting>
+    <Setting Name="SnapshotConfigUrl" Type="System.String" Scope="User">
+      <Value Profile="(Default)">http://canton7-ec2manager.s3.amazonaws.com/snapshot-config.txt</Value>
+    </Setting>
+    <Setting Name="AwsCredentialsUrl" Type="System.String" Scope="User">
+      <Value Profile="(Default)">https://portal.aws.amazon.com/gp/aws/securityCredentials?#access_credentials</Value>
+    </Setting>
+    <Setting Name="HomePageUrl" Type="System.String" Scope="User">
+      <Value Profile="(Default)">https://github.com/canton7/ec2manager</Value>
+    </Setting>
+    <Setting Name="Ec2ConsoleUrl" Type="System.String" Scope="User">
+      <Value Profile="(Default)">https://console.aws.amazon.com/ec2/home?region=eu-west-1</Value>
+    </Setting>
+  </Settings>
+</SettingsFile>

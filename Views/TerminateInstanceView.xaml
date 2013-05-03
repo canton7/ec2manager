@@ -1,0 +1,22 @@
+﻿<UserControl x:Class="Ec2Manager.Views.TerminateInstanceView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:supp="clr-namespace:Ec2Manager.Support"
+             xmlns:conv="clr-namespace:Ec2Manager.Converters"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             mc:Ignorable="d" 
+             d:DesignHeight="600" d:DesignWidth="600">
+    <DockPanel>
+        <GroupBox Header="Instance Properties" DockPanel.Dock="Top" Padding="10" VerticalAlignment="Top">
+            <Grid>
+                <TextBlock Grid.Column="1" Text="{Binding Manager.InstanceState, StringFormat='State: {0}'}"/>
+            </Grid>
+        </GroupBox>
+
+        <TextBox supp:TextBoxUtilities.AlwaysScrollToEnd="True"
+                 ScrollViewer.VerticalScrollBarVisibility="Auto"
+                 ScrollViewer.HorizontalScrollBarVisibility="Auto"
+                 Text="{Binding Logger.Entries, Mode=OneWay, Converter={x:Static conv:LogEntriesToTextConverter.Instance}}"/>
+    </DockPanel>
+</UserControl>
