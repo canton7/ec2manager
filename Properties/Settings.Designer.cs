@@ -73,7 +73,7 @@ namespace Ec2Manager.Properties {
         
         [global::System.Configuration.UserScopedSettingAttribute()]
         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
-        [global::System.Configuration.DefaultSettingValueAttribute("")]
+        [global::System.Configuration.DefaultSettingValueAttribute("https://github.com/canton7/ec2manager")]
         public string HomePageUrl {
             get {
                 return ((string)(this["HomePageUrl"]));

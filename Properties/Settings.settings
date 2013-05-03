@@ -15,7 +15,7 @@
       <Value Profile="(Default)">https://portal.aws.amazon.com/gp/aws/securityCredentials?#access_credentials</Value>
     </Setting>
     <Setting Name="HomePageUrl" Type="System.String" Scope="User">
-      <Value Profile="(Default)" />
+      <Value Profile="(Default)">https://github.com/canton7/ec2manager</Value>
     </Setting>
     <Setting Name="Ec2ConsoleUrl" Type="System.String" Scope="User">
       <Value Profile="(Default)">https://console.aws.amazon.com/ec2/home?region=eu-west-1</Value>

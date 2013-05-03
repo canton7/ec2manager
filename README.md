@@ -13,7 +13,7 @@ Introduction
 Ec2Manager was written to solve a specific problem: occasionally I'd want to get a group of friends together and play a multiplayer game online.
 We wanted a private dedicated server, but no-one's internet connection was good enough to host one.
 
-Amazong's [Ec2](http://aws.amazon.com/ec2/) service has potential here - you can start up a server in a matter of minutes, and terminate it when you're done.
+Amazon's [Ec2](http://aws.amazon.com/ec2/) service has potential here - you can start up a server in a matter of minutes, and terminate it when you're done.
 Ec2Manager was written to allow you to set up a server in only a couple of clicks, and load up a pre-configured dedicated server without having to start from scratch.
 
 Installing
@@ -104,7 +104,7 @@ Install whatever you need to install, and get it working, tweaking the firewall 
 If you're creating a snapshot for a new game, please check below to make sure the ports it's using don't clash with any other server.
 
 When you're done (ish), check the size of your folder (`du -sch .` from just inside the folder is a big help), then create a new volume of corresponding size.
-Attach it (I suggest not using /dev/sdf or /dev/sdg, in case you want to mount a volume from Ec2Manager to compare ec2manager-specific configuration files), then mount it using e.g. (assuming you attached the volume as `/dev/sdg` or `/dev/xvdg`) `sudo mkfs.ext4 /dev/xvdg; mkdir xvdg; sudo mount /dev/xvdg xvdg; sudo chown ubuntu.ubuntu xvdg.
+Attach it (I suggest not using /dev/sdf or /dev/sdg, in case you want to mount a volume from Ec2Manager to compare ec2manager-specific configuration files), then mount it using e.g. (assuming you attached the volume as `/dev/sdg` or `/dev/xvdg`) `sudo mkfs.ext4 /dev/xvdg; mkdir xvdg; sudo mount /dev/xvdg xvdg; sudo chown ubuntu.ubuntu xvdg`.
 Move over your files, and create the Ec2Manager-specific configuration files (see below).
 
 When you're done, detach the volume, terminate the instance, and spin up a new instance in Ec2Manager.
@@ -155,4 +155,7 @@ If you're creating a new snapshot, please respect this.
  - Teamspeak:
  - Killing Floor:
 
+Gratitude
+---------
 
+Thanks for [Adam Whitcroft](http://thenounproject.com/adamwhitcroft) at [The Noun Project](http://thenounproject.com) for the icon!
