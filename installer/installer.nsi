@@ -12,7 +12,7 @@
 
   ;Name and file
   Name "Ec2Manager"
-  OutFile "Ec2Manager_v${VERSION}.exe"
+  OutFile "Ec2Manager-v${VERSION}.exe"
   Icon "..\bin\Release\icon.ico"
 
   ;Default installation folder
