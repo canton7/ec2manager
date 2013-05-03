@@ -22,7 +22,7 @@ Installing
 You're welcome to build the project from source.
 You'll need Visual Studio 2012 to build the project, and [NSIS](http://nsis.sourceforge.net) if you want to build the installer.
 
-Alternatively, you can grab the latest installer from TODO or a standalone .zip from TODO.
+Alternatively, you can grab the [latest installer](http://canton7-ec2manager.s3.amazonaws.com/Releases/Ec2Manager-latest.exe) or a [standalone .zip](http://canton7-ec2manager.s3.amazonaws.com/Releases/Ec2Manager-latest.zip).
 
 How does it work?
 -----------------
@@ -125,7 +125,7 @@ Ec2Manager's drop-down list of volumes is built from two places: the official li
 The location of your personal list depends on how you installed Ec2Manager.
 
 If you grabbed a standalone zip, there should be a 'config' folder in the same directory as Ec2Manager.
-In there, create a file called `snapshot-config.txt`, and copy the format from [the officla list](http://canton7-ec2manager.s3.amazonaws.com/snapshot-config.txt) (that is, `snapshot-or-volume-id[space]Description`).
+In there, create a file called `snapshot-config.txt`, and copy the format from [the official list](http://canton7-ec2manager.s3.amazonaws.com/snapshot-config.txt) (that is, `snapshot-or-volume-id[space]Description`).
 
 Alternatively, host a snapshot-config.txt somewhere, and point the appropriate key in Ec2Manager.exe.config to it.
 
