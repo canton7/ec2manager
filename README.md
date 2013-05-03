@@ -84,15 +84,75 @@ Then click `Save Private Key`, click `Yes`, and save this somewhere.
 
 Next, fire up PuTTY, and in the Host Name box put `username@public-ip`, where `username` is from the `Login as` box in Ec2Manager, and `public-ip` is from the `IP` field in the header of instance's tab in Ec2Manager, for example `ubuntu@123.456.789.012`.
 Go to Connection -> SSH -> Auth, and browse to the key you saved a second ago in the `Private key file for authentication` box.
-Click open!
+Click open and you're in!
 
-Creating new Snapshots
-----------------------
+Creating new Snapshots, and incorporating into Ec2Manager
+---------------------------------------------------------
 
-Scrapbook
----------
+New snapshots can be created either from scratch (say you want to create a new game server), or from an existing snapshot (say you want to customise someone else's snapshot).
+I've found two slightly different approaches fit these two scenarios best, so I'll approach them separately.
 
-The snapshot contains some configuration data for Ec2Manager, including what firewall ports to open, and what other packages need installer.
-Ec2Manager dutifully follows these instructions, reads back the suggested command to start the server, and a user instruction, then passes control back to you.
+### Creating a snapshot from scratch
+
+The best approach here is to fire up a new instance, and build the contents of the volume on the instance itself.
+When it's finished (and most importantly you know the size, as volumes aren't resizable) you can move that over to a volume.
+
+So, fire up a new instance.
+You can use Ec2Manager for that (launch a new volume but don't mount anything), or launch it with Ec2 Console.
+SSH in, and create a new folder.
+Install whatever you need to install, and get it working, tweaking the firewall rules in Ec2 Console - Security Group as appropriate.
+If you're creating a snapshot for a new game, please check below to make sure the ports it's using don't clash with any other server.
+
+When you're done (ish), check the size of your folder (`du -sch .` from just inside the folder is a big help), then create a new volume of corresponding size.
+Attach it (I suggest not using /dev/sdf or /dev/sdg, in case you want to mount a volume from Ec2Manager to compare ec2manager-specific configuration files), then mount it using e.g. (assuming you attached the volume as `/dev/sdg` or `/dev/xvdg`) `sudo mkfs.ext4 /dev/xvdg; mkdir xvdg; sudo mount /dev/xvdg xvdg; sudo chown ubuntu.ubuntu xvdg.
+Move over your files, and create the Ec2Manager-specific configuration files (see below).
+
+When you're done, detach the volume, terminate the instance, and spin up a new instance in Ec2Manager.
+Load a custom snapshot or volume, and specify the volume you just created to test it.
+When you're sure it works (SSH in and fix things if it doesn't), terminate the instance and create a new snapshot from the volume in Ec2 Console.
+You're done!
+
+### Creating a new snapshot from an existing snapshot
+
+Here it's definitely worth firing up an instance with Ec2Manager, and mount the volume you want to copy.
+When that's done, SSH in and tweak the volune to your needs.
+Before terminating the instance, create a new snaphshot using Ec2 Console.
+When you're done, terminate the instance as normal.
+
+### Incorporating new volumes and instances into Ec2Manager
+
+Ec2Manager's drop-down list of volumes is built from two places: the official list (hosted by me) and your personal list.
+The location of your personal list depends on how you installed Ec2Manager.
+
+If you grabbed a standalone zip, there should be a 'config' folder in the same directory as Ec2Manager.
+In there, create a file called `snapshot-config.txt`, and copy the format from [the officla list](http://canton7-ec2manager.s3.amazonaws.com/snapshot-config.txt) (that is, `snapshot-or-volume-id[space]Description`).
+
+Alternatively, host a snapshot-config.txt somewhere, and point the appropriate key in Ec2Manager.exe.config to it.
+
+Ec2Manager-specific configuration files
+---------------------------------------
+
+Each volume has a number of configuration files used by Ec2Manager, including what firewall ports to open, what other packages need installing, the suggested way to start the server, and any instructions to the users.
+Let's detail them...
+
+1. `ec2manager/setup`: This is an executable file (don't forget the shebang!) which is executed once the volume has been mounted.
+Use it to install any necessary packages, etc.
+2. `ec2manager/ports`: This text file contains the ports which needs to be opened.
+The format is one port of range per line, of the format `fromport-toport/protocol`, e.g. `1000-2000/tcp`.
+If you only want to open one port, that's allowed -- e.g. `1000/tcp` -- and if you want to open both TCP and UDP, skip that bit -- e.g. `2000` or `2000-2010`.
+3. `ec2manager/runcmd`: This text file has a single line, which is the suggested command used to start the server.
+This is run from the root of the mounted volume.
+4. `ec2manager/user_instruction`: This is displayed to the user, verbatim. The string `<PUBLIC-IP>` is replaced with the actual public IP of the server.
+
+Port Mappings
+-------------
+
+To try and avoid multiple game servers from using the same ports, this is a list of the different ports in use.
+If you're creating a new snapshot, please respect this.
+
+ - Left 4 dead 2: 
+ - Hidden Source Beta 4b:
+ - Teamspeak:
+ - Killing Floor:
 
 
