@@ -97,13 +97,13 @@ namespace Ec2Manager.ViewModels
             }
         }
 
-        private LabelledValue[] terminatableInstances = new[] { new LabelledValue("Press Refresh", null) };
-        public LabelledValue[] TerminatableInstances
+        private LabelledValue[] runningInstances = new[] { new LabelledValue("Loading...", null) };
+        public LabelledValue[] RunningInstances
         {
-            get { return this.terminatableInstances; }
+            get { return this.runningInstances; }
             set
             {
-                this.terminatableInstances = value;
+                this.runningInstances = value;
                 this.NotifyOfPropertyChange();
             }
         }
@@ -120,6 +120,18 @@ namespace Ec2Manager.ViewModels
             }
         }
 
+        private LabelledValue activeReconnectableInstance;
+        public LabelledValue ActiveReconnectableInstance
+        {
+            get { return this.activeReconnectableInstance; }
+            set
+            {
+                this.activeReconnectableInstance = value;
+                this.NotifyOfPropertyChange();
+                this.NotifyOfPropertyChange(() => CanReconnectInstance);
+            }
+        }
+
 
         private IEventAggregator events;
 
@@ -133,15 +145,19 @@ namespace Ec2Manager.ViewModels
                 {
                     this.LoadFromConfig();
                     this.NotifyOfPropertyChange(() => CanCreate);
-                    this.NotifyOfPropertyChange(() => CanRefreshTerminatableInstances);
+                    this.NotifyOfPropertyChange(() => CanRefreshRunningInstances);
                     this.NotifyOfPropertyChange(() => CanTerminateInstance);
+                    Task.Run(() => this.RefreshRunningInstances());
                 });
 
             this.DisplayName = "Create New Instance";
             this.LoadFromConfig();
 
             this.ActiveInstanceType = this.InstanceTypes.FirstOrDefault(x => x.Value == "t1.micro");
-            this.ActiveTerminatableInstance = this.TerminatableInstances[0];
+            this.ActiveTerminatableInstance = this.RunningInstances[0];
+            this.ActiveReconnectableInstance = this.RunningInstances[0];
+
+            Task.Run(() => this.RefreshRunningInstances());
         }
 
         private void LoadFromConfig()
@@ -175,7 +191,7 @@ namespace Ec2Manager.ViewModels
             });
         }
 
-        public bool CanRefreshTerminatableInstances
+        public bool CanRefreshRunningInstances
         {
             get
             {
@@ -183,15 +199,52 @@ namespace Ec2Manager.ViewModels
                     !string.IsNullOrWhiteSpace(this.config.MainConfig.AwsSecretKey);
             }
         }
-        public void RefreshTerminatableInstances()
+        public void RefreshRunningInstances()
         {
-            var manager = new Ec2Manager(this.config.MainConfig.AwsAccessKey, this.config.MainConfig.AwsSecretKey);
-            this.TerminatableInstances = manager.ListInstances().Select(x => new LabelledValue(x.Item2, x.Item1)).ToArray();
-            if (this.TerminatableInstances.Length == 0)
+            if (!this.CanRefreshRunningInstances)
             {
-                this.TerminatableInstances = new[] { new LabelledValue("No Running Instances", null) };
+                this.RunningInstances = new[] { new LabelledValue("Can't load. Try refreshing", null) };
+                this.ActiveTerminatableInstance = this.RunningInstances[0];
+                this.ActiveReconnectableInstance = this.RunningInstances[0];
+                return;
             }
-            this.ActiveTerminatableInstance = this.TerminatableInstances[0];
+
+            try
+            {
+                var manager = new Ec2Manager(this.config.MainConfig.AwsAccessKey, this.config.MainConfig.AwsSecretKey);
+                this.RunningInstances = manager.ListInstances().Select(x => new LabelledValue(x.Item2, x.Item1)).ToArray();
+                if (this.RunningInstances.Length == 0)
+                {
+                    this.RunningInstances = new[] { new LabelledValue("No Running Instances", null) };
+                }
+                this.ActiveTerminatableInstance = this.RunningInstances[0];
+                this.ActiveReconnectableInstance = this.RunningInstances[0];
+            }
+            catch (Exception)
+            {
+                this.RunningInstances = new[] { new LabelledValue("Error loading. Bad credentials?", null) };
+                this.ActiveTerminatableInstance = this.RunningInstances[0];
+                this.ActiveReconnectableInstance = this.RunningInstances[0];
+            }
+        }
+
+        public bool CanReconnectInstance
+        {
+            get
+            {
+                return !string.IsNullOrWhiteSpace(this.config.MainConfig.AwsAccessKey) &&
+                    !string.IsNullOrWhiteSpace(this.config.MainConfig.AwsSecretKey) &&
+                    this.activeReconnectableInstance != null && !string.IsNullOrEmpty(this.ActiveReconnectableInstance.Value);
+            }
+        }
+        public void ReconnectInstance()
+        {
+            var manager = new Ec2Manager(this.config.MainConfig.AwsAccessKey, this.config.MainConfig.AwsSecretKey, this.ActiveReconnectableInstance.Value);
+            manager.Name = this.ActiveReconnectableInstance.Label;
+            events.Publish(new ReconnectInstanceEvent()
+            {
+                Manager = manager,
+            });
         }
 
         public bool CanTerminateInstance

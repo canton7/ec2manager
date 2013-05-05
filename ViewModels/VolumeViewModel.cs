@@ -62,17 +62,41 @@ namespace Ec2Manager.ViewModels
             this.Logger = logger;
         }
 
-        public async Task Setup(Ec2Manager manager, InstanceClient client, string volumeName, string volumeId)
+        public async Task SetupAsync(Ec2Manager manager, InstanceClient client, string volumeName, string volumeId)
         {
             this.Client = client;
             this.Manager = manager;
 
             this.DisplayName = volumeName;
 
-            this.MountPointDir = await this.Manager.MountVolumeAsync(volumeId, this.Client, this.Manager.Name + " - " + volumeName, this.Logger);
+            this.MountPointDir = await this.Manager.MountVolumeAsync(volumeId, this.Client, volumeName, this.Logger);
             this.VolumeState = "mounted";
             this.RunCommand = this.Client.GetRunCommand(this.MountPointDir, this.Logger);
             this.UserInstruction = this.Client.GetUserInstruction(this.MountPointDir, this.Logger).Replace("<PUBLIC-IP>", this.Manager.PublicIp);
+        }
+
+        public void Reconnect(Ec2Manager manager, InstanceClient client, string volumeName, string volumeId, string mountPointDir)
+        {
+            this.Client = client;
+            this.Manager = manager;
+            this.MountPointDir = mountPointDir;
+
+            this.DisplayName = volumeName;
+
+            this.RunCommand = this.Client.GetRunCommand(this.MountPointDir, this.Logger);
+            this.UserInstruction = this.Client.GetUserInstruction(this.MountPointDir, this.Logger).Replace("<PUBLIC-IP>", this.Manager.PublicIp);
+            this.Logger.Log("Reconnected to volume");
+
+            if (this.Client.IsCommandSessionStarted(this.MountPointDir))
+            {
+                this.VolumeState = "started";
+                this.gameCts = new CancellationTokenSource();
+                var resumeTask = this.Client.ResumeSessionAsync(this.MountPointDir, this.Logger, this.gameCts.Token);
+            }
+            else
+            {
+                this.VolumeState = "mounted";
+            }
         }
 
         public bool CanStartGame

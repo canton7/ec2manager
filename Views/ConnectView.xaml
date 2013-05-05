@@ -32,13 +32,25 @@
                 <Button Name="Create" DockPanel.Dock="Top" IsDefault="True" HorizontalAlignment="Center" VerticalAlignment="Top" Margin="0,20,0,0" Padding="20,5">Create Instance</Button>
             </DockPanel>
         </GroupBox>
-        
+
+        <GroupBox Header="Reconnect To Instance" DockPanel.Dock="Top" VerticalAlignment="Top" Padding="10">
+            <DockPanel>
+                <StackPanel Orientation="Horizontal" DockPanel.Dock="Top">
+                    <TextBlock>Instance:</TextBlock>
+                    <ComboBox ItemsSource="{Binding RunningInstances}" SelectedItem="{Binding ActiveReconnectableInstance}" Margin="15,0" Width="200" DisplayMemberPath="Label"/>
+                    <Button cal:Message.Attach="RefreshRunningInstances">Refresh List</Button>
+                </StackPanel>
+
+                <Button Name="ReconnectInstance" DockPanel.Dock="Top" HorizontalAlignment="Center" VerticalAlignment="Top" Margin="0,20,0,0" Padding="20,5">Reconnect To Instance</Button>
+            </DockPanel>
+        </GroupBox>
+
         <GroupBox Header="Terminate Instance" DockPanel.Dock="Top" VerticalAlignment="Top" Padding="10">
             <DockPanel>
                 <StackPanel Orientation="Horizontal" DockPanel.Dock="Top">
                     <TextBlock>Instance: </TextBlock>
-                    <ComboBox x:Name="TerminatableInstances" Margin="15,0" Width="200" DisplayMemberPath="Label"/>
-                    <Button Name="RefreshTerminatableInstances">Refresh List</Button>
+                    <ComboBox ItemsSource="{Binding RunningInstances}" SelectedItem="{Binding ActiveTerminatableInstance}" Margin="15,0" Width="200" DisplayMemberPath="Label"/>
+                    <Button cal:Message.Attach="RefreshRunningInstances">Refresh List</Button>
                 </StackPanel>
 
                 <Button Name="TerminateInstance" DockPanel.Dock="Top" HorizontalAlignment="Center" VerticalAlignment="Top" Margin="0,20,0,0" Padding="20,5">Terminate Instance</Button>

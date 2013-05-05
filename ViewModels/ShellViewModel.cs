@@ -15,7 +15,9 @@ using System.Diagnostics;
 namespace Ec2Manager.ViewModels
 {
     [Export]
-    public class ShellViewModel : Conductor<IScreen>.Collection.OneActive, IHandle<CreateInstanceEvent>, IHandle<TerminateInstanceEvent>
+    public class ShellViewModel
+        : Conductor<IScreen>.Collection.OneActive,
+        IHandle<CreateInstanceEvent>, IHandle<TerminateInstanceEvent>, IHandle<ReconnectInstanceEvent>
     {
         private IWindowManager windowManager;
         private Config config;
@@ -96,6 +98,14 @@ namespace Ec2Manager.ViewModels
             this.ActivateItem(terminateViewModel);
 
             await terminateViewModel.SetupAsync(message.Manager);
+        }
+
+        public async void Handle(ReconnectInstanceEvent message)
+        {
+            var instanceViewModel = IoC.Get<InstanceViewModel>();
+            this.ActivateItem(instanceViewModel);
+
+            await instanceViewModel.ReconnectAsync(message.Manager);
         }
     }
 }

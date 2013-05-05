@@ -85,42 +85,85 @@ namespace Ec2Manager.ViewModels
             this.ActivateItem(instanceDetailsModel);
         }
 
-        public async Task SetupAsync(Ec2Manager manager, string instanceAmi, string instanceSize, string loginAs, string availabilityZone)
+        private void SetupWithManager()
         {
-            this.Manager = manager;
-
             this.DisplayName = this.Manager.Name;
             this.Manager.DefaultLogger = this.logger;
 
             this.Manager.Bind(s => s.InstanceState, (o, e) =>
-                {
-                    this.NotifyOfPropertyChange(() => CanTerminate);
-                    this.NotifyOfPropertyChange(() => CanMountVolume);
-                    this.NotifyOfPropertyChange(() => CanSavePrivateKey);
-                });
+            {
+                this.NotifyOfPropertyChange(() => CanTerminate);
+                this.NotifyOfPropertyChange(() => CanMountVolume);
+                this.NotifyOfPropertyChange(() => CanSavePrivateKey);
+            });
+        }
+
+        private async Task RefreshVolumes()
+        {
+            var snapshots = await this.config.GetSnapshotConfigAsync();
+            this.volumeTypes.Clear();
+            this.volumeTypes.AddRange(snapshots);
+            this.SelectedVolumeType = this.volumeTypes[0];
+            this.NotifyOfPropertyChange(() => VolumeTypes);
+        }
+
+        public async Task SetupAsync(Ec2Manager manager, string instanceAmi, string instanceSize, string loginAs, string availabilityZone)
+        {
+            this.Manager = manager;
+            this.SetupWithManager();
 
             var createTask = Task.Run(async () =>
                 {
                     await this.Manager.CreateAsync(instanceAmi, instanceSize, availabilityZone);
+
                     this.Client = new InstanceClient(this.Manager.PublicIp, loginAs, this.Manager.PrivateKey);
                     this.Client.Bind(s => s.IsConnected, (o, e) => this.NotifyOfPropertyChange(() => CanMountVolume));
 
                     await this.Client.ConnectAsync(this.logger);
-                    this.NotifyOfPropertyChange(() => CanMountVolume);
-                });
-
-            var volumesTask = Task.Run(async () =>
-                {
-                    var snapshots = await this.config.GetSnapshotConfigAsync();
-                    this.volumeTypes.Clear();
-                    this.volumeTypes.AddRange(snapshots);
-                    this.SelectedVolumeType = this.volumeTypes[0];
-                    this.NotifyOfPropertyChange(() => VolumeTypes);
+                    this.config.SaveKeyAndUser(this.Manager.InstanceId, loginAs, this.Manager.PrivateKey);
+                    //this.NotifyOfPropertyChange(() => CanMountVolume);
                 });
 
             try
             {
-                await Task.WhenAll(createTask, volumesTask);
+                await Task.WhenAll(createTask, this.RefreshVolumes());
+            }
+            catch (Exception e)
+            {
+                this.logger.Log("Error occurred: {0}", e.Message);
+                MessageBox.Show(Application.Current.MainWindow, "Error occurred: " + e.Message, "Error occurred", MessageBoxButton.OK, MessageBoxImage.Error);
+                this.TryClose();
+                return;
+            }
+
+            this.uptimeTimer.Start();
+        }
+
+        public async Task ReconnectAsync(Ec2Manager manager)
+        {
+            this.Manager = manager;
+            this.SetupWithManager();
+
+            var reconnectTask = Task.Run(async () =>
+                {
+                    this.Manager.Reconnect(this.logger);
+                    
+                    var keyAndUser = this.config.RetrieveKeyAndUser(this.Manager.InstanceId);
+                    this.Client = new InstanceClient(this.Manager.PublicIp, keyAndUser.Item1, keyAndUser.Item2);
+                    this.Client.Bind(s => s.IsConnected, (o, e) => this.NotifyOfPropertyChange(() => CanMountVolume));
+                    await this.Client.ConnectAsync(this.logger);
+
+                    foreach (var volume in this.Manager.GetAttachedVolumeDescriptions())
+                    {
+                        var volumeViewModel = IoC.Get<VolumeViewModel>();
+                        this.ActivateItem(volumeViewModel);
+                        volumeViewModel.Reconnect(this.Manager, this.Client, volume.VolumeName, volume.VolumeId, volume.MountPointDir);
+                    }
+                });
+
+            try
+            {
+                await Task.WhenAll(reconnectTask, this.RefreshVolumes());
             }
             catch (Exception e)
             {
@@ -135,7 +178,7 @@ namespace Ec2Manager.ViewModels
 
         public bool CanTerminate
         {
-            get { return this.Manager.InstanceState == "running"; }
+            get { return this.Manager != null && this.Manager.InstanceState == "running"; }
         }
 
         public async void Terminate()
@@ -150,12 +193,14 @@ namespace Ec2Manager.ViewModels
         {
             get
             {
-                return this.Manager.InstanceState == "running" && this.Client != null &&
+                return this.Manager != null &&
+                    this.Manager.InstanceState == "running" && this.Client != null &&
                     (this.SelectedVolumeType.IsCustom == true || this.SelectedVolumeType.SnapshotId != null) &&
                     (!this.selectedVolumeType.IsCustom || !string.IsNullOrWhiteSpace(this.CustomVolumeSnapshotId)) &&
                     this.Client.IsConnected;
             }
         }
+
         public async void MountVolume()
         {
             var volumeViewModel = IoC.Get<VolumeViewModel>();
@@ -177,7 +222,7 @@ namespace Ec2Manager.ViewModels
 
             try
             {
-                await volumeViewModel.Setup(this.Manager, this.Client, volumeName, volumeId);
+                await volumeViewModel.SetupAsync(this.Manager, this.Client, volumeName, volumeId);
             }
             catch (Exception e)
             {
@@ -189,7 +234,7 @@ namespace Ec2Manager.ViewModels
 
         public bool CanSavePrivateKey
         {
-            get { return this.Manager.InstanceState == "running"; }
+            get { return this.Manager != null && this.Manager.InstanceState == "running"; }
         }
         public void SavePrivateKey()
         {

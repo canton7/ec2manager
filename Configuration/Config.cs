@@ -49,10 +49,16 @@ namespace Ec2Manager.Configuration
             return this.snapshotConfig.Value;
         }
 
+        public string SavedKeysDir
+        {
+            get { return Path.Combine(this.ConfigDir, "keys"); }
+        }
+
         [ImportingConstructor]
         public Config()
         {
             Directory.CreateDirectory(this.ConfigDir);
+            Directory.CreateDirectory(this.SavedKeysDir);
 
             this.LoadMainConfig();
 
@@ -111,6 +117,18 @@ namespace Ec2Manager.Configuration
         public void DiscardMainConfig()
         {
             this.LoadMainConfig();
+        }
+
+        public void SaveKeyAndUser(string name, string user, string privateKey)
+        {
+            File.WriteAllText(Path.Combine(this.SavedKeysDir, name), user + "\r\n" + privateKey);
+        }
+
+        public Tuple<string, string> RetrieveKeyAndUser(string name)
+        {
+            var contents = File.ReadAllText(Path.Combine(this.SavedKeysDir, name));
+            var parts = contents.Split(new[] { "\r\n" }, 2, StringSplitOptions.None);
+            return new Tuple<string, string>(parts[0], parts[1]);
         }
     }
 }

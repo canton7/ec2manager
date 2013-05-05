@@ -97,6 +97,7 @@
     <Compile Include="Configuration\Config.cs" />
     <Compile Include="Configuration\MainConfig.cs" />
     <Compile Include="Configuration\VolumeType.cs" />
+    <Compile Include="Events\ReconnectInstanceEvent.cs" />
     <Compile Include="Events\TerminateInstanceEvent.cs" />
     <Compile Include="ILogger.cs" />
     <Compile Include="Support\HyperlinkUtilities.cs" />

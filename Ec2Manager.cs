@@ -17,11 +17,15 @@ namespace Ec2Manager
     {
         private AmazonEC2Client client;
         private string uniqueKey;
-        private string instanceId;
+        public string InstanceId { get; private set; }
 
         // We can mount on xvdf -> xvdp
-        private char nextVolumeMountPointSuffix = 'f';
-        private static readonly char maxVolumeMountPointSuffix = 'p';
+        private static readonly string[] mountPoints = new[]
+        {
+            "/dev/xvdf", "/dev/xvdg", "/dev/xvdh", "/dev/xvdi", "/dev/xvdj", "/dev/xvdk", "/dev/xvdl", "/dev/xvdm",
+            "/dev/xvdn", "/dev/xvdo", "/dev/xvdp",
+        };
+        private List<string> usedMountPoints = new List<string>();
         private object volumeMountPointLock = new object();
 
         public string PrivateKey { get; private set; }
@@ -61,15 +65,23 @@ namespace Ec2Manager
             get { return "Ec2KeyPair-" + this.uniqueKey; }
         }
 
-        public Ec2Manager(string accessKey, string secretKey)
+        /// <summary>
+        /// Instantiate, with the intention of creating a new instance
+        /// </summary>
+        public Ec2Manager(string accessKey, string secretKey, ILogger logger = null)
         {
             this.client = new AmazonEC2Client(accessKey, secretKey, RegionEndpoint.EUWest1);
             this.uniqueKey = Guid.NewGuid().ToString();
+            this.DefaultLogger = logger ?? new StubLogger();
         }
-
-        public Ec2Manager(string accessKey, string secretKey, string instanceId) : this(accessKey, secretKey)
+        /// <summary>
+        /// Associate with an already-running instance
+        /// </summary>
+        public Ec2Manager(string accessKey, string secretKey, string instanceId, ILogger logger = null)
         {
-            this.instanceId = instanceId;
+            this.client = new AmazonEC2Client(accessKey, secretKey, RegionEndpoint.EUWest1);
+            this.DefaultLogger = logger ?? new StubLogger();
+            this.InstanceId = instanceId;
         }
 
         private RunningInstance GetRunningInstance()
@@ -79,7 +91,7 @@ namespace Ec2Manager
 
             var describeInstancesRequest = new DescribeInstancesRequest()
             {
-                InstanceId = new List<string>() { this.instanceId },
+                InstanceId = new List<string>() { this.InstanceId },
             };
 
             while (!worked)
@@ -98,7 +110,7 @@ namespace Ec2Manager
 
             return describeInstancesResponse.DescribeInstancesResult.Reservation
                 .SelectMany(x => x.RunningInstance)
-                .Where(x => x.InstanceId == instanceId)
+                .Where(x => x.InstanceId == InstanceId)
                 .FirstOrDefault();
         }
 
@@ -107,13 +119,22 @@ namespace Ec2Manager
             string result;
             lock (this.volumeMountPointLock)
             {
-                if (this.nextVolumeMountPointSuffix > maxVolumeMountPointSuffix)
+                if (this.usedMountPoints.Count == mountPoints.Length)
                     throw new Exception("Run out of mount points. You have too many volumes mounted!");
 
-                result = "/dev/xvd" + this.nextVolumeMountPointSuffix;
-                this.nextVolumeMountPointSuffix++;
+                result = mountPoints.Except(this.usedMountPoints).First();
+                this.usedMountPoints.Add(result);
             }
             return result;
+        }
+
+        private void RemoveDeviceFromList(string device)
+        {
+            lock (this.volumeMountPointLock)
+            {
+                if (mountPoints.Contains(device))
+                    this.usedMountPoints.Add(device);
+            }
         }
 
         private async Task UntilStateAsync(string state, CancellationToken? cancellationToken = null)
@@ -179,7 +200,7 @@ namespace Ec2Manager
                     .FirstOrDefault(x => x.VolumeId == volumeId)
                     .Attachment;
 
-                if ((attachment.Count == 0 && allowNone) || attachment.FirstOrDefault(x => x.InstanceId == this.instanceId).Status == state)
+                if ((attachment.Count == 0 && allowNone) || attachment.FirstOrDefault(x => x.InstanceId == this.InstanceId).Status == state)
                 {
                     gotToState = true;
                 }
@@ -273,18 +294,19 @@ namespace Ec2Manager
 
             var runResponse = this.client.RunInstances(runInstanceRequest);
             var instances = runResponse.RunInstancesResult.Reservation.RunningInstance;
-            this.instanceId = instances[0].InstanceId;
-            logger.Log("New instance created. Instance ID: {0}", this.instanceId);
+            this.InstanceId = instances[0].InstanceId;
+            logger.Log("New instance created. Instance ID: {0}", this.InstanceId);
 
             // Tag straight away. They might get bored and close the window while it's launching
             logger.Log("Tagging instance");
             this.client.CreateTags(new CreateTagsRequest()
             {
-                ResourceId = new List<string>() { this.instanceId },
+                ResourceId = new List<string>() { this.InstanceId },
                 Tag = new List<Tag>()
                 {
                     new Tag() { Key = "CreatedByEc2Manager", Value = "true" },
                     new Tag() { Key = "Name", Value = name },
+                    new Tag() { Key = "UniqueKey", Value = this.uniqueKey },
                 },
             });
 
@@ -299,7 +321,7 @@ namespace Ec2Manager
                 logger.Log("Sometimes issuing a reboot fixes it, so trying that...");
                 this.client.RebootInstances(new RebootInstancesRequest() 
                 {
-                    InstanceId = new List<string>() { this.instanceId },
+                    InstanceId = new List<string>() { this.InstanceId },
                 });
                 await this.UntilStateAsync("running");
             }
@@ -326,7 +348,7 @@ namespace Ec2Manager
             logger.Log("Assigning public IP {0} to instance", this.PublicIp);
             this.client.AssociateAddress(new AssociateAddressRequest()
             {
-                InstanceId = this.instanceId,
+                InstanceId = this.InstanceId,
                 PublicIp = publicIp,
             });
             logger.Log("Public IP assigned");
@@ -348,6 +370,25 @@ namespace Ec2Manager
             logger.Log("Ip address released");
         }
 
+        private IEnumerable<Volume> GetAttachedVolumes()
+        {
+            return this.client.DescribeVolumes(new DescribeVolumesRequest()).DescribeVolumesResult.Volume
+                .Where(x => x.Attachment.Any(att => att.InstanceId == this.InstanceId));
+        }
+
+        public IEnumerable<VolumeDescription> GetAttachedVolumeDescriptions()
+        {
+            foreach (var volume in this.GetAttachedVolumes())
+            {
+                var attachment = volume.Attachment.FirstOrDefault(x => x.InstanceId == this.InstanceId);
+                if (attachment != null && mountPoints.Contains(attachment.Device))
+                {
+                    var tag = volume.Tag.FirstOrDefault(x => x.Key == "VolumeName");
+                    yield return new VolumeDescription(Path.GetFileName(attachment.Device), volume.VolumeId, tag == null ? "Unnamed" : tag.Value);
+                }
+            }
+        }
+
         private async Task DeleteVolumeAsync(string volumeId, ILogger logger = null)
         {
             logger = logger ?? this.DefaultLogger;
@@ -356,7 +397,7 @@ namespace Ec2Manager
             this.client.DetachVolume(new DetachVolumeRequest()
             {
                 Force = true,
-                InstanceId = this.instanceId,
+                InstanceId = this.InstanceId,
                 VolumeId = volumeId,
             });
 
@@ -379,7 +420,7 @@ namespace Ec2Manager
             logger.Log("Terminating instance");
             this.client.TerminateInstances(new TerminateInstancesRequest()
             {
-                InstanceId = new List<string>() { this.instanceId },
+                InstanceId = new List<string>() { this.InstanceId },
             });
 
             logger.Log("Waiting for instance to reach the 'terminated' state");
@@ -425,10 +466,10 @@ namespace Ec2Manager
         {
             logger = logger ?? this.DefaultLogger;
 
-            logger.Log("Attaching volume to instance {0}, device {1}", this.instanceId, device);
+            logger.Log("Attaching volume to instance {0}, device {1}", this.InstanceId, device);
             var attachVolumeResponse = this.client.AttachVolume(new AttachVolumeRequest()
             {
-                InstanceId = this.instanceId,
+                InstanceId = this.InstanceId,
                 VolumeId = volumeId,
                 Device = device,
             });
@@ -527,6 +568,31 @@ namespace Ec2Manager
             logger.Log("Instance has been created");
         }
 
+        public void Reconnect(ILogger logger = null)
+        {
+            logger = logger ?? this.DefaultLogger;
+
+            var runningInstance = this.GetRunningInstance();
+            
+            this.PublicIp = runningInstance.IpAddress;
+            this.PublicIp = string.IsNullOrWhiteSpace(this.PublicIp) ? null : this.PublicIp;
+
+            this.InstanceState = runningInstance.InstanceState.Name;
+
+            var uniqueKey = runningInstance.Tag.FirstOrDefault(x => x.Key == "UniqueKey");
+            if (uniqueKey == null)
+                this.uniqueKey = new Guid().ToString();
+            else
+                this.uniqueKey = uniqueKey.Value;
+
+            foreach (var volume in this.GetAttachedVolumes())
+            {
+                var attachment = volume.Attachment.FirstOrDefault(x => x.InstanceId == this.InstanceId);
+                if (attachment != null)
+                    this.RemoveDeviceFromList(attachment.Device);
+            }
+        }
+
         public async Task<string> MountVolumeAsync(string volumeId, IMachineInteractionProvider client, string name = null, ILogger logger = null)
         {
             logger = logger ?? this.DefaultLogger;
@@ -582,7 +648,7 @@ namespace Ec2Manager
             return deviceMountPoint;
         }
 
-        public async Task<string> CreateVolumeFromSnapshot(string snapshotId, IMachineInteractionProvider client, string name = null, ILogger logger = null)
+        public async Task<string> CreateVolumeFromSnapshot(string snapshotId, IMachineInteractionProvider client, string volumeName = null, ILogger logger = null)
         {
             logger = logger ?? this.DefaultLogger;
 
@@ -599,13 +665,15 @@ namespace Ec2Manager
             logger.Log("Volume ID {0} created", volumeId);
 
             logger.Log("Tagging volume, so we know we can remove it later");
+            var name = volumeName == null ? "Unnamed" : this.Name + " - " + volumeName;
             this.client.CreateTags(new CreateTagsRequest()
             {
                 ResourceId = new List<string>() { volumeId },
                 Tag = new List<Tag>()
                 {
                     new Tag() { Key = "CreatedByEc2Manager", Value = "true" },
-                    new Tag() { Key = "Name", Value = name ?? "Unnamed" },
+                    new Tag() { Key = "Name", Value = name },
+                    new Tag() { Key = "VolumeName", Value = volumeName },
                 },
             });
 
@@ -633,8 +701,8 @@ namespace Ec2Manager
             var groupIds = instanceStatus.GroupId;
             var keyName = instanceStatus.KeyName;
             // This excludes volumes attached to other machines as well
-            var volumes = this.client.DescribeVolumes(new DescribeVolumesRequest()).DescribeVolumesResult.Volume
-                .Where(x => x.Attachment.Count == 1 && x.Attachment[0].InstanceId == this.instanceId)
+            var volumes = this.GetAttachedVolumes()
+                .Where(x => x.Attachment.Count == 1)
                 .Where(x => x.Tag.Any(y => y.Key == "CreatedByEc2Manager"))
                 .Select(x => x.VolumeId);
 
@@ -671,6 +739,41 @@ namespace Ec2Manager
             }
 
             logger.Log("Instance successfully terminated");
+        }
+
+        public class VolumeDescription
+        {
+            public string MountPointDir { get; private set; }
+            public string VolumeId { get; private set; }
+            public string VolumeName { get; private set; }
+
+            public VolumeDescription(string mountPointDir, string volumeId, string volumeName)
+            {
+                this.MountPointDir = mountPointDir;
+                this.VolumeId = volumeId;
+                this.VolumeName = volumeName;
+            }
+        }
+
+        private class StubLogger : ILogger
+        {
+
+            public BindableCollection<LogEntry> Entries
+            {
+                get { return new BindableCollection<LogEntry>(); }
+            }
+
+            public void Log(string message)
+            {
+            }
+
+            public void Log(string format, params string[] parameters)
+            {
+            }
+
+            public void LogFromStream(Stream stream, IAsyncResult asynch)
+            {
+            }
         }
     }
 }
