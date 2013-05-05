@@ -383,7 +383,7 @@ namespace Ec2Manager
                 var attachment = volume.Attachment.FirstOrDefault(x => x.InstanceId == this.InstanceId);
                 if (attachment != null && mountPoints.Contains(attachment.Device))
                 {
-                    var tag = volume.Tag.FirstOrDefault(x => x.Key == "Name");
+                    var tag = volume.Tag.FirstOrDefault(x => x.Key == "VolumeName");
                     yield return new VolumeDescription(Path.GetFileName(attachment.Device), volume.VolumeId, tag == null ? "Unnamed" : tag.Value);
                 }
             }
@@ -568,7 +568,7 @@ namespace Ec2Manager
             logger.Log("Instance has been created");
         }
 
-        public async Task ReconnectAsync(ILogger logger = null)
+        public void Reconnect(ILogger logger = null)
         {
             logger = logger ?? this.DefaultLogger;
 
@@ -648,7 +648,7 @@ namespace Ec2Manager
             return deviceMountPoint;
         }
 
-        public async Task<string> CreateVolumeFromSnapshot(string snapshotId, IMachineInteractionProvider client, string name = null, ILogger logger = null)
+        public async Task<string> CreateVolumeFromSnapshot(string snapshotId, IMachineInteractionProvider client, string volumeName = null, ILogger logger = null)
         {
             logger = logger ?? this.DefaultLogger;
 
@@ -665,13 +665,15 @@ namespace Ec2Manager
             logger.Log("Volume ID {0} created", volumeId);
 
             logger.Log("Tagging volume, so we know we can remove it later");
+            var name = volumeName == null ? "Unnamed" : this.Name + " - " + volumeName;
             this.client.CreateTags(new CreateTagsRequest()
             {
                 ResourceId = new List<string>() { volumeId },
                 Tag = new List<Tag>()
                 {
                     new Tag() { Key = "CreatedByEc2Manager", Value = "true" },
-                    new Tag() { Key = "Name", Value = name ?? "Unnamed" },
+                    new Tag() { Key = "Name", Value = name },
+                    new Tag() { Key = "VolumeName", Value = volumeName },
                 },
             });
 

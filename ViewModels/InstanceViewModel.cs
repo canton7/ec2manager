@@ -146,7 +146,7 @@ namespace Ec2Manager.ViewModels
 
             var reconnectTask = Task.Run(async () =>
                 {
-                    await this.Manager.ReconnectAsync(this.logger);
+                    this.Manager.Reconnect(this.logger);
                     
                     var keyAndUser = this.config.RetrieveKeyAndUser(this.Manager.InstanceId);
                     this.Client = new InstanceClient(this.Manager.PublicIp, keyAndUser.Item1, keyAndUser.Item2);
@@ -157,7 +157,7 @@ namespace Ec2Manager.ViewModels
                     {
                         var volumeViewModel = IoC.Get<VolumeViewModel>();
                         this.ActivateItem(volumeViewModel);
-                        await volumeViewModel.ReconnectAsync(this.Manager, this.Client, volume.VolumeName, volume.VolumeId, volume.MountPointDir);
+                        volumeViewModel.Reconnect(this.Manager, this.Client, volume.VolumeName, volume.VolumeId, volume.MountPointDir);
                     }
                 });
 
