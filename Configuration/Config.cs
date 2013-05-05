@@ -119,9 +119,16 @@ namespace Ec2Manager.Configuration
             this.LoadMainConfig();
         }
 
-        public void SaveKey(string name, string privateKey)
+        public void SaveKeyAndUser(string name, string user, string privateKey)
         {
-            File.WriteAllText(Path.Combine(this.SavedKeysDir, name), privateKey);
+            File.WriteAllText(Path.Combine(this.SavedKeysDir, name), user + "\r\n" + privateKey);
+        }
+
+        public Tuple<string, string> RetrieveKeyAndUser(string name)
+        {
+            var contents = File.ReadAllText(Path.Combine(this.SavedKeysDir, name));
+            var parts = contents.Split(new[] { "\r\n" }, 2, StringSplitOptions.None);
+            return new Tuple<string, string>(parts[0], parts[1]);
         }
     }
 }
