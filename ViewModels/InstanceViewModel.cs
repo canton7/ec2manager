@@ -102,11 +102,13 @@ namespace Ec2Manager.ViewModels
             var createTask = Task.Run(async () =>
                 {
                     await this.Manager.CreateAsync(instanceAmi, instanceSize, availabilityZone);
+                    this.config.SaveKey(this.Manager.InstanceId, this.Manager.PrivateKey);
+
                     this.Client = new InstanceClient(this.Manager.PublicIp, loginAs, this.Manager.PrivateKey);
                     this.Client.Bind(s => s.IsConnected, (o, e) => this.NotifyOfPropertyChange(() => CanMountVolume));
 
                     await this.Client.ConnectAsync(this.logger);
-                    this.NotifyOfPropertyChange(() => CanMountVolume);
+                    //this.NotifyOfPropertyChange(() => CanMountVolume);
                 });
 
             var volumesTask = Task.Run(async () =>

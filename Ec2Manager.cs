@@ -17,7 +17,7 @@ namespace Ec2Manager
     {
         private AmazonEC2Client client;
         private string uniqueKey;
-        private string instanceId;
+        public string InstanceId { get; private set; }
 
         // We can mount on xvdf -> xvdp
         private char nextVolumeMountPointSuffix = 'f';
@@ -61,15 +61,21 @@ namespace Ec2Manager
             get { return "Ec2KeyPair-" + this.uniqueKey; }
         }
 
+        /// <summary>
+        /// Instantiate, with the intention of creating a new instance
+        /// </summary>
         public Ec2Manager(string accessKey, string secretKey)
         {
             this.client = new AmazonEC2Client(accessKey, secretKey, RegionEndpoint.EUWest1);
             this.uniqueKey = Guid.NewGuid().ToString();
         }
-
+        /// <summary>
+        /// Associate with an already-running instance
+        /// </summary>
         public Ec2Manager(string accessKey, string secretKey, string instanceId) : this(accessKey, secretKey)
         {
-            this.instanceId = instanceId;
+            this.InstanceId = instanceId;
+            this.PublicIp = this.RetrieveAddress();
         }
 
         private RunningInstance GetRunningInstance()
@@ -79,7 +85,7 @@ namespace Ec2Manager
 
             var describeInstancesRequest = new DescribeInstancesRequest()
             {
-                InstanceId = new List<string>() { this.instanceId },
+                InstanceId = new List<string>() { this.InstanceId },
             };
 
             while (!worked)
@@ -98,7 +104,7 @@ namespace Ec2Manager
 
             return describeInstancesResponse.DescribeInstancesResult.Reservation
                 .SelectMany(x => x.RunningInstance)
-                .Where(x => x.InstanceId == instanceId)
+                .Where(x => x.InstanceId == InstanceId)
                 .FirstOrDefault();
         }
 
@@ -179,7 +185,7 @@ namespace Ec2Manager
                     .FirstOrDefault(x => x.VolumeId == volumeId)
                     .Attachment;
 
-                if ((attachment.Count == 0 && allowNone) || attachment.FirstOrDefault(x => x.InstanceId == this.instanceId).Status == state)
+                if ((attachment.Count == 0 && allowNone) || attachment.FirstOrDefault(x => x.InstanceId == this.InstanceId).Status == state)
                 {
                     gotToState = true;
                 }
@@ -273,14 +279,14 @@ namespace Ec2Manager
 
             var runResponse = this.client.RunInstances(runInstanceRequest);
             var instances = runResponse.RunInstancesResult.Reservation.RunningInstance;
-            this.instanceId = instances[0].InstanceId;
-            logger.Log("New instance created. Instance ID: {0}", this.instanceId);
+            this.InstanceId = instances[0].InstanceId;
+            logger.Log("New instance created. Instance ID: {0}", this.InstanceId);
 
             // Tag straight away. They might get bored and close the window while it's launching
             logger.Log("Tagging instance");
             this.client.CreateTags(new CreateTagsRequest()
             {
-                ResourceId = new List<string>() { this.instanceId },
+                ResourceId = new List<string>() { this.InstanceId },
                 Tag = new List<Tag>()
                 {
                     new Tag() { Key = "CreatedByEc2Manager", Value = "true" },
@@ -299,7 +305,7 @@ namespace Ec2Manager
                 logger.Log("Sometimes issuing a reboot fixes it, so trying that...");
                 this.client.RebootInstances(new RebootInstancesRequest() 
                 {
-                    InstanceId = new List<string>() { this.instanceId },
+                    InstanceId = new List<string>() { this.InstanceId },
                 });
                 await this.UntilStateAsync("running");
             }
@@ -319,6 +325,14 @@ namespace Ec2Manager
             return publicIp;
         }
 
+        private string RetrieveAddress(ILogger logger = null)
+        {
+            logger = logger ?? this.DefaultLogger;
+
+            logger.Log("Retriving public IP of instance");
+            return this.GetRunningInstance().IpAddress;
+        }
+
         private void AssignAddress(string publicIp, ILogger logger = null)
         {
             logger = logger ?? this.DefaultLogger;
@@ -326,7 +340,7 @@ namespace Ec2Manager
             logger.Log("Assigning public IP {0} to instance", this.PublicIp);
             this.client.AssociateAddress(new AssociateAddressRequest()
             {
-                InstanceId = this.instanceId,
+                InstanceId = this.InstanceId,
                 PublicIp = publicIp,
             });
             logger.Log("Public IP assigned");
@@ -356,7 +370,7 @@ namespace Ec2Manager
             this.client.DetachVolume(new DetachVolumeRequest()
             {
                 Force = true,
-                InstanceId = this.instanceId,
+                InstanceId = this.InstanceId,
                 VolumeId = volumeId,
             });
 
@@ -379,7 +393,7 @@ namespace Ec2Manager
             logger.Log("Terminating instance");
             this.client.TerminateInstances(new TerminateInstancesRequest()
             {
-                InstanceId = new List<string>() { this.instanceId },
+                InstanceId = new List<string>() { this.InstanceId },
             });
 
             logger.Log("Waiting for instance to reach the 'terminated' state");
@@ -425,10 +439,10 @@ namespace Ec2Manager
         {
             logger = logger ?? this.DefaultLogger;
 
-            logger.Log("Attaching volume to instance {0}, device {1}", this.instanceId, device);
+            logger.Log("Attaching volume to instance {0}, device {1}", this.InstanceId, device);
             var attachVolumeResponse = this.client.AttachVolume(new AttachVolumeRequest()
             {
-                InstanceId = this.instanceId,
+                InstanceId = this.InstanceId,
                 VolumeId = volumeId,
                 Device = device,
             });
@@ -634,7 +648,7 @@ namespace Ec2Manager
             var keyName = instanceStatus.KeyName;
             // This excludes volumes attached to other machines as well
             var volumes = this.client.DescribeVolumes(new DescribeVolumesRequest()).DescribeVolumesResult.Volume
-                .Where(x => x.Attachment.Count == 1 && x.Attachment[0].InstanceId == this.instanceId)
+                .Where(x => x.Attachment.Count == 1 && x.Attachment[0].InstanceId == this.InstanceId)
                 .Where(x => x.Tag.Any(y => y.Key == "CreatedByEc2Manager"))
                 .Select(x => x.VolumeId);
 
