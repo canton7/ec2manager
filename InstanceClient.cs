@@ -231,9 +231,13 @@ namespace Ec2Manager
                                 cancellationToken.Value.ThrowIfCancellationRequested();
                             }
 
-                            var result = reader.ReadToEnd().TrimEnd();
+                            var result = reader.ReadLine();
                             if (!string.IsNullOrEmpty(result))
-                                logger.Log(result);
+                            {
+                                result = result.TrimEnd().StripColors();
+                                if (!string.IsNullOrWhiteSpace(result))
+                                    logger.Log(result);
+                            }
 
                             System.Threading.Thread.Sleep(100);
                         }
