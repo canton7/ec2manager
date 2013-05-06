@@ -108,30 +108,18 @@ namespace Ec2Manager.ViewModels
             }
         }
 
-        private LabelledValue activeTerminatableInstance;
-        public LabelledValue ActiveTerminatableInstance
+        private LabelledValue activeRunningInstance;
+        public LabelledValue ActiveRunningInstance
         {
-            get { return this.activeTerminatableInstance; }
+            get { return this.activeRunningInstance; }
             set
             {
-                this.activeTerminatableInstance = value;
+                this.activeRunningInstance = value;
                 this.NotifyOfPropertyChange();
+                this.NotifyOfPropertyChange(() => CanReconnectInstance);
                 this.NotifyOfPropertyChange(() => CanTerminateInstance);
             }
         }
-
-        private LabelledValue activeReconnectableInstance;
-        public LabelledValue ActiveReconnectableInstance
-        {
-            get { return this.activeReconnectableInstance; }
-            set
-            {
-                this.activeReconnectableInstance = value;
-                this.NotifyOfPropertyChange();
-                this.NotifyOfPropertyChange(() => CanReconnectInstance);
-            }
-        }
-
 
         private IEventAggregator events;
 
@@ -154,8 +142,7 @@ namespace Ec2Manager.ViewModels
             this.LoadFromConfig();
 
             this.ActiveInstanceType = this.InstanceTypes.FirstOrDefault(x => x.Value == "t1.micro");
-            this.ActiveTerminatableInstance = this.RunningInstances[0];
-            this.ActiveReconnectableInstance = this.RunningInstances[0];
+            this.ActiveRunningInstance = this.RunningInstances[0];
 
             Task.Run(() => this.RefreshRunningInstances());
         }
@@ -204,8 +191,7 @@ namespace Ec2Manager.ViewModels
             if (!this.CanRefreshRunningInstances)
             {
                 this.RunningInstances = new[] { new LabelledValue("Can't load. Try refreshing", null) };
-                this.ActiveTerminatableInstance = this.RunningInstances[0];
-                this.ActiveReconnectableInstance = this.RunningInstances[0];
+                this.ActiveRunningInstance = this.RunningInstances[0];
                 return;
             }
 
@@ -217,14 +203,12 @@ namespace Ec2Manager.ViewModels
                 {
                     this.RunningInstances = new[] { new LabelledValue("No Running Instances", null) };
                 }
-                this.ActiveTerminatableInstance = this.RunningInstances[0];
-                this.ActiveReconnectableInstance = this.RunningInstances[0];
+                this.ActiveRunningInstance = this.RunningInstances[0];
             }
             catch (Exception)
             {
                 this.RunningInstances = new[] { new LabelledValue("Error loading. Bad credentials?", null) };
-                this.ActiveTerminatableInstance = this.RunningInstances[0];
-                this.ActiveReconnectableInstance = this.RunningInstances[0];
+                this.ActiveRunningInstance = this.RunningInstances[0];
             }
         }
 
@@ -234,13 +218,13 @@ namespace Ec2Manager.ViewModels
             {
                 return !string.IsNullOrWhiteSpace(this.config.MainConfig.AwsAccessKey) &&
                     !string.IsNullOrWhiteSpace(this.config.MainConfig.AwsSecretKey) &&
-                    this.activeReconnectableInstance != null && !string.IsNullOrEmpty(this.ActiveReconnectableInstance.Value);
+                    this.ActiveRunningInstance != null && !string.IsNullOrEmpty(this.ActiveRunningInstance.Value);
             }
         }
         public void ReconnectInstance()
         {
-            var manager = new Ec2Manager(this.config.MainConfig.AwsAccessKey, this.config.MainConfig.AwsSecretKey, this.ActiveReconnectableInstance.Value);
-            manager.Name = this.ActiveReconnectableInstance.Label;
+            var manager = new Ec2Manager(this.config.MainConfig.AwsAccessKey, this.config.MainConfig.AwsSecretKey, this.ActiveRunningInstance.Value);
+            manager.Name = this.ActiveRunningInstance.Label;
             events.Publish(new ReconnectInstanceEvent()
             {
                 Manager = manager,
@@ -253,13 +237,13 @@ namespace Ec2Manager.ViewModels
             {
                 return !string.IsNullOrWhiteSpace(this.config.MainConfig.AwsAccessKey) &&
                     !string.IsNullOrWhiteSpace(this.config.MainConfig.AwsSecretKey) &&
-                    this.ActiveTerminatableInstance != null && !string.IsNullOrEmpty(this.ActiveTerminatableInstance.Value);
+                    this.ActiveRunningInstance != null && !string.IsNullOrEmpty(this.ActiveRunningInstance.Value);
             }
         }
         public void TerminateInstance()
         {
-            var manager = new Ec2Manager(this.config.MainConfig.AwsAccessKey, this.config.MainConfig.AwsSecretKey, this.ActiveTerminatableInstance.Value);
-            manager.Name = this.ActiveTerminatableInstance.Label;
+            var manager = new Ec2Manager(this.config.MainConfig.AwsAccessKey, this.config.MainConfig.AwsSecretKey, this.ActiveRunningInstance.Value);
+            manager.Name = this.ActiveRunningInstance.Label;
             events.Publish(new TerminateInstanceEvent()
             {
                 Manager = manager,
