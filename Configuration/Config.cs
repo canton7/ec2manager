@@ -9,6 +9,7 @@ using System.Linq;
 using System.Net;
 using System.Reflection;
 using System.Text;
+using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 
 namespace Ec2Manager.Configuration
@@ -121,14 +122,24 @@ namespace Ec2Manager.Configuration
 
         public void SaveKeyAndUser(string name, string user, string privateKey)
         {
-            File.WriteAllText(Path.Combine(this.SavedKeysDir, name), user + "\r\n" + privateKey);
+            var commentedKey = Regex.Replace(privateKey, @"(?=-----END)", "Ec2ManagerUser:" + user + "\n");
+            File.WriteAllText(Path.Combine(this.SavedKeysDir, name), commentedKey);
         }
 
         public Tuple<string, string> RetrieveKeyAndUser(string name)
         {
-            var contents = File.ReadAllText(Path.Combine(this.SavedKeysDir, name));
-            var parts = contents.Split(new[] { "\r\n" }, 2, StringSplitOptions.None);
-            return new Tuple<string, string>(parts[0], parts[1]);
+            var path = Path.Combine(this.SavedKeysDir, name);
+            var key = File.ReadAllText(path);
+            var user = this.ParseUserFromKey(key);
+            // Strip comment from key, as SshNet doesn't like them
+            key = Regex.Replace(key, @"^Ec2Manager.*\r?\n", "", RegexOptions.Multiline);
+            return new Tuple<string, string>(key, user);
+        }
+
+        public string ParseUserFromKey(string key)
+        {
+            var user = Regex.Match(key, @"Ec2ManagerUser:(\w*)").Groups[1].Value;
+            return string.IsNullOrWhiteSpace(user) ? null : user;
         }
     }
 }

@@ -26,6 +26,7 @@ namespace Ec2Manager.ViewModels
 
         public Ec2Manager Manager { get; private set; }
         public InstanceClient Client { get; private set; }
+        private IWindowManager windowManager;
 
         private Logger logger;
         private Config config;
@@ -72,10 +73,11 @@ namespace Ec2Manager.ViewModels
         }
 
         [ImportingConstructor]
-        public InstanceViewModel(InstanceDetailsViewModel instanceDetailsModel, Logger logger, Config config)
+        public InstanceViewModel(InstanceDetailsViewModel instanceDetailsModel, Logger logger, Config config, IWindowManager windowManager)
         {
             this.logger = logger;
             this.config = config;
+            this.windowManager = windowManager;
             this.uptimeTimer.Interval = TimeSpan.FromSeconds(3);
             this.uptimeTimer.Tick += (o, e) => this.Uptime = this.Client.GetUptime();
 
@@ -147,9 +149,36 @@ namespace Ec2Manager.ViewModels
             var reconnectTask = Task.Run(async () =>
                 {
                     this.Manager.Reconnect(this.logger);
-                    
-                    var keyAndUser = this.config.RetrieveKeyAndUser(this.Manager.InstanceId);
-                    this.Client = new InstanceClient(this.Manager.PublicIp, keyAndUser.Item1, keyAndUser.Item2);
+
+                    Tuple<string, string> keyAndUser = null;
+                    try
+                    {
+                        keyAndUser = this.config.RetrieveKeyAndUser(this.Manager.InstanceId);
+                    }
+                    catch (FileNotFoundException)
+                    {
+                        var reconnectDetails = IoC.Get<ReconnectDetailsViewModel>();
+                        bool? result = false;
+                        this.Invoke(() =>
+                            {
+                                result = this.windowManager.ShowDialog(reconnectDetails, settings: new Dictionary<string, object>()
+                                {
+                                    { "ResizeMode", ResizeMode.NoResize },
+                                });
+                            });
+
+                        if (result.HasValue && result.Value)
+                        {
+                            keyAndUser = new Tuple<string, string>(reconnectDetails.PrivateKey, reconnectDetails.LoginAs);
+                            this.config.SaveKeyAndUser(this.Manager.InstanceId, keyAndUser.Item2, keyAndUser.Item1);
+                        }
+                        else
+                        {
+                            throw new Exception("User cancelled");
+                        }
+                    }
+
+                    this.Client = new InstanceClient(this.Manager.PublicIp, keyAndUser.Item2, keyAndUser.Item1);
                     this.Client.Bind(s => s.IsConnected, (o, e) => this.NotifyOfPropertyChange(() => CanMountVolume));
                     await this.Client.ConnectAsync(this.logger);
 

@@ -11,6 +11,7 @@ using System.Windows;
 using Ec2Manager.Configuration;
 using Ec2Manager.Properties;
 using System.Diagnostics;
+using System.Dynamic;
 
 namespace Ec2Manager.ViewModels
 {
@@ -67,7 +68,10 @@ namespace Ec2Manager.ViewModels
 
         public void ShowSettings()
         {
-            this.windowManager.ShowDialog(IoC.Get<SettingsViewModel>());
+            this.windowManager.ShowDialog(IoC.Get<SettingsViewModel>(), settings: new Dictionary<string, object>()
+                {
+                    { "ResizeMode", ResizeMode.NoResize },
+                });
         }
 
         public void ShowEc2Console()
@@ -77,7 +81,7 @@ namespace Ec2Manager.ViewModels
 
         public void ShowAbout()
         {
-            this.windowManager.ShowDialog(IoC.Get<AboutViewModel>(), settings: new Dictionary<string, object>
+            this.windowManager.ShowDialog(IoC.Get<AboutViewModel>(), settings: new Dictionary<string, object>()
                 {
                     { "WindowStyle", WindowStyle.None },
                     { "ShowInTaskbar", false},

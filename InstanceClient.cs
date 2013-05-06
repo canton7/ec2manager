@@ -238,8 +238,10 @@ namespace Ec2Manager
                                 if (!string.IsNullOrWhiteSpace(result))
                                     logger.Log(result);
                             }
-
-                            System.Threading.Thread.Sleep(100);
+                            else
+                            {
+                                System.Threading.Thread.Sleep(100);
+                            }
                         }
                     }
                 };
