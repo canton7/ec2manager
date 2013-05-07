@@ -32,7 +32,7 @@ namespace Ec2Manager.ViewModels
         private Config config;
         private DispatcherTimer uptimeTimer = new DispatcherTimer();
 
-        private bool isSpotInstance;
+        private bool isSpotInstance = false;
         public bool IsSpotInstance
         {
             get { return this.isSpotInstance; }
@@ -96,9 +96,6 @@ namespace Ec2Manager.ViewModels
 
             this.SelectedVolumeType = this.VolumeTypes[0];
             this.ActivateItem(instanceDetailsModel);
-
-            // TEMPORARY
-            this.isSpotInstance = true;
         }
 
         private void SetupWithManager()
@@ -123,21 +120,21 @@ namespace Ec2Manager.ViewModels
             this.NotifyOfPropertyChange(() => VolumeTypes);
         }
 
-        public async Task SetupAsync(Ec2Manager manager, string instanceAmi, string instanceSize, string loginAs, string availabilityZone)
+        public async Task SetupAsync(Ec2Manager manager, string instanceAmi, string instanceSize, string loginAs, string availabilityZone, double? spotBidAmount = null)
         {
             this.Manager = manager;
             this.SetupWithManager();
+            this.IsSpotInstance = spotBidAmount.HasValue;
 
             var createTask = Task.Run(async () =>
                 {
-                    await this.Manager.CreateAsync(instanceAmi, instanceSize, availabilityZone, 1.00);
+                    await this.Manager.CreateAsync(instanceAmi, instanceSize, availabilityZone, spotBidAmount);
 
                     this.Client = new InstanceClient(this.Manager.PublicIp, loginAs, this.Manager.PrivateKey);
                     this.Client.Bind(s => s.IsConnected, (o, e) => this.NotifyOfPropertyChange(() => CanMountVolume));
 
                     await this.Client.ConnectAsync(this.logger);
                     this.config.SaveKeyAndUser(this.Manager.InstanceId, loginAs, this.Manager.PrivateKey);
-                    //this.NotifyOfPropertyChange(() => CanMountVolume);
                 });
 
             try

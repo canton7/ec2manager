@@ -27,6 +27,10 @@
                 <StackPanel DockPanel.Dock="Top" Orientation="Horizontal">
                     <TextBlock>Availability Zone:</TextBlock>
                     <ComboBox x:Name="AvailabilityZones" Width="100" Margin="15,0" DisplayMemberPath="Label" />
+                    <CheckBox x:Name="UseSpotMarket" Margin="15,0,0,0">Use Spot Market</CheckBox>
+                    <Label Margin="15,0,5,0" Padding="0" IsEnabled="{Binding UseSpotMarket}">Bid:</Label>
+                    <Label Padding="0" IsEnabled="{Binding UseSpotMarket}">$</Label>
+                    <TextBox Text="{Binding SpotBidAmount, StringFormat='{}{0:0.000}'}" Width="50" IsEnabled="{Binding UseSpotMarket}"/>
                 </StackPanel>
 
                 <Button Name="Create" DockPanel.Dock="Top" IsDefault="True" HorizontalAlignment="Center" VerticalAlignment="Top" Margin="0,20,0,0" Padding="20,5">Create Instance</Button>

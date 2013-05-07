@@ -121,6 +121,28 @@ namespace Ec2Manager.ViewModels
             }
         }
 
+        private bool useSpotMarket = false;
+        public bool UseSpotMarket
+        {
+            get { return this.useSpotMarket; }
+            set
+            {
+                this.useSpotMarket = value;
+                this.NotifyOfPropertyChange();
+            }
+        }
+
+        private double spotBidAmount;
+        public double SpotBidAmount
+        {
+            get { return this.spotBidAmount; }
+            set
+            {
+                this.spotBidAmount = value;
+                this.NotifyOfPropertyChange();
+            }
+        }
+
         private IEventAggregator events;
 
         [ImportingConstructor]
@@ -174,6 +196,7 @@ namespace Ec2Manager.ViewModels
                 InstanceSize = this.ActiveInstanceType.Value,
                 Manager = manager,
                 LoginAs = this.LoginAs,
+                SpotBidAmount = this.UseSpotMarket ? (double?)this.SpotBidAmount : null,
                 AvailabilityZone = this.SelectedAvailabilityZone.Value,
             });
         }
