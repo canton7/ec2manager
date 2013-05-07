@@ -17,11 +17,10 @@
                     <ColumnDefinition/>
                     <ColumnDefinition/>
                     <ColumnDefinition/>
-                    <ColumnDefinition Width="120"/>
-                    <ColumnDefinition Width="120"/>
                 </Grid.ColumnDefinitions>
                 
                 <Grid.RowDefinitions>
+                    <RowDefinition/>
                     <RowDefinition/>
                     <RowDefinition/>
                 </Grid.RowDefinitions>
@@ -29,10 +28,13 @@
                 <TextBox Grid.Row="0" Grid.Column="0" Background="Transparent" BorderThickness="0" IsReadOnly="True" Text="{Binding Manager.PublicIp, StringFormat='IP: {0}'}"/>
                 <TextBlock Grid.Row="0" Grid.Column="1" Text="{Binding Manager.InstanceState, StringFormat='State: {0}'}"/>
                 <TextBlock Grid.Row="0" Grid.Column="2" Text="{Binding Manager.BidStatus, StringFormat='Bid Status: {0}'}" Visibility="{Binding IsSpotInstance, Converter={StaticResource booleanToVisibilityConverter}}"/>
-                <Button Grid.Row="0" Name="SavePrivateKey" Grid.Column="3" Margin="5,0">Save Private Key</Button>
-                <Button Grid.Row="0" Name="Terminate" Grid.Column="4" Margin="5,0">Terminate Instance</Button>
 
-                <TextBlock Name="Uptime" Grid.Row="1" Grid.ColumnSpan="5"/>
+                <TextBlock Name="Uptime" Grid.Row="1" Grid.ColumnSpan="3"/>
+                
+                <StackPanel Grid.Row="2" Grid.ColumnSpan="3" Orientation="Horizontal" HorizontalAlignment="Right">
+                    <Button Name="SavePrivateKey" Margin="5,0" Width="120">Save Private Key</Button>
+                    <Button Name="Terminate" Margin="5,0" Width="120">Terminate Instance</Button>
+                </StackPanel>
             </Grid>
         </GroupBox>
         

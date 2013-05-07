@@ -94,5 +94,17 @@ namespace Ec2Manager.Properties {
                 this["Ec2ConsoleUrl"] = value;
             }
         }
+        
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("http://aws.amazon.com/ec2/pricing/#on-demand")]
+        public string Ec2PricingUrl {
+            get {
+                return ((string)(this["Ec2PricingUrl"]));
+            }
+            set {
+                this["Ec2PricingUrl"] = value;
+            }
+        }
     }
 }

@@ -67,7 +67,17 @@ namespace Ec2Manager.ViewModels
         {
             get { return instanceTypes; }
         }
-        public LabelledValue ActiveInstanceType { get; set; }
+
+        private LabelledValue activeInstanceType;
+        public LabelledValue ActiveInstanceType
+        {
+            get { return this.activeInstanceType; }
+            set
+            {
+                this.activeInstanceType = value;
+                this.NotifyOfPropertyChange();
+            }
+        }
 
         private string ami;
         public string AMI
@@ -143,6 +153,17 @@ namespace Ec2Manager.ViewModels
             }
         }
 
+        private string currentSpotPrice = "Loading...";
+        public string CurrentSpotPrice
+        {
+            get { return this.currentSpotPrice; }
+            set
+            {
+                this.currentSpotPrice = value;
+                this.NotifyOfPropertyChange();
+            }
+        }
+
         private IEventAggregator events;
 
         [ImportingConstructor]
@@ -158,7 +179,10 @@ namespace Ec2Manager.ViewModels
                     this.NotifyOfPropertyChange(() => CanRefreshRunningInstances);
                     this.NotifyOfPropertyChange(() => CanTerminateInstance);
                     Task.Run(() => this.RefreshRunningInstances());
+                    Task.Run(() => this.RefreshCurrentSpotPrice());
                 });
+
+            this.Bind(s => s.ActiveInstanceType, (o, e) => Task.Run(() => this.RefreshCurrentSpotPrice()));
 
             this.DisplayName = "Create New Instance";
             this.LoadFromConfig();
@@ -167,12 +191,35 @@ namespace Ec2Manager.ViewModels
             this.ActiveRunningInstance = this.RunningInstances[0];
 
             Task.Run(() => this.RefreshRunningInstances());
+            Task.Run(() => this.RefreshCurrentSpotPrice());
+
+            var manager = new Ec2Manager(this.config.MainConfig.AwsAccessKey, this.config.MainConfig.AwsSecretKey);
+            var price = manager.GetCurrentSpotPrice("m1.small");
         }
 
         private void LoadFromConfig()
         {
             this.AMI = this.config.MainConfig.DefaultAmi;
             this.LoginAs = this.config.MainConfig.DefaultLogonUser;
+        }
+
+        private void RefreshCurrentSpotPrice()
+        {
+            if (string.IsNullOrWhiteSpace(this.config.MainConfig.AwsAccessKey) || string.IsNullOrWhiteSpace(this.config.MainConfig.AwsSecretKey))
+            {
+                this.CurrentSpotPrice = "Unavailable";
+                return;
+            }
+
+            try
+            {
+                var manager = new Ec2Manager(this.config.MainConfig.AwsAccessKey, this.config.MainConfig.AwsSecretKey);
+                this.CurrentSpotPrice = manager.GetCurrentSpotPrice(this.ActiveInstanceType.Value).ToString("$0.000");
+            }
+            catch (Exception)
+            {
+                this.CurrentSpotPrice = "Unavailable";
+            }
         }
 
         public bool CanCreate

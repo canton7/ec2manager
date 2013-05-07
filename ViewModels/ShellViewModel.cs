@@ -79,6 +79,11 @@ namespace Ec2Manager.ViewModels
             Process.Start(Settings.Default.Ec2ConsoleUrl);
         }
 
+        public void ShowEc2Pricing()
+        {
+            Process.Start(Settings.Default.Ec2PricingUrl);
+        }
+
         public void ShowAbout()
         {
             this.windowManager.ShowDialog(IoC.Get<AboutViewModel>(), settings: new Dictionary<string, object>()

@@ -20,5 +20,8 @@
     <Setting Name="Ec2ConsoleUrl" Type="System.String" Scope="User">
       <Value Profile="(Default)">https://console.aws.amazon.com/ec2/home?region=eu-west-1</Value>
     </Setting>
+    <Setting Name="Ec2PricingUrl" Type="System.String" Scope="User">
+      <Value Profile="(Default)">http://aws.amazon.com/ec2/pricing/#on-demand</Value>
+    </Setting>
   </Settings>
 </SettingsFile>

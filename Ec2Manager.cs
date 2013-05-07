@@ -96,6 +96,18 @@ namespace Ec2Manager
             this.InstanceId = instanceId;
         }
 
+        public double GetCurrentSpotPrice(string instanceSize)
+        {
+            var result = this.client.DescribeSpotPriceHistory(new DescribeSpotPriceHistoryRequest()
+            {
+                InstanceType = new List<string>() { instanceSize },
+                ProductDescription = new List<string>() { "Linux/UNIX" },
+                MaxResults = 1,
+            });
+
+            return double.Parse(result.DescribeSpotPriceHistoryResult.SpotPriceHistory[0].SpotPrice);
+        }
+
         private RunningInstance GetRunningInstance()
         {
             bool worked = false;
