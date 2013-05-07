@@ -32,6 +32,17 @@ namespace Ec2Manager.ViewModels
         private Config config;
         private DispatcherTimer uptimeTimer = new DispatcherTimer();
 
+        private bool isSpotInstance;
+        public bool IsSpotInstance
+        {
+            get { return this.isSpotInstance; }
+            set
+            {
+                this.isSpotInstance = value;
+                this.NotifyOfPropertyChange();
+            }
+        }
+
         private string uptime;
         public string Uptime
         {
@@ -85,6 +96,9 @@ namespace Ec2Manager.ViewModels
 
             this.SelectedVolumeType = this.VolumeTypes[0];
             this.ActivateItem(instanceDetailsModel);
+
+            // TEMPORARY
+            this.isSpotInstance = true;
         }
 
         private void SetupWithManager()
@@ -116,7 +130,7 @@ namespace Ec2Manager.ViewModels
 
             var createTask = Task.Run(async () =>
                 {
-                    await this.Manager.CreateAsync(instanceAmi, instanceSize, availabilityZone);
+                    await this.Manager.CreateAsync(instanceAmi, instanceSize, availabilityZone, 1.00);
 
                     this.Client = new InstanceClient(this.Manager.PublicIp, loginAs, this.Manager.PrivateKey);
                     this.Client.Bind(s => s.IsConnected, (o, e) => this.NotifyOfPropertyChange(() => CanMountVolume));

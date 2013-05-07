@@ -54,6 +54,18 @@ namespace Ec2Manager
                 this.NotifyOfPropertyChange();
             }
         }
+        private string bidStatus = null;
+        public string BidStatus
+        {
+            get { return this.bidStatus; }
+            private set
+            {
+                this.bidStatus = value;
+                this.NotifyOfPropertyChange();
+            }
+        }
+
+        private string bidRequestId = null;
 
         private string securityGroupName
         {
@@ -157,6 +169,40 @@ namespace Ec2Manager
                     await Task.Delay(2000);
                 }
             }
+        }
+
+        private async Task<string> UntilBidActiveAsync(string spotInstanceRequestId, CancellationToken? cancellationToken = null)
+        {
+            string instanceId = null;
+
+            var bidStateRequest = new DescribeSpotInstanceRequestsRequest()
+            {
+                SpotInstanceRequestId = new List<string>() { spotInstanceRequestId },
+            };
+
+            while (instanceId == null)
+            {
+                if (cancellationToken.HasValue && cancellationToken.Value.IsCancellationRequested)
+                    break;
+
+                var bidState = this.client.DescribeSpotInstanceRequests(bidStateRequest).DescribeSpotInstanceRequestsResult.SpotInstanceRequest[0];
+                this.BidStatus = bidState.Status.Code;
+
+                if (bidState.State == "active")
+                {
+                    instanceId = bidState.InstanceId;
+                }
+                else if (bidState.State == "open")
+                {
+                    await Task.Delay(1000);
+                }
+                else
+                {
+                    throw new Exception(string.Format("Spot bid has reached state {0} for reason {1}", bidState.State, bidState.Status));
+                }
+            }
+
+            return instanceId;
         }
 
         private async Task UntilVolumeStateAsync(string volumeId, string state)
@@ -297,6 +343,62 @@ namespace Ec2Manager
             this.InstanceId = instances[0].InstanceId;
             logger.Log("New instance created. Instance ID: {0}", this.InstanceId);
 
+            await this.SetupInstance(name);
+        }
+
+        private async Task BidForInstanceAsync(string ami, string size, string keyPairName, string securityGroup, string name, double spotBidPrice, string availabilityZone = null, ILogger logger = null)
+        {
+            logger = logger ?? this.DefaultLogger;
+
+            logger.Log("Bidding for new instance. Price: ${0}, AMI: {1}, size: {2}", spotBidPrice.ToString(), ami, size);
+            var launchSpecification = new LaunchSpecification()
+            {
+                ImageId = ami,
+                InstanceType = size,
+                KeyName = keyPairName,
+                SecurityGroup = new List<string>() { securityGroup },
+            };
+            if (!string.IsNullOrWhiteSpace(availabilityZone))
+            {
+                launchSpecification.Placement = new Placement() { AvailabilityZone = availabilityZone };
+            }
+
+            var spotResponse = this.client.RequestSpotInstances(new RequestSpotInstancesRequest()
+            {
+                InstanceCount = 1,
+                SpotPrice = spotBidPrice.ToString(),
+                LaunchSpecification = launchSpecification,
+            });
+            this.bidRequestId = spotResponse.RequestSpotInstancesResult.SpotInstanceRequest[0].SpotInstanceRequestId;
+
+            logger.Log("Bid ID {0} created. Waiting for spot bid request to be fulfilled", this.bidRequestId);
+            logger.Log("This normally takes at least a few minutes");
+            this.InstanceId = await this.UntilBidActiveAsync(this.bidRequestId);
+            logger.Log("New instance created. Instance ID: {0}", this.InstanceId);
+
+            // Now that the request has been fulfilled, cancel it
+            this.CancelBidRequest();
+
+            await this.SetupInstance(name);
+        }
+
+        private void CancelBidRequest()
+        {
+            if (this.bidRequestId == null)
+                return;
+
+            this.client.CancelSpotInstanceRequests(new CancelSpotInstanceRequestsRequest()
+            {
+                SpotInstanceRequestId = new List<string>() { this.bidRequestId },
+            });
+
+            this.bidRequestId = null;
+        }
+
+        private async Task SetupInstance(string name, ILogger logger = null)
+        {
+            logger = logger ?? this.DefaultLogger;
+
             // Tag straight away. They might get bored and close the window while it's launching
             logger.Log("Tagging instance");
             this.client.CreateTags(new CreateTagsRequest()
@@ -319,7 +421,7 @@ namespace Ec2Manager
             {
                 logger.Log("The instance is taking a long time to come up. This happens sometimes.");
                 logger.Log("Sometimes issuing a reboot fixes it, so trying that...");
-                this.client.RebootInstances(new RebootInstancesRequest() 
+                this.client.RebootInstances(new RebootInstancesRequest()
                 {
                     InstanceId = new List<string>() { this.InstanceId },
                 });
@@ -478,7 +580,7 @@ namespace Ec2Manager
             await this.UntilVolumeAttachedStateAsync(volumeId, "attached");
         }
 
-        public async Task CreateAsync(string instanceAmi, string instanceSize, string availabilityZone = null, ILogger logger = null)
+        public async Task CreateAsync(string instanceAmi, string instanceSize, string availabilityZone = null, double? spotBidPrice = null, ILogger logger = null)
         {
             logger = logger ?? this.DefaultLogger;
 
@@ -518,11 +620,20 @@ namespace Ec2Manager
 
             try
             {
-                await this.CreateInstanceAsync(instanceAmi, instanceSize, this.keyPairName, this.securityGroupName, this.Name, availabilityZone, logger);
+                if (spotBidPrice.HasValue)
+                {
+                    await this.BidForInstanceAsync(instanceAmi, instanceSize, this.keyPairName, this.securityGroupName, this.Name, spotBidPrice.Value, availabilityZone, logger);
+                }
+                else
+                {
+                    await this.CreateInstanceAsync(instanceAmi, instanceSize, this.keyPairName, this.securityGroupName, this.Name, availabilityZone, logger);
+                }
             }
-            catch (AmazonEC2Exception e)
+            catch (Exception e)
             {
                 logger.Log("Error creating instance: {0}. Performing rollback", e.Message);
+                if (spotBidPrice.HasValue)
+                    this.CancelBidRequest();
                 this.DeleteKeyPair(this.keyPairName, logger);
                 this.DeleteSecurityGroup(this.securityGroupName, logger);
                 throw;
