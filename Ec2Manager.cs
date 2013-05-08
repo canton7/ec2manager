@@ -194,8 +194,8 @@ namespace Ec2Manager
 
             while (instanceId == null)
             {
-                if (cancellationToken.HasValue && cancellationToken.Value.IsCancellationRequested)
-                    break;
+                if (cancellationToken.HasValue)
+                    cancellationToken.Value.ThrowIfCancellationRequested();
 
                 var bidState = this.client.DescribeSpotInstanceRequests(bidStateRequest).DescribeSpotInstanceRequestsResult.SpotInstanceRequest[0];
                 this.BidStatus = bidState.Status.Code;
@@ -331,7 +331,7 @@ namespace Ec2Manager
             return keyPair.KeyMaterial;
         }
 
-        private async Task CreateInstanceAsync(string ami, string size, string keyPairName, string securityGroup, string name, string availabilityZone = null, ILogger logger = null)
+        private async Task CreateInstanceAsync(string ami, string size, string keyPairName, string securityGroup, string name, string availabilityZone = null, CancellationToken? cancellationToken = null, ILogger logger = null)
         {
             logger = logger ?? this.DefaultLogger;
 
@@ -355,12 +355,13 @@ namespace Ec2Manager
             this.InstanceId = instances[0].InstanceId;
             logger.Log("New instance created. Instance ID: {0}", this.InstanceId);
 
-            await this.SetupInstance(name);
+            await this.SetupInstance(name, cancellationToken);
         }
 
-        private async Task BidForInstanceAsync(string ami, string size, string keyPairName, string securityGroup, string name, double spotBidPrice, string availabilityZone = null, ILogger logger = null)
+        private async Task BidForInstanceAsync(string ami, string size, string keyPairName, string securityGroup, string name, double spotBidPrice, string availabilityZone = null, CancellationToken? cancellationToken = null, ILogger logger = null)
         {
             logger = logger ?? this.DefaultLogger;
+            CancellationToken token = cancellationToken.HasValue ? cancellationToken.Value : new CancellationToken();
 
             logger.Log("Bidding for new instance. Price: ${0}, AMI: {1}, size: {2}", spotBidPrice.ToString(), ami, size);
             var launchSpecification = new LaunchSpecification()
@@ -385,10 +386,10 @@ namespace Ec2Manager
 
             logger.Log("Bid ID {0} created. Waiting for spot bid request to be fulfilled", this.bidRequestId);
             logger.Log("This normally takes at least a few minutes");
-            this.InstanceId = await this.UntilBidActiveAsync(this.bidRequestId);
+            this.InstanceId = await this.UntilBidActiveAsync(this.bidRequestId, token);
             logger.Log("New instance created. Instance ID: {0}", this.InstanceId);
 
-            await this.SetupInstance(name);
+            await this.SetupInstance(name, token);
         }
 
         private void CancelBidRequest()
@@ -404,9 +405,10 @@ namespace Ec2Manager
             this.bidRequestId = null;
         }
 
-        private async Task SetupInstance(string name, ILogger logger = null)
+        private async Task SetupInstance(string name, CancellationToken? cancellationToken = null, ILogger logger = null)
         {
             logger = logger ?? this.DefaultLogger;
+            CancellationToken token = cancellationToken.HasValue ? cancellationToken.Value : new CancellationToken();
 
             // Tag straight away. They might get bored and close the window while it's launching
             logger.Log("Tagging instance");
@@ -424,9 +426,21 @@ namespace Ec2Manager
             logger.Log("Waiting for instance to reach 'running' state");
             // Sometimes (I have no idea why) AWS reports the instance as pending when the console shows it running
             // The observed fix is to restart it
-            CancellationTokenSource cts = new CancellationTokenSource(TimeSpan.FromSeconds(45));
-            await this.UntilStateAsync("running", cts.Token);
-            if (cts.IsCancellationRequested)
+            var timeoutCts = new CancellationTokenSource(TimeSpan.FromSeconds(45));
+            var cts = CancellationTokenSource.CreateLinkedTokenSource(token, timeoutCts.Token);
+            bool needsRestart = false;
+            try
+            {
+                await this.UntilStateAsync("running", cts.Token);
+            }
+            catch (TaskCanceledException)
+            {
+                if (timeoutCts.IsCancellationRequested && !token.IsCancellationRequested)
+                    needsRestart = true;
+                else
+                    throw;
+            }
+            if (needsRestart)
             {
                 logger.Log("The instance is taking a long time to come up. This happens sometimes.");
                 logger.Log("Sometimes issuing a reboot fixes it, so trying that...");
@@ -434,7 +448,7 @@ namespace Ec2Manager
                 {
                     InstanceId = new List<string>() { this.InstanceId },
                 });
-                await this.UntilStateAsync("running");
+                await this.UntilStateAsync("running", token);
             }
 
             logger.Log("Instance is now running");
@@ -589,17 +603,19 @@ namespace Ec2Manager
             await this.UntilVolumeAttachedStateAsync(volumeId, "attached");
         }
 
-        public async Task CreateAsync(string instanceAmi, string instanceSize, string availabilityZone = null, double? spotBidPrice = null, ILogger logger = null)
+        public async Task CreateAsync(string instanceAmi, string instanceSize, string availabilityZone = null, double? spotBidPrice = null, CancellationToken? cancellationToken = null, ILogger logger = null)
         {
             logger = logger ?? this.DefaultLogger;
+            CancellationToken token = cancellationToken.HasValue ? cancellationToken.Value : new CancellationToken();
 
             logger.Log("Starting instance creation process");
 
             try
             {
                 this.CreateSecurityGroup(this.securityGroupName, logger);
+                token.ThrowIfCancellationRequested();
             }
-            catch (AmazonEC2Exception e)
+            catch (Exception e)
             {
                 logger.Log("Error creating security group: {0}", e.Message);
                 throw;
@@ -608,8 +624,9 @@ namespace Ec2Manager
             try
             {
                 this.AuthorizeIngress(this.securityGroupName, new[] { new PortRangeDescription(22, 22, "tcp"), new PortRangeDescription(-1, -1, "icmp") }, logger);
+                token.ThrowIfCancellationRequested();
             }
-            catch (AmazonEC2Exception e)
+            catch (Exception e)
             {
                 logger.Log("Error authorising ingress: {0}. Performing rollback", e.Message);
                 this.DeleteSecurityGroup(this.securityGroupName, logger);
@@ -619,8 +636,9 @@ namespace Ec2Manager
             try
             {
                 this.PrivateKey = this.CreateKeyPair(this.keyPairName, logger);
+                token.ThrowIfCancellationRequested();
             }
-            catch (AmazonEC2Exception e)
+            catch (Exception e)
             {
                 logger.Log("Error creating key pair: {0}. Performing rollback", e.Message);
                 this.DeleteSecurityGroup(this.securityGroupName, logger);
@@ -631,12 +649,13 @@ namespace Ec2Manager
             {
                 if (spotBidPrice.HasValue)
                 {
-                    await this.BidForInstanceAsync(instanceAmi, instanceSize, this.keyPairName, this.securityGroupName, this.Name, spotBidPrice.Value, availabilityZone, logger);
+                    await this.BidForInstanceAsync(instanceAmi, instanceSize, this.keyPairName, this.securityGroupName, this.Name, spotBidPrice.Value, availabilityZone, token, logger);
                 }
                 else
                 {
-                    await this.CreateInstanceAsync(instanceAmi, instanceSize, this.keyPairName, this.securityGroupName, this.Name, availabilityZone, logger);
+                    await this.CreateInstanceAsync(instanceAmi, instanceSize, this.keyPairName, this.securityGroupName, this.Name, availabilityZone, token, logger);
                 }
+                token.ThrowIfCancellationRequested();
             }
             catch (Exception e)
             {
@@ -648,12 +667,13 @@ namespace Ec2Manager
                 throw;
             }
 
-            AmazonEC2Exception exception = null;
+            Exception exception = null;
             try
             {
                 this.PublicIp = this.AllocateAddress(logger);
+                token.ThrowIfCancellationRequested();
             }
-            catch (AmazonEC2Exception e)
+            catch (Exception e)
             {
                 exception = e;
             }
@@ -670,8 +690,9 @@ namespace Ec2Manager
             try
             {
                 this.AssignAddress(this.PublicIp, logger);
+                token.ThrowIfCancellationRequested();
             }
-            catch (AmazonEC2Exception e)
+            catch (Exception e)
             {
                 exception = e;
             }
