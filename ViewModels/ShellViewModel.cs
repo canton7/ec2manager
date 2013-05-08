@@ -79,6 +79,11 @@ namespace Ec2Manager.ViewModels
             Process.Start(Settings.Default.Ec2ConsoleUrl);
         }
 
+        public void ShowEc2Pricing()
+        {
+            Process.Start(Settings.Default.Ec2PricingUrl);
+        }
+
         public void ShowAbout()
         {
             this.windowManager.ShowDialog(IoC.Get<AboutViewModel>(), settings: new Dictionary<string, object>()
@@ -93,7 +98,7 @@ namespace Ec2Manager.ViewModels
             var instanceViewModel = IoC.Get<InstanceViewModel>();
             this.ActivateItem(instanceViewModel);
 
-            await instanceViewModel.SetupAsync(message.Manager, message.InstanceAmi, message.InstanceSize, message.LoginAs, message.AvailabilityZone);
+            await instanceViewModel.SetupAsync(message.Manager, message.InstanceAmi, message.InstanceSize, message.LoginAs, message.AvailabilityZone, message.SpotBidAmount);
         }
 
         public async void Handle(TerminateInstanceEvent message)

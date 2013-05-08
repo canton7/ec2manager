@@ -23,10 +23,18 @@
                     <TextBlock>AMI:</TextBlock>
                     <TextBox Name="AMI" Width="150" Margin="15,0"></TextBox>
                 </StackPanel>
-                
-                <StackPanel DockPanel.Dock="Top" Orientation="Horizontal">
+
+                <StackPanel DockPanel.Dock="Top" Orientation="Horizontal"  Margin="0,0,0,20">
                     <TextBlock>Availability Zone:</TextBlock>
                     <ComboBox x:Name="AvailabilityZones" Width="100" Margin="15,0" DisplayMemberPath="Label" />
+                </StackPanel>
+
+                <StackPanel DockPanel.Dock="Top" Orientation="Horizontal">
+                    <CheckBox x:Name="UseSpotMarket">Use Spot Market</CheckBox>
+                    <Label Margin="15,0,0,0" Padding="0" IsEnabled="{Binding UseSpotMarket}">Bid: $</Label>
+                    <TextBox Margin="0,-3,0,0" Text="{Binding SpotBidAmount, StringFormat='{}{0:0.000}'}" Width="50" IsEnabled="{Binding UseSpotMarket}"/>
+                    <Label Margin="15,0,0,0" Padding="0" IsEnabled="{Binding UseSpotMarket}">Current:</Label>
+                    <Label Margin="5,0,0,0" Padding="0" Content="{Binding CurrentSpotPrice}" IsEnabled="{Binding UseSpotMarket}"/>
                 </StackPanel>
 
                 <Button Name="Create" DockPanel.Dock="Top" IsDefault="True" HorizontalAlignment="Center" VerticalAlignment="Top" Margin="0,20,0,0" Padding="20,5">Create Instance</Button>
