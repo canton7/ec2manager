@@ -11,6 +11,7 @@ using System.IO;
 using Ec2Manager.Configuration;
 using System.Windows.Threading;
 using System.Windows;
+using System.Threading;
 
 namespace Ec2Manager.ViewModels
 {
@@ -28,7 +29,7 @@ namespace Ec2Manager.ViewModels
         public InstanceClient Client { get; private set; }
         private IWindowManager windowManager;
 
-        private Logger logger;
+        public Logger Logger { get; private set; }
         private Config config;
         private DispatcherTimer uptimeTimer = new DispatcherTimer();
 
@@ -83,10 +84,22 @@ namespace Ec2Manager.ViewModels
             }
         }
 
+        private CancellationTokenSource cancelCts;
+        public CancellationTokenSource CancelCts
+        {
+            get { return this.cancelCts; }
+            private set
+            {
+                this.cancelCts = value;
+                this.NotifyOfPropertyChange();
+                this.NotifyOfPropertyChange(() => CanCancelAction);
+            }
+        }
+
         [ImportingConstructor]
         public InstanceViewModel(InstanceDetailsViewModel instanceDetailsModel, Logger logger, Config config, IWindowManager windowManager)
         {
-            this.logger = logger;
+            this.Logger = logger;
             this.config = config;
             this.windowManager = windowManager;
             this.uptimeTimer.Interval = TimeSpan.FromSeconds(3);
@@ -101,7 +114,7 @@ namespace Ec2Manager.ViewModels
         private void SetupWithManager()
         {
             this.DisplayName = this.Manager.Name;
-            this.Manager.DefaultLogger = this.logger;
+            this.Manager.DefaultLogger = this.Logger;
 
             this.Manager.Bind(s => s.InstanceState, (o, e) =>
             {
@@ -126,30 +139,37 @@ namespace Ec2Manager.ViewModels
             this.SetupWithManager();
             this.IsSpotInstance = spotBidAmount.HasValue;
 
+            this.CancelCts = new CancellationTokenSource();
             var createTask = Task.Run(async () =>
                 {
-                    await this.Manager.CreateAsync(instanceAmi, instanceSize, availabilityZone, spotBidAmount);
+                    await this.Manager.CreateAsync(instanceAmi, instanceSize, availabilityZone, spotBidAmount, this.CancelCts.Token);
 
                     this.Client = new InstanceClient(this.Manager.PublicIp, loginAs, this.Manager.PrivateKey);
                     this.Client.Bind(s => s.IsConnected, (o, e) => this.NotifyOfPropertyChange(() => CanMountVolume));
 
-                    await this.Client.ConnectAsync(this.logger);
+                    await this.Client.ConnectAsync(this.Logger);
                     this.config.SaveKeyAndUser(this.Manager.InstanceId, loginAs, this.Manager.PrivateKey);
-                });
+                }, this.CancelCts.Token);
 
             try
             {
                 await Task.WhenAll(createTask, this.RefreshVolumes());
+                this.uptimeTimer.Start();
+            }
+            catch (OperationCanceledException)
+            {
+                this.TryClose();
             }
             catch (Exception e)
             {
-                this.logger.Log("Error occurred: {0}", e.Message);
+                this.Logger.Log("Error occurred: {0}", e.Message);
                 MessageBox.Show(Application.Current.MainWindow, "Error occurred: " + e.Message, "Error occurred", MessageBoxButton.OK, MessageBoxImage.Error);
                 this.TryClose();
-                return;
             }
-
-            this.uptimeTimer.Start();
+            finally
+            {
+                this.CancelCts = null;
+            }
         }
 
         public async Task ReconnectAsync(Ec2Manager manager)
@@ -159,7 +179,7 @@ namespace Ec2Manager.ViewModels
 
             var reconnectTask = Task.Run(async () =>
                 {
-                    this.Manager.Reconnect(this.logger);
+                    this.Manager.Reconnect(this.Logger);
 
                     Tuple<string, string> keyAndUser = null;
                     try
@@ -191,7 +211,7 @@ namespace Ec2Manager.ViewModels
 
                     this.Client = new InstanceClient(this.Manager.PublicIp, keyAndUser.Item2, keyAndUser.Item1);
                     this.Client.Bind(s => s.IsConnected, (o, e) => this.NotifyOfPropertyChange(() => CanMountVolume));
-                    await this.Client.ConnectAsync(this.logger);
+                    await this.Client.ConnectAsync(this.Logger);
 
                     foreach (var volume in this.Manager.GetAttachedVolumeDescriptions())
                     {
@@ -207,13 +227,27 @@ namespace Ec2Manager.ViewModels
             }
             catch (Exception e)
             {
-                this.logger.Log("Error occurred: {0}", e.Message);
+                this.Logger.Log("Error occurred: {0}", e.Message);
                 MessageBox.Show(Application.Current.MainWindow, "Error occurred: " + e.Message, "Error occurred", MessageBoxButton.OK, MessageBoxImage.Error);
                 this.TryClose();
                 return;
             }
 
             this.uptimeTimer.Start();
+        }
+
+        public bool CanCancelAction
+        {
+            get { return this.CancelCts != null && !this.CancelCts.IsCancellationRequested; }
+        }
+        public void CancelAction()
+        {
+            if (this.CancelCts == null)
+                return;
+
+            this.Logger.Log("Starting to cancel operation");
+            this.CancelCts.Cancel();
+            this.NotifyOfPropertyChange(() => CanCancelAction);
         }
 
         public bool CanTerminate
@@ -262,13 +296,24 @@ namespace Ec2Manager.ViewModels
 
             try
             {
-                await volumeViewModel.SetupAsync(this.Manager, this.Client, volumeName, volumeId);
+                this.CancelCts = new CancellationTokenSource();
+                await volumeViewModel.SetupAsync(this.Manager, this.Client, volumeName, volumeId, this.CancelCts.Token);
+
+            }
+            catch (OperationCanceledException)
+            {
+                this.Logger.Log("Volume mounting cancelled");
+                volumeViewModel.TryClose();
             }
             catch (Exception e)
             {
-                this.logger.Log("Error occurred: {0}", e.Message);
+                this.Logger.Log("Error occurred: {0}", e.Message);
                 MessageBox.Show(Application.Current.MainWindow, "Error occurred: " + e.Message, "Error occurred", MessageBoxButton.OK, MessageBoxImage.Error);
                 volumeViewModel.TryClose();
+            }
+            finally
+            {
+                this.CancelCts = null;
             }
         }
 

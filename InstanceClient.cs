@@ -65,7 +65,7 @@ namespace Ec2Manager
         public async Task MountAndSetupDeviceAsync(string device, string mountPointDir, ILogger logger)
         {
             var mountPoint = this.mountBase + mountPointDir;
-            await this.RunAndLogAsync("sudo mkdir \"" + mountPoint + "\"", logger);
+            await this.RunAndLogAsync("sudo mkdir -p \"" + mountPoint + "\"", logger);
             await this.RunAndLogAsync("sudo mount " + device + " \"" + mountPoint + "\"", logger, false, 5);
             await this.RunAndLogAsync("sudo chown -R " + user + "." + user + " \"" + mountPoint + "\"", logger);
 

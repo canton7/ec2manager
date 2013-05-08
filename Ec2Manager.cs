@@ -152,15 +152,6 @@ namespace Ec2Manager
             return result;
         }
 
-        private void RemoveDeviceFromList(string device)
-        {
-            lock (this.volumeMountPointLock)
-            {
-                if (mountPoints.Contains(device))
-                    this.usedMountPoints.Add(device);
-            }
-        }
-
         private async Task UntilStateAsync(string state, CancellationToken? cancellationToken = null)
         {
             bool gotToState = false;
@@ -398,10 +389,14 @@ namespace Ec2Manager
             await this.SetupInstance(name, token);
         }
 
-        private void CancelBidRequest()
+        private void CancelBidRequest(ILogger logger = null)
         {
+            logger = logger ?? this.DefaultLogger;
+
             if (this.bidRequestId == null)
                 return;
+
+            logger.Log("Cancelling spot bid request");
 
             this.client.CancelSpotInstanceRequests(new CancelSpotInstanceRequestsRequest()
             {
@@ -541,11 +536,16 @@ namespace Ec2Manager
                 VolumeId = volumeId,
             });
 
+            this.ResetAttachedVolumes(logger);
+
             logger.Log("Volume {0} deleted", volumeId);
         }
 
-        private async Task TerminateInstanceAsync( ILogger logger = null)
+        private async Task TerminateInstanceAsync(ILogger logger = null)
         {
+            if (this.InstanceId == null)
+                return;
+
             logger = logger ?? this.DefaultLogger;
 
             logger.Log("Terminating instance");
@@ -624,7 +624,8 @@ namespace Ec2Manager
             }
             catch (Exception e)
             {
-                logger.Log("Error creating security group: {0}", e.Message);
+                logger.Log("Error creating security group: {0}. Performing rollback", e.Message);
+                this.DeleteSecurityGroup(this.securityGroupName, logger);
                 throw;
             }
 
@@ -648,10 +649,12 @@ namespace Ec2Manager
             catch (Exception e)
             {
                 logger.Log("Error creating key pair: {0}. Performing rollback", e.Message);
+                this.DeleteKeyPair(this.keyPairName, logger);
                 this.DeleteSecurityGroup(this.securityGroupName, logger);
                 throw;
             }
 
+            Exception exception = null;
             try
             {
                 if (spotBidPrice.HasValue)
@@ -666,27 +669,13 @@ namespace Ec2Manager
             }
             catch (Exception e)
             {
-                logger.Log("Error creating instance: {0}. Performing rollback", e.Message);
-                if (spotBidPrice.HasValue)
-                    this.CancelBidRequest();
-                this.DeleteKeyPair(this.keyPairName, logger);
-                this.DeleteSecurityGroup(this.securityGroupName, logger);
-                throw;
-            }
-
-            Exception exception = null;
-            try
-            {
-                this.PublicIp = this.AllocateAddress(logger);
-                token.ThrowIfCancellationRequested();
-            }
-            catch (Exception e)
-            {
                 exception = e;
             }
             if (exception != null)
             {
-                logger.Log("Error allocating public IP: {0}. Performing rollback", exception.Message);
+                logger.Log("Error creating instance: {0}. Performing rollback", exception.Message);
+                if (spotBidPrice.HasValue)
+                    this.CancelBidRequest();
                 await this.TerminateInstanceAsync(logger);
                 this.DeleteKeyPair(this.keyPairName, logger);
                 this.DeleteSecurityGroup(this.securityGroupName, logger);
@@ -696,6 +685,7 @@ namespace Ec2Manager
             exception = null;
             try
             {
+                this.PublicIp = this.AllocateAddress(logger);
                 this.AssignAddress(this.PublicIp, logger);
                 token.ThrowIfCancellationRequested();
             }
@@ -716,6 +706,23 @@ namespace Ec2Manager
             logger.Log("Instance has been created");
         }
 
+        private void ResetAttachedVolumes(ILogger logger = null)
+        {
+            logger = logger ?? this.DefaultLogger;
+
+            logger.Log("Resetting list of attached devices");
+            lock (this.volumeMountPointLock)
+            {
+                this.usedMountPoints.Clear();
+                foreach (var volume in this.GetAttachedVolumes())
+                {
+                    var attachment = volume.Attachment.FirstOrDefault(x => x.InstanceId == this.InstanceId);
+                    if (attachment != null && mountPoints.Contains(attachment.Device))
+                        this.usedMountPoints.Add(attachment.Device);
+                }
+            }
+        }
+
         public void Reconnect(ILogger logger = null)
         {
             logger = logger ?? this.DefaultLogger;
@@ -733,12 +740,7 @@ namespace Ec2Manager
             else
                 this.uniqueKey = uniqueKey.Value;
 
-            foreach (var volume in this.GetAttachedVolumes())
-            {
-                var attachment = volume.Attachment.FirstOrDefault(x => x.InstanceId == this.InstanceId);
-                if (attachment != null)
-                    this.RemoveDeviceFromList(attachment.Device);
-            }
+            this.ResetAttachedVolumes(logger);
         }
 
         public async Task<string> MountVolumeAsync(string volumeId, IMachineInteractionProvider client, string name = null, CancellationToken? cancellationToken = null, ILogger logger = null)
@@ -912,12 +914,6 @@ namespace Ec2Manager
 
         private class StubLogger : ILogger
         {
-
-            public BindableCollection<LogEntry> Entries
-            {
-                get { return new BindableCollection<LogEntry>(); }
-            }
-
             public void Log(string message)
             {
             }

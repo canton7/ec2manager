@@ -10,7 +10,6 @@ namespace Ec2Manager
 {
     public interface ILogger
     {
-        BindableCollection<LogEntry> Entries { get; }
         void Log(string message);
         void Log(string format, params string[] parameters);
         void LogFromStream(Stream stream, IAsyncResult asynch);
