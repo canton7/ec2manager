@@ -31,10 +31,10 @@
 
                 <StackPanel DockPanel.Dock="Top" Orientation="Horizontal">
                     <CheckBox x:Name="UseSpotMarket">Use Spot Market</CheckBox>
-                    <Label Margin="15,0,0,0" Padding="0" IsEnabled="{Binding UseSpotMarket}">Bid: $</Label>
+                    <Label Margin="15,0,0,0" Padding="0" IsEnabled="{Binding UseSpotMarket}">Max bid: $</Label>
                     <TextBox Margin="0,-3,0,0" Text="{Binding SpotBidAmount, StringFormat='{}{0:0.000}'}" Width="50" IsEnabled="{Binding UseSpotMarket}"/>
-                    <Label Margin="15,0,0,0" Padding="0" IsEnabled="{Binding UseSpotMarket}">Current:</Label>
-                    <Label Margin="5,0,0,0" Padding="0" Content="{Binding CurrentSpotPrice}" IsEnabled="{Binding UseSpotMarket}"/>
+                    <Label Margin="15,0,0,0" Padding="0" IsEnabled="{Binding UseSpotMarket}">Current price:</Label>
+                    <Label Margin="5,0,0,0" Padding="0" Content="{Binding CurrentSpotPriceLabel}" IsEnabled="{Binding UseSpotMarket}"/>
                 </StackPanel>
 
                 <Button Name="Create" DockPanel.Dock="Top" IsDefault="True" HorizontalAlignment="Center" VerticalAlignment="Top" Margin="0,20,0,0" Padding="20,5">Create Instance</Button>

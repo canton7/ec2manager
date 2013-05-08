@@ -9,6 +9,7 @@ using System.ComponentModel.Composition;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using System.Windows;
 
 namespace Ec2Manager.ViewModels
 {
@@ -153,13 +154,25 @@ namespace Ec2Manager.ViewModels
             }
         }
 
-        private string currentSpotPrice = "Loading...";
-        public string CurrentSpotPrice
+        private double currentSpotPrice;
+        public double CurrentSpotPrice
         {
             get { return this.currentSpotPrice; }
             set
             {
                 this.currentSpotPrice = value;
+                this.NotifyOfPropertyChange();
+                this.CurrentSpotPriceLabel = this.currentSpotPrice.ToString("$0.000");
+            }
+        }
+
+        private string currentSpotPriceLabel = "Loading...";
+        public string CurrentSpotPriceLabel
+        {
+            get { return this.currentSpotPriceLabel; }
+            set
+            {
+                this.currentSpotPriceLabel = value;
                 this.NotifyOfPropertyChange();
             }
         }
@@ -207,18 +220,18 @@ namespace Ec2Manager.ViewModels
         {
             if (string.IsNullOrWhiteSpace(this.config.MainConfig.AwsAccessKey) || string.IsNullOrWhiteSpace(this.config.MainConfig.AwsSecretKey))
             {
-                this.CurrentSpotPrice = "Unavailable";
+                this.CurrentSpotPriceLabel = "Unavailable";
                 return;
             }
 
             try
             {
                 var manager = new Ec2Manager(this.config.MainConfig.AwsAccessKey, this.config.MainConfig.AwsSecretKey);
-                this.CurrentSpotPrice = manager.GetCurrentSpotPrice(this.ActiveInstanceType.Value).ToString("$0.000");
+                this.CurrentSpotPrice = manager.GetCurrentSpotPrice(this.ActiveInstanceType.Value);
             }
             catch (Exception)
             {
-                this.CurrentSpotPrice = "Unavailable";
+                this.CurrentSpotPriceLabel = "Unavailable";
             }
         }
 
@@ -235,6 +248,19 @@ namespace Ec2Manager.ViewModels
         }
         public void Create()
         {
+            if (this.UseSpotMarket && this.SpotBidAmount <= this.CurrentSpotPrice)
+            {
+                var result = MessageBox.Show(Application.Current.MainWindow, "Are you sure about that spot bid amount?\nIt's lower than the current price, so you'll be waiting a long time for it to be fulfilled (like, days).", "Are you sure?", MessageBoxButton.YesNo, MessageBoxImage.Warning, MessageBoxResult.No);
+                if (result == MessageBoxResult.No)
+                    return;
+            }
+            else if (this.UseSpotMarket && this.SpotBidAmount < this.CurrentSpotPrice * 1.2)
+            {
+                var result = MessageBox.Show(Application.Current.MainWindow, "Are you sure about that spot bid amount?\nIt's quite similar to the current price, so there's a high(ish) chance your instance will be terminated.", "Are you sure?", MessageBoxButton.YesNo, MessageBoxImage.Warning, MessageBoxResult.No);
+                if (result == MessageBoxResult.No)
+                    return;
+            }
+
             var manager = new Ec2Manager(this.config.MainConfig.AwsAccessKey, this.config.MainConfig.AwsSecretKey);
             manager.Name = this.InstanceName;
             this.events.Publish(new CreateInstanceEvent()
