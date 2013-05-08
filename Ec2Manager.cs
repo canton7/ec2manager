@@ -388,9 +388,6 @@ namespace Ec2Manager
             this.InstanceId = await this.UntilBidActiveAsync(this.bidRequestId);
             logger.Log("New instance created. Instance ID: {0}", this.InstanceId);
 
-            // Now that the request has been fulfilled, cancel it
-            this.CancelBidRequest();
-
             await this.SetupInstance(name);
         }
 
