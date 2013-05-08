@@ -217,9 +217,10 @@ namespace Ec2Manager
             return instanceId;
         }
 
-        private async Task UntilVolumeStateAsync(string volumeId, string state)
+        private async Task UntilVolumeStateAsync(string volumeId, string state, CancellationToken? cancellationToken = null)
         {
             bool gotToState = false;
+            CancellationToken token = cancellationToken.HasValue ? cancellationToken.Value : new CancellationToken();
 
             var describeVolumesRequest = new DescribeVolumesRequest()
             {
@@ -228,6 +229,8 @@ namespace Ec2Manager
 
             while (!gotToState)
             {
+                token.ThrowIfCancellationRequested();
+
                 var describeVolumesResponse = this.client.DescribeVolumes(describeVolumesRequest);
                 var status = describeVolumesResponse.DescribeVolumesResult.Volume.FirstOrDefault(x => x.VolumeId == volumeId).Status;
 
@@ -242,9 +245,10 @@ namespace Ec2Manager
             }
         }
 
-        private async Task UntilVolumeAttachedStateAsync(string volumeId, string state, bool allowNone = true)
+        private async Task UntilVolumeAttachedStateAsync(string volumeId, string state, bool allowNone = true, CancellationToken? cancellationToken = null)
         {
             bool gotToState = false;
+            CancellationToken token = cancellationToken.HasValue ? cancellationToken.Value : new CancellationToken();
 
             var describeVolumesRequest = new DescribeVolumesRequest()
             {
@@ -253,6 +257,8 @@ namespace Ec2Manager
 
             while (!gotToState)
             {
+                token.ThrowIfCancellationRequested();
+
                 var describeVolumesResponse = this.client.DescribeVolumes(describeVolumesRequest);
                 var attachment = describeVolumesResponse.DescribeVolumesResult.Volume
                     .FirstOrDefault(x => x.VolumeId == volumeId)
@@ -587,9 +593,10 @@ namespace Ec2Manager
             });
         }
 
-        private async Task AttachVolumeAsync(string volumeId, string device, ILogger logger = null)
+        private async Task AttachVolumeAsync(string volumeId, string device, CancellationToken? cancellationToken = null, ILogger logger = null)
         {
             logger = logger ?? this.DefaultLogger;
+            CancellationToken token = cancellationToken.HasValue ? cancellationToken.Value : new CancellationToken();
 
             logger.Log("Attaching volume to instance {0}, device {1}", this.InstanceId, device);
             var attachVolumeResponse = this.client.AttachVolume(new AttachVolumeRequest()
@@ -600,7 +607,7 @@ namespace Ec2Manager
             });
 
             logger.Log("Waiting for volume to reach the 'attached' state");
-            await this.UntilVolumeAttachedStateAsync(volumeId, "attached");
+            await this.UntilVolumeAttachedStateAsync(volumeId, "attached", cancellationToken: token);
         }
 
         public async Task CreateAsync(string instanceAmi, string instanceSize, string availabilityZone = null, double? spotBidPrice = null, CancellationToken? cancellationToken = null, ILogger logger = null)
@@ -734,9 +741,10 @@ namespace Ec2Manager
             }
         }
 
-        public async Task<string> MountVolumeAsync(string volumeId, IMachineInteractionProvider client, string name = null, ILogger logger = null)
+        public async Task<string> MountVolumeAsync(string volumeId, IMachineInteractionProvider client, string name = null, CancellationToken? cancellationToken = null, ILogger logger = null)
         {
             logger = logger ?? this.DefaultLogger;
+            CancellationToken token = cancellationToken.HasValue ? cancellationToken.Value : new CancellationToken();
             bool weCreatedVolume = false;
 
             if (volumeId.StartsWith("snap-"))
@@ -744,9 +752,10 @@ namespace Ec2Manager
                 weCreatedVolume = true;
                 try
                 {
-                    volumeId = await this.CreateVolumeFromSnapshot(volumeId, client, name, logger);
+                    volumeId = await this.CreateVolumeFromSnapshot(volumeId, client, name, token, logger);
+                    token.ThrowIfCancellationRequested();
                 }
-                catch (AmazonEC2Exception e)
+                catch (Exception e)
                 {
                     logger.Log("Error creating volume from snapshot: {0}", e.Message);
                     throw;
@@ -757,22 +766,26 @@ namespace Ec2Manager
 
             string device = null;
             string deviceMountPoint = null;
-            AmazonEC2Exception exception = null;
+            Exception exception = null;
             try
             {
                 device = this.GetNextDevice();
                 deviceMountPoint = Path.GetFileName(device);
-                await this.AttachVolumeAsync(volumeId, device, logger);
+                await this.AttachVolumeAsync(volumeId, device, token, logger);
+                token.ThrowIfCancellationRequested();
 
                 logger.Log("Mounting and setting up device");
                 await client.MountAndSetupDeviceAsync(device, deviceMountPoint, logger);
+                token.ThrowIfCancellationRequested();
 
                 logger.Log("Retriving port settings");
                 var portSettings = client.GetPortDescriptions(deviceMountPoint, logger).ToArray();
+                token.ThrowIfCancellationRequested();
 
                 this.AuthorizeIngress(this.securityGroupName, portSettings, logger);
+                token.ThrowIfCancellationRequested();
             }
-            catch (AmazonEC2Exception e)
+            catch (Exception e)
             {
                 exception = e;
             }
@@ -789,9 +802,10 @@ namespace Ec2Manager
             return deviceMountPoint;
         }
 
-        public async Task<string> CreateVolumeFromSnapshot(string snapshotId, IMachineInteractionProvider client, string volumeName = null, ILogger logger = null)
+        public async Task<string> CreateVolumeFromSnapshot(string snapshotId, IMachineInteractionProvider client, string volumeName = null, CancellationToken? cancellationToken = null, ILogger logger = null)
         {
             logger = logger ?? this.DefaultLogger;
+            CancellationToken token = cancellationToken.HasValue ? cancellationToken.Value : new CancellationToken();
 
             logger.Log("Starting device mount process. Snapshot ID: {0}", snapshotId);
 
@@ -819,7 +833,7 @@ namespace Ec2Manager
             });
 
             logger.Log("Waiting for volume to reach the 'available' state");
-            await this.UntilVolumeStateAsync(volumeId, "available");
+            await this.UntilVolumeStateAsync(volumeId, "available", token);
 
             return volumeId;
         }
