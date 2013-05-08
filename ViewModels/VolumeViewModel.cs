@@ -62,14 +62,14 @@ namespace Ec2Manager.ViewModels
             this.Logger = logger;
         }
 
-        public async Task SetupAsync(Ec2Manager manager, InstanceClient client, string volumeName, string volumeId)
+        public async Task SetupAsync(Ec2Manager manager, InstanceClient client, string volumeName, string volumeId, CancellationToken? cancellationToken = null)
         {
             this.Client = client;
             this.Manager = manager;
 
             this.DisplayName = volumeName;
 
-            this.MountPointDir = await this.Manager.MountVolumeAsync(volumeId, this.Client, volumeName, this.Logger);
+            this.MountPointDir = await this.Manager.MountVolumeAsync(volumeId, this.Client, volumeName, cancellationToken, this.Logger);
             this.VolumeState = "mounted";
             this.RunCommand = this.Client.GetRunCommand(this.MountPointDir, this.Logger);
             this.UserInstruction = this.Client.GetUserInstruction(this.MountPointDir, this.Logger).Replace("<PUBLIC-IP>", this.Manager.PublicIp);
