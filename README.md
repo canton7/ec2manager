@@ -191,6 +191,17 @@ If you only want to open one port, that's allowed -- e.g. `1000/tcp` -- and if y
 This is run from the root of the mounted volume.
 4. `ec2manager/user_instruction`: This is displayed to the user, verbatim. The string `<PUBLIC-IP>` is replaced with the actual public IP of the server.
 
+Choosing another AMI
+--------------------
+
+If you like, you can change which AMI Ec2Manager uses (by editing 'Ec2Manager.exe.config').
+However, bear in mind that it must be Ubuntu (`ec2manager/setup`, see above, installs ubuntu packages), 64-bit (I've tried to support both 32-bit and 64-bit applications in snapshots, but where this is impossible I've gone for 64-bit), ad have passwordless sudo.
+You can use ebs-backed or instance-store-backed AMIs, but bear in mind that Micro instsances can't use instance-store-backed AMIs.
+The AMI must also reside in the eu-west-1 zone.
+
+I use [this list](http://cloud-images.ubuntu.com/locator/ec2/).
+
+
 Port Mappings
 -------------
 
