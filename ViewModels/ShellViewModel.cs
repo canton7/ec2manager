@@ -11,11 +11,14 @@ using System.Windows;
 using Ec2Manager.Configuration;
 using Ec2Manager.Properties;
 using System.Diagnostics;
+using System.Dynamic;
 
 namespace Ec2Manager.ViewModels
 {
     [Export]
-    public class ShellViewModel : Conductor<IScreen>.Collection.OneActive, IHandle<CreateInstanceEvent>, IHandle<TerminateInstanceEvent>
+    public class ShellViewModel
+        : Conductor<IScreen>.Collection.OneActive,
+        IHandle<CreateInstanceEvent>, IHandle<TerminateInstanceEvent>, IHandle<ReconnectInstanceEvent>
     {
         private IWindowManager windowManager;
         private Config config;
@@ -65,7 +68,10 @@ namespace Ec2Manager.ViewModels
 
         public void ShowSettings()
         {
-            this.windowManager.ShowDialog(IoC.Get<SettingsViewModel>());
+            this.windowManager.ShowDialog(IoC.Get<SettingsViewModel>(), settings: new Dictionary<string, object>()
+                {
+                    { "ResizeMode", ResizeMode.NoResize },
+                });
         }
 
         public void ShowEc2Console()
@@ -73,9 +79,14 @@ namespace Ec2Manager.ViewModels
             Process.Start(Settings.Default.Ec2ConsoleUrl);
         }
 
+        public void ShowEc2Pricing()
+        {
+            Process.Start(Settings.Default.Ec2PricingUrl);
+        }
+
         public void ShowAbout()
         {
-            this.windowManager.ShowDialog(IoC.Get<AboutViewModel>(), settings: new Dictionary<string, object>
+            this.windowManager.ShowDialog(IoC.Get<AboutViewModel>(), settings: new Dictionary<string, object>()
                 {
                     { "WindowStyle", WindowStyle.None },
                     { "ShowInTaskbar", false},
@@ -87,7 +98,7 @@ namespace Ec2Manager.ViewModels
             var instanceViewModel = IoC.Get<InstanceViewModel>();
             this.ActivateItem(instanceViewModel);
 
-            await instanceViewModel.SetupAsync(message.Manager, message.InstanceAmi, message.InstanceSize, message.LoginAs, message.AvailabilityZone);
+            await instanceViewModel.SetupAsync(message.Manager, message.InstanceAmi, message.InstanceSize, message.LoginAs, message.AvailabilityZone, message.SpotBidAmount);
         }
 
         public async void Handle(TerminateInstanceEvent message)
@@ -96,6 +107,14 @@ namespace Ec2Manager.ViewModels
             this.ActivateItem(terminateViewModel);
 
             await terminateViewModel.SetupAsync(message.Manager);
+        }
+
+        public async void Handle(ReconnectInstanceEvent message)
+        {
+            var instanceViewModel = IoC.Get<InstanceViewModel>();
+            this.ActivateItem(instanceViewModel);
+
+            await instanceViewModel.ReconnectAsync(message.Manager);
         }
     }
 }

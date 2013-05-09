@@ -23,25 +23,37 @@
                     <TextBlock>AMI:</TextBlock>
                     <TextBox Name="AMI" Width="150" Margin="15,0"></TextBox>
                 </StackPanel>
-                
-                <StackPanel DockPanel.Dock="Top" Orientation="Horizontal">
+
+                <StackPanel DockPanel.Dock="Top" Orientation="Horizontal"  Margin="0,0,0,20">
                     <TextBlock>Availability Zone:</TextBlock>
                     <ComboBox x:Name="AvailabilityZones" Width="100" Margin="15,0" DisplayMemberPath="Label" />
+                </StackPanel>
+
+                <StackPanel DockPanel.Dock="Top" Orientation="Horizontal">
+                    <CheckBox x:Name="UseSpotMarket">Use Spot Market</CheckBox>
+                    <Label Margin="15,0,0,0" Padding="0" IsEnabled="{Binding UseSpotMarket}">Max bid: $</Label>
+                    <TextBox Margin="0,-3,0,0" Text="{Binding SpotBidAmount, StringFormat='{}{0:0.000}'}" Width="50" IsEnabled="{Binding UseSpotMarket}"/>
+                    <Label Margin="15,0,0,0" Padding="0" IsEnabled="{Binding UseSpotMarket}">Current price:</Label>
+                    <Label Margin="5,0,0,0" Padding="0" Content="{Binding CurrentSpotPriceLabel}" IsEnabled="{Binding UseSpotMarket}"/>
                 </StackPanel>
 
                 <Button Name="Create" DockPanel.Dock="Top" IsDefault="True" HorizontalAlignment="Center" VerticalAlignment="Top" Margin="0,20,0,0" Padding="20,5">Create Instance</Button>
             </DockPanel>
         </GroupBox>
-        
-        <GroupBox Header="Terminate Instance" DockPanel.Dock="Top" VerticalAlignment="Top" Padding="10">
+
+        <GroupBox Header="Reconnect / Terminate Instance" DockPanel.Dock="Top" VerticalAlignment="Top" Padding="10" Margin="0,20,0,0">
             <DockPanel>
                 <StackPanel Orientation="Horizontal" DockPanel.Dock="Top">
-                    <TextBlock>Instance: </TextBlock>
-                    <ComboBox x:Name="TerminatableInstances" Margin="15,0" Width="200" DisplayMemberPath="Label"/>
-                    <Button Name="RefreshTerminatableInstances">Refresh List</Button>
+                    <TextBlock>Instance:</TextBlock>
+                    <ComboBox x:Name="RunningInstances" Margin="15,0" Width="200" DisplayMemberPath="Label"/>
+                    <Button cal:Message.Attach="RefreshRunningInstances">Refresh List</Button>
                 </StackPanel>
 
-                <Button Name="TerminateInstance" DockPanel.Dock="Top" HorizontalAlignment="Center" VerticalAlignment="Top" Margin="0,20,0,0" Padding="20,5">Terminate Instance</Button>
+                <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" HorizontalAlignment="Center">
+                    <Button Name="ReconnectInstance" Margin="0,20,15,0" Padding="20,5">Reconnect To Instance</Button>
+                    <Button Name="TerminateInstance" Margin="15,20,0,0" Padding="20,5">Terminate Instance</Button>
+                </StackPanel>
+                
             </DockPanel>
         </GroupBox>
     </DockPanel>

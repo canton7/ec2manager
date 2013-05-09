@@ -9,6 +9,7 @@ using System.Linq;
 using System.Net;
 using System.Reflection;
 using System.Text;
+using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 
 namespace Ec2Manager.Configuration
@@ -49,10 +50,16 @@ namespace Ec2Manager.Configuration
             return this.snapshotConfig.Value;
         }
 
+        public string SavedKeysDir
+        {
+            get { return Path.Combine(this.ConfigDir, "keys"); }
+        }
+
         [ImportingConstructor]
         public Config()
         {
             Directory.CreateDirectory(this.ConfigDir);
+            Directory.CreateDirectory(this.SavedKeysDir);
 
             this.LoadMainConfig();
 
@@ -111,6 +118,28 @@ namespace Ec2Manager.Configuration
         public void DiscardMainConfig()
         {
             this.LoadMainConfig();
+        }
+
+        public void SaveKeyAndUser(string name, string user, string privateKey)
+        {
+            var commentedKey = Regex.Replace(privateKey, @"(?=-----END)", "Ec2ManagerUser:" + user + "\n");
+            File.WriteAllText(Path.Combine(this.SavedKeysDir, name), commentedKey);
+        }
+
+        public Tuple<string, string> RetrieveKeyAndUser(string name)
+        {
+            var path = Path.Combine(this.SavedKeysDir, name);
+            var key = File.ReadAllText(path);
+            var user = this.ParseUserFromKey(key);
+            // Strip comment from key, as SshNet doesn't like them
+            key = Regex.Replace(key, @"^Ec2Manager.*\r?\n", "", RegexOptions.Multiline);
+            return new Tuple<string, string>(key, user);
+        }
+
+        public string ParseUserFromKey(string key)
+        {
+            var user = Regex.Match(key, @"Ec2ManagerUser:(\w*)").Groups[1].Value;
+            return string.IsNullOrWhiteSpace(user) ? null : user;
         }
     }
 }

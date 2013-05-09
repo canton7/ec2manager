@@ -7,26 +7,35 @@
              mc:Ignorable="d" 
              d:DesignHeight="600" d:DesignWidth="600">
     <DockPanel>
+        <DockPanel.Resources>
+            <BooleanToVisibilityConverter x:Key="booleanToVisibilityConverter"/>
+        </DockPanel.Resources>
+        
         <GroupBox Header="Instance Properties" DockPanel.Dock="Top" Padding="10">
             <Grid>
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition/>
                     <ColumnDefinition/>
-                    <ColumnDefinition Width="120"/>
-                    <ColumnDefinition Width="120"/>
+                    <ColumnDefinition/>
                 </Grid.ColumnDefinitions>
                 
                 <Grid.RowDefinitions>
+                    <RowDefinition/>
                     <RowDefinition/>
                     <RowDefinition/>
                 </Grid.RowDefinitions>
 
                 <TextBox Grid.Row="0" Grid.Column="0" Background="Transparent" BorderThickness="0" IsReadOnly="True" Text="{Binding Manager.PublicIp, StringFormat='IP: {0}'}"/>
                 <TextBlock Grid.Row="0" Grid.Column="1" Text="{Binding Manager.InstanceState, StringFormat='State: {0}'}"/>
-                <Button Grid.Row="0" Name="SavePrivateKey" Grid.Column="2" Margin="5,0">Save Private Key</Button>
-                <Button Grid.Row="0" Name="Terminate" Grid.Column="3" Margin="5,0">Terminate Instance</Button>
+                <TextBlock Grid.Row="0" Grid.Column="2" Text="{Binding Manager.BidStatus, StringFormat='Bid Status: {0}'}" Visibility="{Binding IsSpotInstance, Converter={StaticResource booleanToVisibilityConverter}}"/>
 
-                <TextBlock Name="Uptime" Grid.Row="1" Grid.ColumnSpan="4"/>
+                <TextBlock Name="Uptime" Grid.Row="1" Grid.ColumnSpan="3"/>
+                
+                <StackPanel Grid.Row="2" Grid.ColumnSpan="3" Orientation="Horizontal" HorizontalAlignment="Right">
+                    <Button Name="SavePrivateKey" Margin="5,0" Width="120">Save Private Key</Button>
+                    <Button Name="CancelAction" Margin="5,0" Width="100">Cancel</Button>
+                    <Button Name="Terminate" Margin="5,0" Width="120">Terminate Instance</Button>
+                </StackPanel>
             </Grid>
         </GroupBox>
         

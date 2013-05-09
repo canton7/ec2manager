@@ -9,6 +9,7 @@ using System.ComponentModel.Composition;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using System.Windows;
 
 namespace Ec2Manager.ViewModels
 {
@@ -67,7 +68,17 @@ namespace Ec2Manager.ViewModels
         {
             get { return instanceTypes; }
         }
-        public LabelledValue ActiveInstanceType { get; set; }
+
+        private LabelledValue activeInstanceType;
+        public LabelledValue ActiveInstanceType
+        {
+            get { return this.activeInstanceType; }
+            set
+            {
+                this.activeInstanceType = value;
+                this.NotifyOfPropertyChange();
+            }
+        }
 
         private string ami;
         public string AMI
@@ -97,29 +108,74 @@ namespace Ec2Manager.ViewModels
             }
         }
 
-        private LabelledValue[] terminatableInstances = new[] { new LabelledValue("Press Refresh", null) };
-        public LabelledValue[] TerminatableInstances
+        private LabelledValue[] runningInstances = new[] { new LabelledValue("Loading...", null) };
+        public LabelledValue[] RunningInstances
         {
-            get { return this.terminatableInstances; }
+            get { return this.runningInstances; }
             set
             {
-                this.terminatableInstances = value;
+                this.runningInstances = value;
                 this.NotifyOfPropertyChange();
             }
         }
 
-        private LabelledValue activeTerminatableInstance;
-        public LabelledValue ActiveTerminatableInstance
+        private LabelledValue activeRunningInstance;
+        public LabelledValue ActiveRunningInstance
         {
-            get { return this.activeTerminatableInstance; }
+            get { return this.activeRunningInstance; }
             set
             {
-                this.activeTerminatableInstance = value;
+                this.activeRunningInstance = value;
                 this.NotifyOfPropertyChange();
+                this.NotifyOfPropertyChange(() => CanReconnectInstance);
                 this.NotifyOfPropertyChange(() => CanTerminateInstance);
             }
         }
 
+        private bool useSpotMarket = false;
+        public bool UseSpotMarket
+        {
+            get { return this.useSpotMarket; }
+            set
+            {
+                this.useSpotMarket = value;
+                this.NotifyOfPropertyChange();
+            }
+        }
+
+        private double spotBidAmount;
+        public double SpotBidAmount
+        {
+            get { return this.spotBidAmount; }
+            set
+            {
+                this.spotBidAmount = value;
+                this.NotifyOfPropertyChange();
+            }
+        }
+
+        private double currentSpotPrice;
+        public double CurrentSpotPrice
+        {
+            get { return this.currentSpotPrice; }
+            set
+            {
+                this.currentSpotPrice = value;
+                this.NotifyOfPropertyChange();
+                this.CurrentSpotPriceLabel = this.currentSpotPrice.ToString("$0.000");
+            }
+        }
+
+        private string currentSpotPriceLabel = "Loading...";
+        public string CurrentSpotPriceLabel
+        {
+            get { return this.currentSpotPriceLabel; }
+            set
+            {
+                this.currentSpotPriceLabel = value;
+                this.NotifyOfPropertyChange();
+            }
+        }
 
         private IEventAggregator events;
 
@@ -133,21 +189,50 @@ namespace Ec2Manager.ViewModels
                 {
                     this.LoadFromConfig();
                     this.NotifyOfPropertyChange(() => CanCreate);
-                    this.NotifyOfPropertyChange(() => CanRefreshTerminatableInstances);
+                    this.NotifyOfPropertyChange(() => CanRefreshRunningInstances);
                     this.NotifyOfPropertyChange(() => CanTerminateInstance);
+                    Task.Run(() => this.RefreshRunningInstances());
+                    Task.Run(() => this.RefreshCurrentSpotPrice());
                 });
+
+            this.Bind(s => s.ActiveInstanceType, (o, e) => Task.Run(() => this.RefreshCurrentSpotPrice()));
 
             this.DisplayName = "Create New Instance";
             this.LoadFromConfig();
 
             this.ActiveInstanceType = this.InstanceTypes.FirstOrDefault(x => x.Value == "t1.micro");
-            this.ActiveTerminatableInstance = this.TerminatableInstances[0];
+            this.ActiveRunningInstance = this.RunningInstances[0];
+
+            Task.Run(() => this.RefreshRunningInstances());
+            Task.Run(() => this.RefreshCurrentSpotPrice());
+
+            var manager = new Ec2Manager(this.config.MainConfig.AwsAccessKey, this.config.MainConfig.AwsSecretKey);
+            var price = manager.GetCurrentSpotPrice("m1.small");
         }
 
         private void LoadFromConfig()
         {
             this.AMI = this.config.MainConfig.DefaultAmi;
             this.LoginAs = this.config.MainConfig.DefaultLogonUser;
+        }
+
+        private void RefreshCurrentSpotPrice()
+        {
+            if (string.IsNullOrWhiteSpace(this.config.MainConfig.AwsAccessKey) || string.IsNullOrWhiteSpace(this.config.MainConfig.AwsSecretKey))
+            {
+                this.CurrentSpotPriceLabel = "Unavailable";
+                return;
+            }
+
+            try
+            {
+                var manager = new Ec2Manager(this.config.MainConfig.AwsAccessKey, this.config.MainConfig.AwsSecretKey);
+                this.CurrentSpotPrice = manager.GetCurrentSpotPrice(this.ActiveInstanceType.Value);
+            }
+            catch (Exception)
+            {
+                this.CurrentSpotPriceLabel = "Unavailable";
+            }
         }
 
         public bool CanCreate
@@ -163,6 +248,19 @@ namespace Ec2Manager.ViewModels
         }
         public void Create()
         {
+            if (this.UseSpotMarket && this.SpotBidAmount <= this.CurrentSpotPrice)
+            {
+                var result = MessageBox.Show(Application.Current.MainWindow, "Are you sure about that spot bid amount?\nIt's lower than the current price, so you'll be waiting a long time for it to be fulfilled (like, days).", "Are you sure?", MessageBoxButton.YesNo, MessageBoxImage.Warning, MessageBoxResult.No);
+                if (result == MessageBoxResult.No)
+                    return;
+            }
+            else if (this.UseSpotMarket && this.SpotBidAmount < this.CurrentSpotPrice * 1.2)
+            {
+                var result = MessageBox.Show(Application.Current.MainWindow, "Are you sure about that spot bid amount?\nIt's quite similar to the current price, so there's a high(ish) chance your instance will be terminated.", "Are you sure?", MessageBoxButton.YesNo, MessageBoxImage.Warning, MessageBoxResult.No);
+                if (result == MessageBoxResult.No)
+                    return;
+            }
+
             var manager = new Ec2Manager(this.config.MainConfig.AwsAccessKey, this.config.MainConfig.AwsSecretKey);
             manager.Name = this.InstanceName;
             this.events.Publish(new CreateInstanceEvent()
@@ -171,11 +269,12 @@ namespace Ec2Manager.ViewModels
                 InstanceSize = this.ActiveInstanceType.Value,
                 Manager = manager,
                 LoginAs = this.LoginAs,
+                SpotBidAmount = this.UseSpotMarket ? (double?)this.SpotBidAmount : null,
                 AvailabilityZone = this.SelectedAvailabilityZone.Value,
             });
         }
 
-        public bool CanRefreshTerminatableInstances
+        public bool CanRefreshRunningInstances
         {
             get
             {
@@ -183,15 +282,49 @@ namespace Ec2Manager.ViewModels
                     !string.IsNullOrWhiteSpace(this.config.MainConfig.AwsSecretKey);
             }
         }
-        public void RefreshTerminatableInstances()
+        public void RefreshRunningInstances()
         {
-            var manager = new Ec2Manager(this.config.MainConfig.AwsAccessKey, this.config.MainConfig.AwsSecretKey);
-            this.TerminatableInstances = manager.ListInstances().Select(x => new LabelledValue(x.Item2, x.Item1)).ToArray();
-            if (this.TerminatableInstances.Length == 0)
+            if (!this.CanRefreshRunningInstances)
             {
-                this.TerminatableInstances = new[] { new LabelledValue("No Running Instances", null) };
+                this.RunningInstances = new[] { new LabelledValue("Can't load. Try refreshing", null) };
+                this.ActiveRunningInstance = this.RunningInstances[0];
+                return;
             }
-            this.ActiveTerminatableInstance = this.TerminatableInstances[0];
+
+            try
+            {
+                var manager = new Ec2Manager(this.config.MainConfig.AwsAccessKey, this.config.MainConfig.AwsSecretKey);
+                this.RunningInstances = manager.ListInstances().Select(x => new LabelledValue(x.Item2, x.Item1)).ToArray();
+                if (this.RunningInstances.Length == 0)
+                {
+                    this.RunningInstances = new[] { new LabelledValue("No Running Instances", null) };
+                }
+                this.ActiveRunningInstance = this.RunningInstances[0];
+            }
+            catch (Exception)
+            {
+                this.RunningInstances = new[] { new LabelledValue("Error loading. Bad credentials?", null) };
+                this.ActiveRunningInstance = this.RunningInstances[0];
+            }
+        }
+
+        public bool CanReconnectInstance
+        {
+            get
+            {
+                return !string.IsNullOrWhiteSpace(this.config.MainConfig.AwsAccessKey) &&
+                    !string.IsNullOrWhiteSpace(this.config.MainConfig.AwsSecretKey) &&
+                    this.ActiveRunningInstance != null && !string.IsNullOrEmpty(this.ActiveRunningInstance.Value);
+            }
+        }
+        public void ReconnectInstance()
+        {
+            var manager = new Ec2Manager(this.config.MainConfig.AwsAccessKey, this.config.MainConfig.AwsSecretKey, this.ActiveRunningInstance.Value);
+            manager.Name = this.ActiveRunningInstance.Label;
+            events.Publish(new ReconnectInstanceEvent()
+            {
+                Manager = manager,
+            });
         }
 
         public bool CanTerminateInstance
@@ -200,13 +333,13 @@ namespace Ec2Manager.ViewModels
             {
                 return !string.IsNullOrWhiteSpace(this.config.MainConfig.AwsAccessKey) &&
                     !string.IsNullOrWhiteSpace(this.config.MainConfig.AwsSecretKey) &&
-                    this.ActiveTerminatableInstance != null && !string.IsNullOrEmpty(this.ActiveTerminatableInstance.Value);
+                    this.ActiveRunningInstance != null && !string.IsNullOrEmpty(this.ActiveRunningInstance.Value);
             }
         }
         public void TerminateInstance()
         {
-            var manager = new Ec2Manager(this.config.MainConfig.AwsAccessKey, this.config.MainConfig.AwsSecretKey, this.ActiveTerminatableInstance.Value);
-            manager.Name = this.ActiveTerminatableInstance.Label;
+            var manager = new Ec2Manager(this.config.MainConfig.AwsAccessKey, this.config.MainConfig.AwsSecretKey, this.ActiveRunningInstance.Value);
+            manager.Name = this.ActiveRunningInstance.Label;
             events.Publish(new TerminateInstanceEvent()
             {
                 Manager = manager,

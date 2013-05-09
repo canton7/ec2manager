@@ -21,7 +21,7 @@ namespace Ec2Manager.ViewModels
 	    {
             this.DisplayName = "About";
 
-            this.Version = Assembly.GetExecutingAssembly().GetName().Version.ToString();
+            this.Version = Assembly.GetExecutingAssembly().GetName().Version.ToString(3);
             this.HomepageUrl = Settings.Default.HomePageUrl;
 	    }
 

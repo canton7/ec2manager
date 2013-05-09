@@ -94,9 +94,11 @@
     <Compile Include="Classes\AsyncLazy.cs" />
     <Compile Include="Classes\AsyncSemaphore.cs" />
     <Compile Include="Classes\ScreenExtensions.cs" />
+    <Compile Include="Classes\StringExtensions.cs" />
     <Compile Include="Configuration\Config.cs" />
     <Compile Include="Configuration\MainConfig.cs" />
     <Compile Include="Configuration\VolumeType.cs" />
+    <Compile Include="Events\ReconnectInstanceEvent.cs" />
     <Compile Include="Events\TerminateInstanceEvent.cs" />
     <Compile Include="ILogger.cs" />
     <Compile Include="Support\HyperlinkUtilities.cs" />
@@ -111,6 +113,7 @@
     <Compile Include="ViewModels\ConnectViewModel.cs" />
     <Compile Include="ViewModels\InstanceDetailsViewModel.cs" />
     <Compile Include="ViewModels\InstanceViewModel.cs" />
+    <Compile Include="ViewModels\ReconnectDetailsViewModel.cs" />
     <Compile Include="ViewModels\SettingsViewModel.cs" />
     <Compile Include="ViewModels\ShellViewModel.cs" />
     <Compile Include="ViewModels\TerminateInstanceViewModel.cs" />
@@ -126,6 +129,9 @@
     </Compile>
     <Compile Include="Views\InstanceView.xaml.cs">
       <DependentUpon>InstanceView.xaml</DependentUpon>
+    </Compile>
+    <Compile Include="Views\ReconnectDetailsView.xaml.cs">
+      <DependentUpon>ReconnectDetailsView.xaml</DependentUpon>
     </Compile>
     <Compile Include="Views\SettingsView.xaml.cs">
       <DependentUpon>SettingsView.xaml</DependentUpon>
@@ -161,6 +167,10 @@
       <Generator>MSBuild:Compile</Generator>
     </Page>
     <Page Include="Views\InstanceView.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Include="Views\ReconnectDetailsView.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>

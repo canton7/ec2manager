@@ -65,7 +65,7 @@ namespace Ec2Manager
         public async Task MountAndSetupDeviceAsync(string device, string mountPointDir, ILogger logger)
         {
             var mountPoint = this.mountBase + mountPointDir;
-            await this.RunAndLogAsync("sudo mkdir \"" + mountPoint + "\"", logger);
+            await this.RunAndLogAsync("sudo mkdir -p \"" + mountPoint + "\"", logger);
             await this.RunAndLogAsync("sudo mount " + device + " \"" + mountPoint + "\"", logger, false, 5);
             await this.RunAndLogAsync("sudo chown -R " + user + "." + user + " \"" + mountPoint + "\"", logger);
 
@@ -130,10 +130,20 @@ namespace Ec2Manager
             return this.client.RunCommand("[ -r \"" + mountPoint + "/ec2manager/runcmd\" ] && cat \"" + mountPoint + "/ec2manager/runcmd\"").Result.Trim();
         }
 
+        public bool IsCommandSessionStarted(string sessionName)
+        {
+            return this.client.RunCommand("screen -ls | grep " + sessionName).ExitStatus == 0;
+        }
+
         public async Task RunCommandAsync(string from, string command, string sessionName, ILogger logger, CancellationToken? cancellationToken = null)
         {
             var cmd = "cd \"" + from + "\" && " + command + "";
-            await this.RunInShell(cmd, sessionName, logger, cancellationToken);
+            await this.RunInShellAsync(cmd, sessionName, logger, cancellationToken);
+        }
+
+        public async Task ResumeSessionAsync(string sessionName, ILogger logger, CancellationToken? cancellationToken = null)
+        {
+            await this.RunInShellAsync(null, sessionName, logger, cancellationToken);
         }
 
         public string GetUserInstruction(string mountPointDir, ILogger logger)
@@ -186,7 +196,10 @@ namespace Ec2Manager
             });
         }
 
-        private Task RunInShell(string command, string sessionName, ILogger logger, System.Threading.CancellationToken? cancellationToken = null)
+        /// <summary>
+        /// Note unintuitive behaviour - if command is null, tries to reconnect to session
+        /// </summary>
+        private Task RunInShellAsync(string command, string sessionName, ILogger logger, System.Threading.CancellationToken? cancellationToken = null)
         {
             System.Action runAction = () =>
                 {
@@ -197,10 +210,17 @@ namespace Ec2Manager
                         writer.AutoFlush = true;
 
                         reader.ReadToEnd();
-                        // Start a new screen session, with A as the control character (as we can't send meta-characters like ctrl)
-                        writer.WriteLine("screen -eAa -S " + sessionName);
-                        reader.ReadToEnd();
-                        writer.WriteLine(command);
+                        if (command != null)
+                        {
+                            // Start a new screen session, with A as the control character (as we can't send meta-characters like ctrl)
+                            writer.WriteLine("screen -eAa -S " + sessionName);
+                            reader.ReadToEnd();
+                            writer.WriteLine(command);
+                        }
+                        else
+                        {
+                            writer.WriteLine("screen -d -r " + sessionName);
+                        }
 
                         while (true)
                         {
@@ -211,11 +231,17 @@ namespace Ec2Manager
                                 cancellationToken.Value.ThrowIfCancellationRequested();
                             }
 
-                            var result = reader.ReadToEnd().TrimEnd();
+                            var result = reader.ReadLine();
                             if (!string.IsNullOrEmpty(result))
-                                logger.Log(result);
-
-                            System.Threading.Thread.Sleep(100);
+                            {
+                                result = result.TrimEnd().StripColors();
+                                if (!string.IsNullOrWhiteSpace(result))
+                                    logger.Log(result);
+                            }
+                            else
+                            {
+                                System.Threading.Thread.Sleep(100);
+                            }
                         }
                     }
                 };

@@ -13,5 +13,6 @@ namespace Ec2Manager.Events
         public Ec2Manager Manager { get; set; }
         public string LoginAs { get; set; }
         public string AvailabilityZone { get; set; }
+        public double? SpotBidAmount { get; set; }
     }
 }

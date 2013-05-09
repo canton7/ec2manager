@@ -9,7 +9,8 @@
         <Menu IsMainMenu="True" DockPanel.Dock="Top">
             <MenuItem Header="_File">
                 <MenuItem x:Name="ShowSettings" Header="_Settings"/>
-                <MenuItem x:Name="ShowEc2Console" Header="Ec2 _Console"/>
+                <MenuItem x:Name="ShowEc2Console" Header="EC2 _Console"/>
+                <MenuItem x:Name="ShowEc2Pricing" Header="EC2 _Pricing"/>
                 <MenuItem x:Name="TryClose" Header="_Exit"/>
             </MenuItem>
             <MenuItem Header="_Help">
