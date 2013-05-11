@@ -1,6 +1,11 @@
 Changelog
 =========
 
+v1.1.1
+------
+
+ - Fix bug which caused crash on startup if credentials weren't set
+
 v1.1.0
 ------
 
