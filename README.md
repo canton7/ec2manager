@@ -148,6 +148,9 @@ When it's finished (and most importantly you know the size, as volumes aren't re
 So, fire up a new instance.
 You can use Ec2Manager for that (launch a new volume but don't mount anything), or launch it with EC2 Console.
 SSH in, and create a new folder.
+
+If whatever you're installing is likely to be larger than 5 gigs or so, it's probably worth choosing an instance size larger than Micro, and using the ephemeral storance in /mnt to setup your server.
+
 Install whatever you need to install, and get it working, tweaking the firewall rules in Ec2 Console - Security Group as appropriate.
 If you're creating a snapshot for a new game, please check below to make sure the ports it's using don't clash with any other server.
 
