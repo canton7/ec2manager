@@ -205,9 +205,6 @@ namespace Ec2Manager.ViewModels
 
             Task.Run(() => this.RefreshRunningInstances());
             Task.Run(() => this.RefreshCurrentSpotPrice());
-
-            var manager = new Ec2Manager(this.config.MainConfig.AwsAccessKey, this.config.MainConfig.AwsSecretKey);
-            var price = manager.GetCurrentSpotPrice("m1.small");
         }
 
         private void LoadFromConfig()
