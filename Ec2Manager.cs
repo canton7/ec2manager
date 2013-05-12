@@ -96,19 +96,29 @@ namespace Ec2Manager
             this.InstanceId = instanceId;
         }
 
-        public double GetCurrentSpotPrice(string instanceSize)
+        public async Task<double> GetCurrentSpotPriceAsync(string instanceSize)
         {
-            var result = this.client.DescribeSpotPriceHistory(new DescribeSpotPriceHistoryRequest()
+            var result = await this.RequestAsync(s => s.DescribeSpotPriceHistory(new DescribeSpotPriceHistoryRequest()
             {
                 InstanceType = new List<string>() { instanceSize },
                 ProductDescription = new List<string>() { "Linux/UNIX" },
                 MaxResults = 1,
-            });
+            }));
 
             return double.Parse(result.DescribeSpotPriceHistoryResult.SpotPriceHistory[0].SpotPrice);
         }
 
-        private RunningInstance GetRunningInstance()
+        private Task RequestAsync(Action<AmazonEC2Client> method)
+        {
+            return this.RequestAsync<object>(s => { method(s); return null; });
+        }
+
+        private Task<T> RequestAsync<T>(Func<AmazonEC2Client, T> method)
+        {
+            return Task.Run<T>(() => method(this.client));
+        }
+
+        private async Task<RunningInstance> GetRunningInstanceAsync()
         {
             bool worked = false;
             DescribeInstancesResponse describeInstancesResponse = null;
@@ -122,7 +132,7 @@ namespace Ec2Manager
             {  
                 try
                 {
-                    describeInstancesResponse = this.client.DescribeInstances(describeInstancesRequest);
+                    describeInstancesResponse = await this.RequestAsync(s => s.DescribeInstances(describeInstancesRequest));
                     worked = true;
                 }
                 catch (AmazonEC2Exception e)
@@ -161,7 +171,7 @@ namespace Ec2Manager
                 if (cancellationToken.HasValue && cancellationToken.Value.IsCancellationRequested)
                     break;
 
-                this.InstanceState = this.GetRunningInstance().InstanceState.Name;
+                this.InstanceState = (await this.GetRunningInstanceAsync()).InstanceState.Name;
 
                 if (this.InstanceState == state)
                 {
@@ -188,7 +198,7 @@ namespace Ec2Manager
                 if (cancellationToken.HasValue)
                     cancellationToken.Value.ThrowIfCancellationRequested();
 
-                var bidState = this.client.DescribeSpotInstanceRequests(bidStateRequest).DescribeSpotInstanceRequestsResult.SpotInstanceRequest[0];
+                var bidState = (await this.RequestAsync(s => s.DescribeSpotInstanceRequests(bidStateRequest))).DescribeSpotInstanceRequestsResult.SpotInstanceRequest[0];
                 this.BidStatus = bidState.Status.Code;
 
                 if (bidState.State == "active")
@@ -222,7 +232,7 @@ namespace Ec2Manager
             {
                 token.ThrowIfCancellationRequested();
 
-                var describeVolumesResponse = this.client.DescribeVolumes(describeVolumesRequest);
+                var describeVolumesResponse = await this.RequestAsync(s => s.DescribeVolumes(describeVolumesRequest));
                 var status = describeVolumesResponse.DescribeVolumesResult.Volume.FirstOrDefault(x => x.VolumeId == volumeId).Status;
 
                 if (status == state)
@@ -250,7 +260,7 @@ namespace Ec2Manager
             {
                 token.ThrowIfCancellationRequested();
 
-                var describeVolumesResponse = this.client.DescribeVolumes(describeVolumesRequest);
+                var describeVolumesResponse = await this.RequestAsync(s => s.DescribeVolumes(describeVolumesRequest));
                 var attachment = describeVolumesResponse.DescribeVolumesResult.Volume
                     .FirstOrDefault(x => x.VolumeId == volumeId)
                     .Attachment;
@@ -266,20 +276,20 @@ namespace Ec2Manager
             }
         }
 
-        private void CreateSecurityGroup(string groupName, ILogger logger = null)
+        private async Task CreateSecurityGroupAsync(string groupName, ILogger logger = null)
         {
             logger = logger ?? this.DefaultLogger;
 
             logger.Log("Creating a new security group: {0}", this.securityGroupName);
-            var createSecurityGroupResponse = this.client.CreateSecurityGroup(new CreateSecurityGroupRequest()
+            var createSecurityGroupResponse = await this.RequestAsync(s => s.CreateSecurityGroup(new CreateSecurityGroupRequest()
             {
                 GroupName = groupName,
                 GroupDescription = "Ec2Manager-created security group",
-            });
+            }));
             logger.Log("Security group ID {0} created", createSecurityGroupResponse.CreateSecurityGroupResult.GroupId);
         }
 
-        private void AuthorizeIngress(string groupName, IEnumerable<PortRangeDescription> portRanges, ILogger logger = null)
+        private async Task AuthorizeIngressAsync(string groupName, IEnumerable<PortRangeDescription> portRanges, ILogger logger = null)
         {
             logger = logger ?? this.DefaultLogger;
             if (portRanges.Count() == 0)
@@ -301,7 +311,7 @@ namespace Ec2Manager
 
             try
             {
-                this.client.AuthorizeSecurityGroupIngress(ingressRequest);
+                await this.RequestAsync(s => s.AuthorizeSecurityGroupIngress(ingressRequest));
             }
             catch (AmazonEC2Exception e)
             {
@@ -313,15 +323,15 @@ namespace Ec2Manager
             logger.Log("Inbound access authorised");
         }
 
-        private string CreateKeyPair(string keyPairName, ILogger logger = null)
+        private async Task<string> CreateKeyPairAsync(string keyPairName, ILogger logger = null)
         {
             logger = logger ?? this.DefaultLogger;
 
             logger.Log("Creating a new key pair: {0}", this.keyPairName);
-            var newKeyResponse = this.client.CreateKeyPair(new CreateKeyPairRequest()
+            var newKeyResponse = await this.RequestAsync(s => s.CreateKeyPair(new CreateKeyPairRequest()
             {
                 KeyName = keyPairName,
-            });
+            }));
             var keyPair = newKeyResponse.CreateKeyPairResult.KeyPair;
             logger.Log("Key pair created. Fingerprint {0}", keyPair.KeyFingerprint);
 
@@ -347,12 +357,12 @@ namespace Ec2Manager
                 runInstanceRequest.Placement = new Placement() { AvailabilityZone = availabilityZone };
             }
 
-            var runResponse = this.client.RunInstances(runInstanceRequest);
+            var runResponse = await this.RequestAsync(s => s.RunInstances(runInstanceRequest));
             var instances = runResponse.RunInstancesResult.Reservation.RunningInstance;
             this.InstanceId = instances[0].InstanceId;
             logger.Log("New instance created. Instance ID: {0}", this.InstanceId);
 
-            await this.SetupInstance(name, cancellationToken);
+            await this.SetupInstanceAsync(name, cancellationToken);
         }
 
         private async Task BidForInstanceAsync(string ami, string size, string keyPairName, string securityGroup, string name, double spotBidPrice, string availabilityZone = null, CancellationToken? cancellationToken = null, ILogger logger = null)
@@ -373,12 +383,12 @@ namespace Ec2Manager
                 launchSpecification.Placement = new Placement() { AvailabilityZone = availabilityZone };
             }
 
-            var spotResponse = this.client.RequestSpotInstances(new RequestSpotInstancesRequest()
+            var spotResponse = await this.RequestAsync(s => s.RequestSpotInstances(new RequestSpotInstancesRequest()
             {
                 InstanceCount = 1,
                 SpotPrice = spotBidPrice.ToString(),
                 LaunchSpecification = launchSpecification,
-            });
+            }));
             this.bidRequestId = spotResponse.RequestSpotInstancesResult.SpotInstanceRequest[0].SpotInstanceRequestId;
 
             logger.Log("Bid ID {0} created. Waiting for spot bid request to be fulfilled", this.bidRequestId);
@@ -386,10 +396,10 @@ namespace Ec2Manager
             this.InstanceId = await this.UntilBidActiveAsync(this.bidRequestId, token);
             logger.Log("New instance created. Instance ID: {0}", this.InstanceId);
 
-            await this.SetupInstance(name, token);
+            await this.SetupInstanceAsync(name, token);
         }
 
-        private void CancelBidRequest(ILogger logger = null)
+        private async Task CancelBidRequestAsync(ILogger logger = null)
         {
             logger = logger ?? this.DefaultLogger;
 
@@ -398,22 +408,22 @@ namespace Ec2Manager
 
             logger.Log("Cancelling spot bid request");
 
-            this.client.CancelSpotInstanceRequests(new CancelSpotInstanceRequestsRequest()
+            await this.RequestAsync(s => s.CancelSpotInstanceRequests(new CancelSpotInstanceRequestsRequest()
             {
                 SpotInstanceRequestId = new List<string>() { this.bidRequestId },
-            });
+            }));
 
             this.bidRequestId = null;
         }
 
-        private async Task SetupInstance(string name, CancellationToken? cancellationToken = null, ILogger logger = null)
+        private async Task SetupInstanceAsync(string name, CancellationToken? cancellationToken = null, ILogger logger = null)
         {
             logger = logger ?? this.DefaultLogger;
             CancellationToken token = cancellationToken.HasValue ? cancellationToken.Value : new CancellationToken();
 
             // Tag straight away. They might get bored and close the window while it's launching
             logger.Log("Tagging instance");
-            this.client.CreateTags(new CreateTagsRequest()
+            await this.RequestAsync(s => s.CreateTags(new CreateTagsRequest()
             {
                 ResourceId = new List<string>() { this.InstanceId },
                 Tag = new List<Tag>()
@@ -422,7 +432,7 @@ namespace Ec2Manager
                     new Tag() { Key = "Name", Value = name },
                     new Tag() { Key = "UniqueKey", Value = this.uniqueKey },
                 },
-            });
+            }));
 
             logger.Log("Waiting for instance to reach 'running' state");
             // Sometimes (I have no idea why) AWS reports the instance as pending when the console shows it running
@@ -445,74 +455,77 @@ namespace Ec2Manager
             {
                 logger.Log("The instance is taking a long time to come up. This happens sometimes.");
                 logger.Log("Sometimes issuing a reboot fixes it, so trying that...");
-                this.client.RebootInstances(new RebootInstancesRequest()
+                await this.RequestAsync(s => s.RebootInstances(new RebootInstancesRequest()
                 {
                     InstanceId = new List<string>() { this.InstanceId },
-                });
+                }));
                 await this.UntilStateAsync("running", token);
             }
 
             logger.Log("Instance is now running");
         }
 
-        private string AllocateAddress(ILogger logger = null)
+        private async Task<string> AllocateAddressAsync(ILogger logger = null)
         {
             logger = logger ?? this.DefaultLogger;
 
             logger.Log("Allocating an IP address");
-            var allocateResponse = this.client.AllocateAddress(new AllocateAddressRequest());
+            var allocateResponse = await this.RequestAsync(s => s.AllocateAddress(new AllocateAddressRequest()));
             var publicIp = allocateResponse.AllocateAddressResult.PublicIp;
             logger.Log("Ip address {0} allocated", publicIp);
 
             return publicIp;
         }
 
-        private void AssignAddress(string publicIp, ILogger logger = null)
+        private async Task AssignAddressAsync(string publicIp, ILogger logger = null)
         {
             logger = logger ?? this.DefaultLogger;
 
             logger.Log("Assigning public IP {0} to instance", this.PublicIp);
-            this.client.AssociateAddress(new AssociateAddressRequest()
+            await this.RequestAsync(s => s.AssociateAddress(new AssociateAddressRequest()
             {
                 InstanceId = this.InstanceId,
                 PublicIp = publicIp,
-            });
+            }));
             logger.Log("Public IP assigned");
         }
 
-        private void ReleaseIp(string publicIp, ILogger logger = null)
+        private async Task ReleaseIpAsync(string publicIp, ILogger logger = null)
         {
             logger = logger ?? this.DefaultLogger;
 
             logger.Log("Releasing IP address {0}", publicIp);
-            this.client.DisassociateAddress(new DisassociateAddressRequest()
+            await this.RequestAsync(s => s.DisassociateAddress(new DisassociateAddressRequest()
             {
                 PublicIp = publicIp,
-            });
-            this.client.ReleaseAddress(new ReleaseAddressRequest()
+            }));
+            await this.RequestAsync(s => s.ReleaseAddress(new ReleaseAddressRequest()
             {
                 PublicIp = publicIp,
-            });
+            }));
             logger.Log("Ip address released");
         }
 
-        private IEnumerable<Volume> GetAttachedVolumes()
+        private Task<IEnumerable<Volume>> GetAttachedVolumesAsync()
         {
-            return this.client.DescribeVolumes(new DescribeVolumesRequest()).DescribeVolumesResult.Volume
-                .Where(x => x.Attachment.Any(att => att.InstanceId == this.InstanceId));
+            return this.RequestAsync(s => s.DescribeVolumes(new DescribeVolumesRequest()).DescribeVolumesResult.Volume
+                .Where(x => x.Attachment.Any(att => att.InstanceId == this.InstanceId)));
         }
 
-        public IEnumerable<VolumeDescription> GetAttachedVolumeDescriptions()
+        public async Task<IEnumerable<VolumeDescription>> GetAttachedVolumeDescriptionsAsync()
         {
-            foreach (var volume in this.GetAttachedVolumes())
+            var items = new List<VolumeDescription>();
+            foreach (var volume in await this.GetAttachedVolumesAsync())
             {
                 var attachment = volume.Attachment.FirstOrDefault(x => x.InstanceId == this.InstanceId);
                 if (attachment != null && mountPoints.Contains(attachment.Device))
                 {
                     var tag = volume.Tag.FirstOrDefault(x => x.Key == "VolumeName");
-                    yield return new VolumeDescription(Path.GetFileName(attachment.Device), volume.VolumeId, tag == null ? "Unnamed" : tag.Value);
+                    items.Add(new VolumeDescription(Path.GetFileName(attachment.Device), volume.VolumeId, tag == null ? "Unnamed" : tag.Value));
                 }
             }
+
+            return items;
         }
 
         private async Task DeleteVolumeAsync(string volumeId, ILogger logger = null)
@@ -520,23 +533,23 @@ namespace Ec2Manager
             logger = logger ?? this.DefaultLogger;
 
             logger.Log("Detaching volume {0}", volumeId);
-            this.client.DetachVolume(new DetachVolumeRequest()
+            await this.RequestAsync(s => s.DetachVolume(new DetachVolumeRequest()
             {
                 Force = true,
                 InstanceId = this.InstanceId,
                 VolumeId = volumeId,
-            });
+            }));
 
             logger.Log("Waiting until volume {0} becomes available", volumeId);
             await this.UntilVolumeAttachedStateAsync(volumeId, "available");
 
             logger.Log("Deleting volume {0}", volumeId);
-            this.client.DeleteVolume(new DeleteVolumeRequest()
+            await this.RequestAsync(s => s.DeleteVolume(new DeleteVolumeRequest()
             {
                 VolumeId = volumeId,
-            });
+            }));
 
-            this.ResetAttachedVolumes(logger);
+            await this.ResetAttachedVolumesAsync(logger);
 
             logger.Log("Volume {0} deleted", volumeId);
         }
@@ -549,27 +562,27 @@ namespace Ec2Manager
             logger = logger ?? this.DefaultLogger;
 
             logger.Log("Terminating instance");
-            this.client.TerminateInstances(new TerminateInstancesRequest()
+            await this.RequestAsync(s => s.TerminateInstances(new TerminateInstancesRequest()
             {
                 InstanceId = new List<string>() { this.InstanceId },
-            });
+            }));
 
             logger.Log("Waiting for instance to reach the 'terminated' state");
             await this.UntilStateAsync("terminated");
             logger.Log("Instance terminated");
         }
 
-        private void DeleteSecurityGroup(string groupId, ILogger logger = null)
+        private async Task DeleteSecurityGroupAsync(string groupId, ILogger logger = null)
         {
             logger = logger ?? this.DefaultLogger;
 
             logger.Log("Deleting security group {0}", groupId);
             try
             {
-                this.client.DeleteSecurityGroup(new DeleteSecurityGroupRequest()
+                await this.RequestAsync(s => s.DeleteSecurityGroup(new DeleteSecurityGroupRequest()
                 {
                     GroupId = groupId,
-                });
+                }));
             }
             catch (AmazonEC2Exception e)
             {
@@ -582,15 +595,15 @@ namespace Ec2Manager
             }
         }
 
-        private void DeleteKeyPair(string keyName, ILogger logger = null)
+        private async Task DeleteKeyPairAsync(string keyName, ILogger logger = null)
         {
             logger = logger ?? this.DefaultLogger;
 
             logger.Log("Deleting key pair: {0}", keyName);
-            this.client.DeleteKeyPair(new DeleteKeyPairRequest()
+            await this.RequestAsync(s => s.DeleteKeyPair(new DeleteKeyPairRequest()
             {
                 KeyName = keyName,
-            });
+            }));
         }
 
         private async Task AttachVolumeAsync(string volumeId, string device, CancellationToken? cancellationToken = null, ILogger logger = null)
@@ -599,12 +612,12 @@ namespace Ec2Manager
             CancellationToken token = cancellationToken.HasValue ? cancellationToken.Value : new CancellationToken();
 
             logger.Log("Attaching volume to instance {0}, device {1}", this.InstanceId, device);
-            var attachVolumeResponse = this.client.AttachVolume(new AttachVolumeRequest()
+            var attachVolumeResponse = await this.RequestAsync(s => s.AttachVolume(new AttachVolumeRequest()
             {
                 InstanceId = this.InstanceId,
                 VolumeId = volumeId,
                 Device = device,
-            });
+            }));
 
             logger.Log("Waiting for volume to reach the 'attached' state");
             await this.UntilVolumeAttachedStateAsync(volumeId, "attached", cancellationToken: token);
@@ -617,44 +630,59 @@ namespace Ec2Manager
 
             logger.Log("Starting instance creation process");
 
-            try
-            {
-                this.CreateSecurityGroup(this.securityGroupName, logger);
-                token.ThrowIfCancellationRequested();
-            }
-            catch (Exception e)
-            {
-                logger.Log("Error creating security group: {0}. Performing rollback", e.Message);
-                this.DeleteSecurityGroup(this.securityGroupName, logger);
-                throw;
-            }
-
-            try
-            {
-                this.AuthorizeIngress(this.securityGroupName, new[] { new PortRangeDescription(22, 22, "tcp"), new PortRangeDescription(-1, -1, "icmp") }, logger);
-                token.ThrowIfCancellationRequested();
-            }
-            catch (Exception e)
-            {
-                logger.Log("Error authorising ingress: {0}. Performing rollback", e.Message);
-                this.DeleteSecurityGroup(this.securityGroupName, logger);
-                throw;
-            }
-
-            try
-            {
-                this.PrivateKey = this.CreateKeyPair(this.keyPairName, logger);
-                token.ThrowIfCancellationRequested();
-            }
-            catch (Exception e)
-            {
-                logger.Log("Error creating key pair: {0}. Performing rollback", e.Message);
-                this.DeleteKeyPair(this.keyPairName, logger);
-                this.DeleteSecurityGroup(this.securityGroupName, logger);
-                throw;
-            }
-
             Exception exception = null;
+            try
+            {
+                await this.CreateSecurityGroupAsync(this.securityGroupName, logger);
+                token.ThrowIfCancellationRequested();
+            }
+            catch (Exception e)
+            {
+                exception = e;
+            }
+            if (exception != null)
+            {
+                logger.Log("Error creating security group: {0}. Performing rollback", exception.Message);
+                await this.DeleteSecurityGroupAsync(this.securityGroupName, logger);
+                throw exception;
+            }
+
+            exception = null;
+            try
+            {
+                await this.AuthorizeIngressAsync(this.securityGroupName, new[] { new PortRangeDescription(22, 22, "tcp"), new PortRangeDescription(-1, -1, "icmp") }, logger);
+                token.ThrowIfCancellationRequested();
+            }
+            catch (Exception e)
+            {
+                exception = e;
+            }
+            if (exception != null)
+            {
+                logger.Log("Error authorising ingress: {0}. Performing rollback", exception.Message);
+                await this.DeleteSecurityGroupAsync(this.securityGroupName, logger);
+                throw exception;
+            }
+
+            exception = null;
+            try
+            {
+                this.PrivateKey = await this.CreateKeyPairAsync(this.keyPairName, logger);
+                token.ThrowIfCancellationRequested();
+            }
+            catch (Exception e)
+            {
+                exception = e;
+            }
+            if (exception != null)
+            {
+                logger.Log("Error creating key pair: {0}. Performing rollback", exception.Message);
+                await this.DeleteKeyPairAsync(this.keyPairName, logger);
+                await this.DeleteSecurityGroupAsync(this.securityGroupName, logger);
+                throw exception;
+            }
+
+            exception = null;
             try
             {
                 if (spotBidPrice.HasValue)
@@ -675,18 +703,18 @@ namespace Ec2Manager
             {
                 logger.Log("Error creating instance: {0}. Performing rollback", exception.Message);
                 if (spotBidPrice.HasValue)
-                    this.CancelBidRequest();
+                    await this.CancelBidRequestAsync();
                 await this.TerminateInstanceAsync(logger);
-                this.DeleteKeyPair(this.keyPairName, logger);
-                this.DeleteSecurityGroup(this.securityGroupName, logger);
+                await this.DeleteKeyPairAsync(this.keyPairName, logger);
+                await this.DeleteSecurityGroupAsync(this.securityGroupName, logger);
                 throw exception;
             }
 
             exception = null;
             try
             {
-                this.PublicIp = this.AllocateAddress(logger);
-                this.AssignAddress(this.PublicIp, logger);
+                this.PublicIp = await this.AllocateAddressAsync(logger);
+                await this.AssignAddressAsync(this.PublicIp, logger);
                 token.ThrowIfCancellationRequested();
             }
             catch (Exception e)
@@ -696,25 +724,26 @@ namespace Ec2Manager
             if (exception != null)
             {
                 logger.Log("Error allocating public IP: {0}. Performing rollback", exception.Message);
-                this.ReleaseIp(this.PublicIp, logger);
+                await this.ReleaseIpAsync(this.PublicIp, logger);
                 await this.TerminateInstanceAsync(logger);
-                this.DeleteKeyPair(this.keyPairName, logger);
-                this.DeleteSecurityGroup(this.securityGroupName, logger);
+                await this.DeleteKeyPairAsync(this.keyPairName, logger);
+                await this.DeleteSecurityGroupAsync(this.securityGroupName, logger);
                 throw exception;
             }
 
             logger.Log("Instance has been created");
         }
 
-        private void ResetAttachedVolumes(ILogger logger = null)
+        private async Task ResetAttachedVolumesAsync(ILogger logger = null)
         {
             logger = logger ?? this.DefaultLogger;
 
             logger.Log("Resetting list of attached devices");
+            var volumes = await this.GetAttachedVolumesAsync();
             lock (this.volumeMountPointLock)
             {
                 this.usedMountPoints.Clear();
-                foreach (var volume in this.GetAttachedVolumes())
+                foreach (var volume in volumes)
                 {
                     var attachment = volume.Attachment.FirstOrDefault(x => x.InstanceId == this.InstanceId);
                     if (attachment != null && mountPoints.Contains(attachment.Device))
@@ -723,11 +752,11 @@ namespace Ec2Manager
             }
         }
 
-        public void Reconnect(ILogger logger = null)
+        public async Task ReconnectAsync(ILogger logger = null)
         {
             logger = logger ?? this.DefaultLogger;
 
-            var runningInstance = this.GetRunningInstance();
+            var runningInstance = await this.GetRunningInstanceAsync();
             
             this.PublicIp = runningInstance.IpAddress;
             this.PublicIp = string.IsNullOrWhiteSpace(this.PublicIp) ? null : this.PublicIp;
@@ -740,7 +769,7 @@ namespace Ec2Manager
             else
                 this.uniqueKey = uniqueKey.Value;
 
-            this.ResetAttachedVolumes(logger);
+            await this.ResetAttachedVolumesAsync(logger);
         }
 
         public async Task<string> MountVolumeAsync(string volumeId, IMachineInteractionProvider client, string name = null, CancellationToken? cancellationToken = null, ILogger logger = null)
@@ -784,7 +813,7 @@ namespace Ec2Manager
                 var portSettings = client.GetPortDescriptions(deviceMountPoint, logger).ToArray();
                 token.ThrowIfCancellationRequested();
 
-                this.AuthorizeIngress(this.securityGroupName, portSettings, logger);
+                await this.AuthorizeIngressAsync(this.securityGroupName, portSettings, logger);
                 token.ThrowIfCancellationRequested();
             }
             catch (Exception e)
@@ -812,18 +841,19 @@ namespace Ec2Manager
             logger.Log("Starting device mount process. Snapshot ID: {0}", snapshotId);
 
             logger.Log("Creating EBS volume based on snapshot");
-            var createVolumeResponse = this.client.CreateVolume(new CreateVolumeRequest()
+            var availabilityZone = (await this.GetRunningInstanceAsync()).Placement.AvailabilityZone;
+            var createVolumeResponse = await this.RequestAsync(s => s.CreateVolume(new CreateVolumeRequest()
             {
                 SnapshotId = snapshotId,
                 VolumeType = "standard",
-                AvailabilityZone = this.GetRunningInstance().Placement.AvailabilityZone,
-            });
+                AvailabilityZone = availabilityZone,
+            }));
             var volumeId = createVolumeResponse.CreateVolumeResult.Volume.VolumeId;
             logger.Log("Volume ID {0} created", volumeId);
 
             logger.Log("Tagging volume, so we know we can remove it later");
             var name = volumeName == null ? "Unnamed" : this.Name + " - " + volumeName;
-            this.client.CreateTags(new CreateTagsRequest()
+            await this.RequestAsync(s => s.CreateTags(new CreateTagsRequest()
             {
                 ResourceId = new List<string>() { volumeId },
                 Tag = new List<Tag>()
@@ -832,7 +862,7 @@ namespace Ec2Manager
                     new Tag() { Key = "Name", Value = name },
                     new Tag() { Key = "VolumeName", Value = volumeName },
                 },
-            });
+            }));
 
             logger.Log("Waiting for volume to reach the 'available' state");
             await this.UntilVolumeStateAsync(volumeId, "available", token);
@@ -840,9 +870,9 @@ namespace Ec2Manager
             return volumeId;
         }
 
-        public IEnumerable<Tuple<string, string>> ListInstances()
+        public async Task<IEnumerable<Tuple<string, string>>> ListInstancesAsync()
         {
-            var instances = this.client.DescribeInstances(new DescribeInstancesRequest()).DescribeInstancesResult.Reservation
+            var instances = (await this.RequestAsync(s => s.DescribeInstances(new DescribeInstancesRequest()))).DescribeInstancesResult.Reservation
                 .SelectMany(reservation => reservation.RunningInstance.Where(instance => instance.InstanceState.Name == "running" && instance.Tag.Any(tag => tag.Key == "CreatedByEc2Manager")));
 
            return instances.Select(x => new Tuple<string, string>(x.InstanceId, (x.Tag.FirstOrDefault(tag => tag.Key == "Name") ?? new Tag() { Value = "No Name" }).Value));
@@ -854,11 +884,11 @@ namespace Ec2Manager
 
             logger.Log("Starting instance termination process");
 
-            var instanceStatus = this.GetRunningInstance();
+            var instanceStatus = await this.GetRunningInstanceAsync();
             var groupIds = instanceStatus.GroupId;
             var keyName = instanceStatus.KeyName;
             // This excludes volumes attached to other machines as well
-            var volumes = this.GetAttachedVolumes()
+            var volumes = (await this.GetAttachedVolumesAsync())
                 .Where(x => x.Attachment.Count == 1)
                 .Where(x => x.Tag.Any(y => y.Key == "CreatedByEc2Manager"))
                 .Select(x => x.VolumeId);
@@ -868,7 +898,7 @@ namespace Ec2Manager
             // the IP before they get too bored
             if (this.PublicIp != null)
             {
-                this.ReleaseIp(this.PublicIp, logger);
+                await this.ReleaseIpAsync(this.PublicIp, logger);
             }
 
             // Detach the volumes in parallel, since it takes a nice long time
@@ -878,7 +908,7 @@ namespace Ec2Manager
             await this.TerminateInstanceAsync(logger);
 
             // This has to be set after the instance has been terminated
-            var allInstances = this.client.DescribeInstances(new DescribeInstancesRequest()).DescribeInstancesResult.Reservation
+            var allInstances = (await this.RequestAsync(s => s.DescribeInstances(new DescribeInstancesRequest()))).DescribeInstancesResult.Reservation
                 .Where(x => x.RunningInstance.All(y => y.InstanceState.Name != "terminated")).ToArray();
 
             var usedGroupIds = allInstances.SelectMany(x => x.GroupId).Distinct();
@@ -886,13 +916,13 @@ namespace Ec2Manager
 
             foreach (var groupId in groupIds.Except(usedGroupIds))
             {
-                this.DeleteSecurityGroup(groupId, logger);
+                await this.DeleteSecurityGroupAsync(groupId, logger);
             }
 
             var usedKeyNames = allInstances.SelectMany(x => x.RunningInstance.Select(y => y.KeyName)).Distinct();
             if (!usedKeyNames.Contains(keyName))
             {
-                this.DeleteKeyPair(keyName, logger);
+                await this.DeleteKeyPairAsync(keyName, logger);
             }
 
             logger.Log("Instance successfully terminated");

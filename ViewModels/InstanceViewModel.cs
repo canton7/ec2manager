@@ -179,7 +179,7 @@ namespace Ec2Manager.ViewModels
 
             var reconnectTask = Task.Run(async () =>
                 {
-                    this.Manager.Reconnect(this.Logger);
+                    await this.Manager.ReconnectAsync(this.Logger);
 
                     Tuple<string, string> keyAndUser = null;
                     try
@@ -213,7 +213,7 @@ namespace Ec2Manager.ViewModels
                     this.Client.Bind(s => s.IsConnected, (o, e) => this.NotifyOfPropertyChange(() => CanMountVolume));
                     await this.Client.ConnectAsync(this.Logger);
 
-                    foreach (var volume in this.Manager.GetAttachedVolumeDescriptions())
+                    foreach (var volume in await this.Manager.GetAttachedVolumeDescriptionsAsync())
                     {
                         var volumeViewModel = IoC.Get<VolumeViewModel>();
                         this.ActivateItem(volumeViewModel);

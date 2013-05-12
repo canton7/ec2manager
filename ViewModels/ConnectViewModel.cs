@@ -191,11 +191,11 @@ namespace Ec2Manager.ViewModels
                     this.NotifyOfPropertyChange(() => CanCreate);
                     this.NotifyOfPropertyChange(() => CanRefreshRunningInstances);
                     this.NotifyOfPropertyChange(() => CanTerminateInstance);
-                    Task.Run(() => this.RefreshRunningInstances());
-                    Task.Run(() => this.RefreshCurrentSpotPrice());
+                    this.RefreshRunningInstances();
+                    var spotPriceTask = this.RefreshCurrentSpotPriceAsync();
                 });
 
-            this.Bind(s => s.ActiveInstanceType, (o, e) => Task.Run(() => this.RefreshCurrentSpotPrice()));
+            this.Bind(s => s.ActiveInstanceType, (o, e) => Task.Run(() => this.RefreshCurrentSpotPriceAsync()));
 
             this.DisplayName = "Create New Instance";
             this.LoadFromConfig();
@@ -203,8 +203,8 @@ namespace Ec2Manager.ViewModels
             this.ActiveInstanceType = this.InstanceTypes.FirstOrDefault(x => x.Value == "t1.micro");
             this.ActiveRunningInstance = this.RunningInstances[0];
 
-            Task.Run(() => this.RefreshRunningInstances());
-            Task.Run(() => this.RefreshCurrentSpotPrice());
+            this.RefreshRunningInstances();
+            var spotPriceTaskMain = this.RefreshCurrentSpotPriceAsync();
         }
 
         private void LoadFromConfig()
@@ -213,7 +213,7 @@ namespace Ec2Manager.ViewModels
             this.LoginAs = this.config.MainConfig.DefaultLogonUser;
         }
 
-        private void RefreshCurrentSpotPrice()
+        private async Task RefreshCurrentSpotPriceAsync()
         {
             if (string.IsNullOrWhiteSpace(this.config.MainConfig.AwsAccessKey) || string.IsNullOrWhiteSpace(this.config.MainConfig.AwsSecretKey))
             {
@@ -224,7 +224,7 @@ namespace Ec2Manager.ViewModels
             try
             {
                 var manager = new Ec2Manager(this.config.MainConfig.AwsAccessKey, this.config.MainConfig.AwsSecretKey);
-                this.CurrentSpotPrice = manager.GetCurrentSpotPrice(this.ActiveInstanceType.Value);
+                this.CurrentSpotPrice = await manager.GetCurrentSpotPriceAsync(this.ActiveInstanceType.Value);
             }
             catch (Exception)
             {
@@ -279,7 +279,7 @@ namespace Ec2Manager.ViewModels
                     !string.IsNullOrWhiteSpace(this.config.MainConfig.AwsSecretKey);
             }
         }
-        public void RefreshRunningInstances()
+        public async void RefreshRunningInstances()
         {
             if (!this.CanRefreshRunningInstances)
             {
@@ -291,7 +291,7 @@ namespace Ec2Manager.ViewModels
             try
             {
                 var manager = new Ec2Manager(this.config.MainConfig.AwsAccessKey, this.config.MainConfig.AwsSecretKey);
-                this.RunningInstances = manager.ListInstances().Select(x => new LabelledValue(x.Item2, x.Item1)).ToArray();
+                this.RunningInstances = (await manager.ListInstancesAsync()).Select(x => new LabelledValue(x.Item2, x.Item1)).ToArray();
                 if (this.RunningInstances.Length == 0)
                 {
                     this.RunningInstances = new[] { new LabelledValue("No Running Instances", null) };
