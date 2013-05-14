@@ -27,8 +27,17 @@
         <GroupBox Header="User Instruction" DockPanel.Dock="Top" Padding="10">
             <TextBox Name="UserInstruction" Background="Transparent" BorderThickness="0" IsReadOnly="True" TextWrapping="Wrap"/>
         </GroupBox>
+
+        <GroupBox Header="Volume Control" DockPanel.Dock="Top" Padding="5">
+            <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
+                <Button Name="CancelAction" Margin="5,0" Padding="5,0">Cancel Mounting</Button>
+                <Button Name="UnmountVolume" Margin="5,0" Padding="5,0">Unmount Volume</Button>
+            </StackPanel>
+        </GroupBox>
         
+
         <TextBox DockPanel.Dock="Top"
+                 VerticalAlignment="Stretch"
                  supp:TextBoxUtilities.AlwaysScrollToEnd="True"
                  ScrollViewer.VerticalScrollBarVisibility="Auto"
                  ScrollViewer.HorizontalScrollBarVisibility="Auto"

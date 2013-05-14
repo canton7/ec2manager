@@ -528,7 +528,7 @@ namespace Ec2Manager
             return items;
         }
 
-        private async Task DeleteVolumeAsync(string volumeId, ILogger logger = null)
+        public async Task DeleteVolumeAsync(string volumeId, ILogger logger = null)
         {
             logger = logger ?? this.DefaultLogger;
 

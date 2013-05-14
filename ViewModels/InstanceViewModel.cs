@@ -296,9 +296,7 @@ namespace Ec2Manager.ViewModels
 
             try
             {
-                this.CancelCts = new CancellationTokenSource();
-                await volumeViewModel.SetupAsync(this.Manager, this.Client, volumeName, volumeId, this.CancelCts.Token);
-
+                await volumeViewModel.SetupAsync(this.Manager, this.Client, volumeName, volumeId);
             }
             catch (OperationCanceledException)
             {
@@ -310,10 +308,6 @@ namespace Ec2Manager.ViewModels
                 this.Logger.Log("Error occurred: {0}", e.Message);
                 MessageBox.Show(Application.Current.MainWindow, "Error occurred: " + e.Message, "Error occurred", MessageBoxButton.OK, MessageBoxImage.Error);
                 volumeViewModel.TryClose();
-            }
-            finally
-            {
-                this.CancelCts = null;
             }
         }
 
