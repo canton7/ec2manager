@@ -783,7 +783,7 @@ namespace Ec2Manager
                 weCreatedVolume = true;
                 try
                 {
-                    volumeId = await this.CreateVolumeFromSnapshot(volumeId, client, name, token, logger);
+                    volumeId = await this.CreateVolumeFromSnapshotAsync(volumeId, client, name, token, logger);
                     token.ThrowIfCancellationRequested();
                 }
                 catch (Exception e)
@@ -833,7 +833,7 @@ namespace Ec2Manager
             return deviceMountPoint;
         }
 
-        public async Task<string> CreateVolumeFromSnapshot(string snapshotId, IMachineInteractionProvider client, string volumeName = null, CancellationToken? cancellationToken = null, ILogger logger = null)
+        public async Task<string> CreateVolumeFromSnapshotAsync(string snapshotId, IMachineInteractionProvider client, string volumeName = null, CancellationToken? cancellationToken = null, ILogger logger = null)
         {
             logger = logger ?? this.DefaultLogger;
             CancellationToken token = cancellationToken.HasValue ? cancellationToken.Value : new CancellationToken();
@@ -868,6 +868,39 @@ namespace Ec2Manager
             await this.UntilVolumeStateAsync(volumeId, "available", token);
 
             return volumeId;
+        }
+
+        private async Task<string> CreateSnapshotFromVolumeAsync(string volumeId, string snapshotName, string snapshotDescription, CancellationToken? cancellationToken = null, ILogger logger = null)
+        {
+            logger = logger ?? this.DefaultLogger;
+            CancellationToken token = cancellationToken.HasValue ? cancellationToken.Value : new CancellationToken();
+
+            logger.Log("Starting to create snapshot");
+
+            var response = await this.RequestAsync(s => s.CreateSnapshot(new CreateSnapshotRequest()
+            {
+                VolumeId = volumeId,
+                Description = snapshotDescription,
+            }));
+            var snapshotId = response.CreateSnapshotResult.Snapshot.SnapshotId;
+
+            logger.Log("Waiting for snapshot to reach the 'completed' state");
+            // Wait until ready
+
+            logger.Log("Tagging snapshot"); 
+            await this.RequestAsync(s => s.CreateTags(new CreateTagsRequest()
+            {
+                ResourceId = new List<string>() { snapshotId },
+                Tag = new List<Tag>()
+                {
+                    new Tag() { Key = "Name", Value = snapshotName },
+                },
+            }));
+
+            // Set permissions to public (?)
+            //this.client.DescribeSnapshotAttribute(new DescribeSnapshotAttributeRequest() { Attribute = new SnapshotAttribute() { a
+
+            return snapshotId;
         }
 
         public async Task<IEnumerable<Tuple<string, string>>> ListInstancesAsync()
@@ -926,6 +959,31 @@ namespace Ec2Manager
             }
 
             logger.Log("Instance successfully terminated");
+        }
+
+        public async Task<string> CreateSnapshotAsync(string volumeId, string snapshotName, string snapshotDescription, CancellationToken? cancellationToken = null, ILogger logger = null)
+        {
+            logger = logger ?? this.DefaultLogger;
+            CancellationToken token = cancellationToken ?? new CancellationToken();
+
+            string snapshotId = null;
+
+            Exception exception = null;
+            try
+            {
+                snapshotId = await this.CreateSnapshotFromVolumeAsync(volumeId, snapshotName, snapshotDescription, cancellationToken, logger);
+            }
+            catch (Exception e)
+            {
+                exception = e;
+            }
+            if (exception != null)
+            {
+                // Tidy up. Delete snapshot?
+                throw exception;
+            }
+
+            return snapshotId;
         }
 
         public class VolumeDescription
