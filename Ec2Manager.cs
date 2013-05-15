@@ -261,11 +261,38 @@ namespace Ec2Manager
                 token.ThrowIfCancellationRequested();
 
                 var describeVolumesResponse = await this.RequestAsync(s => s.DescribeVolumes(describeVolumesRequest));
-                var attachment = describeVolumesResponse.DescribeVolumesResult.Volume
-                    .FirstOrDefault(x => x.VolumeId == volumeId)
-                    .Attachment;
+                var volume = describeVolumesResponse.DescribeVolumesResult.Volume
+                    .FirstOrDefault(x => x.VolumeId == volumeId);
 
-                if ((attachment.Count == 0 && allowNone) || attachment.FirstOrDefault(x => x.InstanceId == this.InstanceId).Status == state)
+                if (volume != null && ((volume.Attachment.Count == 0 && allowNone) || volume.Attachment.FirstOrDefault(x => x.InstanceId == this.InstanceId).Status == state))
+                {
+                    gotToState = true;
+                }
+                else
+                {
+                    await Task.Delay(1000);
+                }
+            }
+        }
+
+        private async Task UntilSnapshotStateAsync(string snapshotId, string state, CancellationToken? cancellationToken = null)
+        {
+            bool gotToState = false;
+            CancellationToken token = cancellationToken.HasValue ? cancellationToken.Value : new CancellationToken();
+
+            var describeSnapshotsRequest = new DescribeSnapshotsRequest()
+            {
+                SnapshotId = new List<string>() { snapshotId },
+            };
+
+            while (!gotToState)
+            {
+                token.ThrowIfCancellationRequested();
+
+                var describeSnapshotsResponse = await this.RequestAsync(s => s.DescribeSnapshots(describeSnapshotsRequest));
+                var status = describeSnapshotsResponse.DescribeSnapshotsResult.Snapshot.FirstOrDefault(x => x.SnapshotId == snapshotId).Status;
+
+                if (status == state)
                 {
                     gotToState = true;
                 }
@@ -870,7 +897,7 @@ namespace Ec2Manager
             return volumeId;
         }
 
-        private async Task<string> CreateSnapshotFromVolumeAsync(string volumeId, string snapshotName, string snapshotDescription, CancellationToken? cancellationToken = null, ILogger logger = null)
+        private async Task<string> CreateSnapshotFromVolumeAsync(string volumeId, string snapshotName, string snapshotDescription, bool isPublic, CancellationToken? cancellationToken = null, ILogger logger = null)
         {
             logger = logger ?? this.DefaultLogger;
             CancellationToken token = cancellationToken.HasValue ? cancellationToken.Value : new CancellationToken();
@@ -885,7 +912,7 @@ namespace Ec2Manager
             var snapshotId = response.CreateSnapshotResult.Snapshot.SnapshotId;
 
             logger.Log("Waiting for snapshot to reach the 'completed' state");
-            // Wait until ready
+            await this.UntilSnapshotStateAsync(snapshotId, "completed", cancellationToken);
 
             logger.Log("Tagging snapshot"); 
             await this.RequestAsync(s => s.CreateTags(new CreateTagsRequest()
@@ -897,8 +924,16 @@ namespace Ec2Manager
                 },
             }));
 
-            // Set permissions to public (?)
-            //this.client.DescribeSnapshotAttribute(new DescribeSnapshotAttributeRequest() { Attribute = new SnapshotAttribute() { a
+            if (isPublic)
+            {
+                logger.Log("Setting perissions to public");
+                await this.RequestAsync(s => s.ModifySnapshotAttribute(new ModifySnapshotAttributeRequest()
+                {
+                    SnapshotId = snapshotId,
+                    Attribute = "CreateVolumePermission",
+                    UserGroup = new List<string>() { "all" },
+                }));
+            };
 
             return snapshotId;
         }
@@ -961,27 +996,13 @@ namespace Ec2Manager
             logger.Log("Instance successfully terminated");
         }
 
-        public async Task<string> CreateSnapshotAsync(string volumeId, string snapshotName, string snapshotDescription, CancellationToken? cancellationToken = null, ILogger logger = null)
+        public async Task<string> CreateSnapshotAsync(string volumeId, string snapshotName, string snapshotDescription, bool isPublic, CancellationToken? cancellationToken = null, ILogger logger = null)
         {
             logger = logger ?? this.DefaultLogger;
-            CancellationToken token = cancellationToken ?? new CancellationToken();
+            CancellationToken token = cancellationToken.HasValue ? cancellationToken.Value : new CancellationToken();
 
-            string snapshotId = null;
-
-            Exception exception = null;
-            try
-            {
-                snapshotId = await this.CreateSnapshotFromVolumeAsync(volumeId, snapshotName, snapshotDescription, cancellationToken, logger);
-            }
-            catch (Exception e)
-            {
-                exception = e;
-            }
-            if (exception != null)
-            {
-                // Tidy up. Delete snapshot?
-                throw exception;
-            }
+            // What to do if there's an error?
+            var snapshotId = await this.CreateSnapshotFromVolumeAsync(volumeId, snapshotName, snapshotDescription, isPublic, cancellationToken, logger);
 
             return snapshotId;
         }

@@ -30,8 +30,9 @@
 
         <GroupBox Header="Volume Control" DockPanel.Dock="Top" Padding="5">
             <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
-                <Button Name="CancelAction" Margin="5,0" Padding="5,0">Cancel Mounting</Button>
+                <Button Name="CreateSnapshot" Margin="5,0" Padding="5,0">Create Snapshot</Button>
                 <Button Name="UnmountVolume" Margin="5,0" Padding="5,0">Unmount Volume</Button>
+                <Button Name="CancelAction" Margin="5,0" Padding="5,0">Cancel</Button>
             </StackPanel>
         </GroupBox>
         
