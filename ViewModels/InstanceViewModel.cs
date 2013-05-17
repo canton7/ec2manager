@@ -213,12 +213,12 @@ namespace Ec2Manager.ViewModels
                     this.Client.Bind(s => s.IsConnected, (o, e) => this.NotifyOfPropertyChange(() => CanMountVolume));
                     await this.Client.ConnectAsync(this.Logger);
 
-                    foreach (var volume in await this.Manager.GetAttachedVolumeDescriptionsAsync())
-                    {
-                        var volumeViewModel = IoC.Get<VolumeViewModel>();
-                        this.ActivateItem(volumeViewModel);
-                        volumeViewModel.Reconnect(this.Manager, this.Client, volume.VolumeName, volume.VolumeId, volume.MountPointDir);
-                    }
+                    await Task.WhenAll((await this.Manager.GetAttachedVolumeDescriptionsAsync()).Select(volume =>
+                        {
+                            var volumeViewModel = IoC.Get<VolumeViewModel>();
+                            this.ActivateItem(volumeViewModel);
+                            return volumeViewModel.ReconnectAsync(this.Manager, this.Client, volume.VolumeName, volume.VolumeId, volume.MountPointDir);
+                        }));
                 });
 
             try

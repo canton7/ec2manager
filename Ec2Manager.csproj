@@ -111,6 +111,7 @@
     <Compile Include="Events\CreateInstanceEvent.cs" />
     <Compile Include="ViewModels\AboutViewModel.cs" />
     <Compile Include="ViewModels\ConnectViewModel.cs" />
+    <Compile Include="ViewModels\CreateSnapshotDetailsViewModel.cs" />
     <Compile Include="ViewModels\InstanceDetailsViewModel.cs" />
     <Compile Include="ViewModels\InstanceViewModel.cs" />
     <Compile Include="ViewModels\ReconnectDetailsViewModel.cs" />
@@ -123,6 +124,9 @@
     </Compile>
     <Compile Include="Views\ConnectView.xaml.cs">
       <DependentUpon>ConnectView.xaml</DependentUpon>
+    </Compile>
+    <Compile Include="Views\CreateSnapshotDetailsView.xaml.cs">
+      <DependentUpon>CreateSnapshotDetailsView.xaml</DependentUpon>
     </Compile>
     <Compile Include="Views\InstanceDetailsView.xaml.cs">
       <DependentUpon>InstanceDetailsView.xaml</DependentUpon>
@@ -159,6 +163,10 @@
       <Generator>MSBuild:Compile</Generator>
     </Page>
     <Page Include="Views\ConnectView.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Include="Views\CreateSnapshotDetailsView.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>

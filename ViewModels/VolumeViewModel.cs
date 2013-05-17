@@ -7,6 +7,7 @@ using System.Text;
 using System.Threading.Tasks;
 using Ec2Manager.Classes;
 using System.Threading;
+using System.Windows;
 
 namespace Ec2Manager.ViewModels
 {
@@ -15,9 +16,11 @@ namespace Ec2Manager.ViewModels
     public class VolumeViewModel : Screen
     {
         public Logger Logger { get; private set; }
+        private IWindowManager windowManager;
 
         public InstanceClient Client { get; private set; }
         public Ec2Manager Manager { get; private set; }
+        private string mountedVolumeId;
         public string MountPointDir { get; private set; }
         public string VolumeId { get; private set; }
         private CancellationTokenSource gameCts;
@@ -66,13 +69,15 @@ namespace Ec2Manager.ViewModels
                 this.NotifyOfPropertyChange(() => CanStartGame);
                 this.NotifyOfPropertyChange(() => CanStopGame);
                 this.NotifyOfPropertyChange(() => CanUnmountVolume);
+                this.NotifyOfPropertyChange(() => CanCreateSnapshot);
             }
         }
 
         [ImportingConstructor]
-        public VolumeViewModel(Logger logger)
+        public VolumeViewModel(Logger logger, IWindowManager windowManager)
         {
             this.Logger = logger;
+            this.windowManager = windowManager;
         }
 
         public async Task SetupAsync(Ec2Manager manager, InstanceClient client, string volumeName, string volumeId)
@@ -86,7 +91,9 @@ namespace Ec2Manager.ViewModels
             try
             {
                 this.cancelCts = new CancellationTokenSource();
-                this.MountPointDir = await this.Manager.MountVolumeAsync(volumeId, this.Client, volumeName, this.cancelCts.Token, this.Logger);
+                var result = await this.Manager.MountVolumeAsync(volumeId, this.Client, volumeName, this.cancelCts.Token, this.Logger);
+                this.MountPointDir = result.Item1;
+                this.mountedVolumeId = result.Item2;
                 this.VolumeState = "mounted";
                 this.RunCommand = this.Client.GetRunCommand(this.MountPointDir, this.Logger);
                 this.UserInstruction = this.Client.GetUserInstruction(this.MountPointDir, this.Logger).Replace("<PUBLIC-IP>", this.Manager.PublicIp);
@@ -97,11 +104,12 @@ namespace Ec2Manager.ViewModels
             }
         }
 
-        public void Reconnect(Ec2Manager manager, InstanceClient client, string volumeName, string volumeId, string mountPointDir)
+        public async Task ReconnectAsync(Ec2Manager manager, InstanceClient client, string volumeName, string volumeId, string mountPointDir)
         {
             this.Client = client;
             this.Manager = manager;
             this.VolumeId = volumeId;
+            this.mountedVolumeId = volumeId;
             this.MountPointDir = mountPointDir;
 
             this.DisplayName = volumeName;
@@ -114,7 +122,7 @@ namespace Ec2Manager.ViewModels
             {
                 this.VolumeState = "started";
                 this.gameCts = new CancellationTokenSource();
-                var resumeTask = this.Client.ResumeSessionAsync(this.MountPointDir, this.Logger, this.gameCts.Token);
+                await this.Client.ResumeSessionAsync(this.MountPointDir, this.Logger, this.gameCts.Token);
             }
             else
             {
@@ -186,6 +194,35 @@ namespace Ec2Manager.ViewModels
             this.VolumeState = "unmounted";
             this.Logger.Log("Done");
             this.TryClose();
+        }
+
+        public bool CanCreateSnapshot
+        {
+            get { return this.VolumeState == "mounted"; }
+        }
+        public async void CreateSnapshot()
+        {
+            var detailsModel = IoC.Get<CreateSnapshotDetailsViewModel>();
+            var result = this.windowManager.ShowDialog(detailsModel, settings: new Dictionary<string, object>()
+            {
+                { "ResizeMode", ResizeMode.NoResize },
+            });
+
+            if (result.HasValue && result.Value)
+            {
+                try
+                {
+                    this.VolumeState = "creating-snapshot";
+
+                    this.CancelCts = new CancellationTokenSource();
+                    await this.Manager.CreateSnapshotAsync(this.mountedVolumeId, detailsModel.Name, detailsModel.Description, detailsModel.IsPublic, this.CancelCts.Token, this.Logger);
+                }
+                finally
+                {
+                    this.CancelCts = null;
+                    this.VolumeState = "mounted";
+                }
+            }
         }
     }
 }
