@@ -20,6 +20,7 @@ namespace Ec2Manager.ViewModels
 
         public InstanceClient Client { get; private set; }
         public Ec2Manager Manager { get; private set; }
+        private string mountedVolumeId;
         public string MountPointDir { get; private set; }
         public string VolumeId { get; private set; }
         private CancellationTokenSource gameCts;
@@ -90,7 +91,9 @@ namespace Ec2Manager.ViewModels
             try
             {
                 this.cancelCts = new CancellationTokenSource();
-                this.MountPointDir = await this.Manager.MountVolumeAsync(volumeId, this.Client, volumeName, this.cancelCts.Token, this.Logger);
+                var result = await this.Manager.MountVolumeAsync(volumeId, this.Client, volumeName, this.cancelCts.Token, this.Logger);
+                this.MountPointDir = result.Item1;
+                this.mountedVolumeId = result.Item2;
                 this.VolumeState = "mounted";
                 this.RunCommand = this.Client.GetRunCommand(this.MountPointDir, this.Logger);
                 this.UserInstruction = this.Client.GetUserInstruction(this.MountPointDir, this.Logger).Replace("<PUBLIC-IP>", this.Manager.PublicIp);
@@ -101,11 +104,12 @@ namespace Ec2Manager.ViewModels
             }
         }
 
-        public void Reconnect(Ec2Manager manager, InstanceClient client, string volumeName, string volumeId, string mountPointDir)
+        public async Task ReconnectAsync(Ec2Manager manager, InstanceClient client, string volumeName, string volumeId, string mountPointDir)
         {
             this.Client = client;
             this.Manager = manager;
             this.VolumeId = volumeId;
+            this.mountedVolumeId = volumeId;
             this.MountPointDir = mountPointDir;
 
             this.DisplayName = volumeName;
@@ -118,7 +122,7 @@ namespace Ec2Manager.ViewModels
             {
                 this.VolumeState = "started";
                 this.gameCts = new CancellationTokenSource();
-                var resumeTask = this.Client.ResumeSessionAsync(this.MountPointDir, this.Logger, this.gameCts.Token);
+                await this.Client.ResumeSessionAsync(this.MountPointDir, this.Logger, this.gameCts.Token);
             }
             else
             {
@@ -211,7 +215,7 @@ namespace Ec2Manager.ViewModels
                     this.VolumeState = "creating-snapshot";
 
                     this.CancelCts = new CancellationTokenSource();
-                    await this.Manager.CreateSnapshotAsync(this.VolumeId, detailsModel.Name, detailsModel.Description, detailsModel.IsPublic, this.CancelCts.Token, this.Logger);
+                    await this.Manager.CreateSnapshotAsync(this.mountedVolumeId, detailsModel.Name, detailsModel.Description, detailsModel.IsPublic, this.CancelCts.Token, this.Logger);
                 }
                 finally
                 {

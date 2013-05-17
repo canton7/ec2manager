@@ -799,7 +799,7 @@ namespace Ec2Manager
             await this.ResetAttachedVolumesAsync(logger);
         }
 
-        public async Task<string> MountVolumeAsync(string volumeId, IMachineInteractionProvider client, string name = null, CancellationToken? cancellationToken = null, ILogger logger = null)
+        public async Task<Tuple<string, string>> MountVolumeAsync(string volumeId, IMachineInteractionProvider client, string name = null, CancellationToken? cancellationToken = null, ILogger logger = null)
         {
             logger = logger ?? this.DefaultLogger;
             CancellationToken token = cancellationToken.HasValue ? cancellationToken.Value : new CancellationToken();
@@ -857,7 +857,7 @@ namespace Ec2Manager
 
             logger.Log("Volume successfully mounted");
 
-            return deviceMountPoint;
+            return new Tuple<string, string>(deviceMountPoint, volumeId);
         }
 
         public async Task<string> CreateVolumeFromSnapshotAsync(string snapshotId, IMachineInteractionProvider client, string volumeName = null, CancellationToken? cancellationToken = null, ILogger logger = null)
@@ -926,14 +926,17 @@ namespace Ec2Manager
 
             if (isPublic)
             {
-                logger.Log("Setting perissions to public");
+                logger.Log("Setting permissions to public");
                 await this.RequestAsync(s => s.ModifySnapshotAttribute(new ModifySnapshotAttributeRequest()
                 {
                     SnapshotId = snapshotId,
-                    Attribute = "CreateVolumePermission",
+                    OperationType = "add",
+                    Attribute = "createVolumePermission",
                     UserGroup = new List<string>() { "all" },
                 }));
             };
+
+            logger.Log("Done");
 
             return snapshotId;
         }
