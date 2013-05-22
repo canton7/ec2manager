@@ -3,6 +3,7 @@ using Ec2Manager.Classes;
 using Ec2Manager.Configuration;
 using Ec2Manager.Events;
 using Ec2Manager.Properties;
+using Ec2Manager.Ec2Manager;
 using System;
 using System.Collections.Generic;
 using System.ComponentModel.Composition;
@@ -10,26 +11,13 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using System.Windows;
+using Ec2Manager.Model;
 
 namespace Ec2Manager.ViewModels
 {
     [Export]
     public class ConnectViewModel : Screen
     {
-        private static readonly LabelledValue[] instanceTypes = new LabelledValue[]
-        {
-            new LabelledValue("M1 Small", "m1.small"),
-            new LabelledValue("M1 Medium", "m1.medium"),
-            new LabelledValue("M1 Large", "m1.large"),
-            new LabelledValue("M3 Extra Large", "m3.xlarge"),
-            new LabelledValue("M3 2x Extra Large", "m3.2xlarge"),
-            new LabelledValue("Micro", "t1.micro"),
-            new LabelledValue("High-Memory Extra Large", "m2.xlarge"),
-            new LabelledValue("High-Memory 2x Extra Large", "m2.2xlarge"),
-            new LabelledValue("High-Memory 4x Extra Large", "m2.4xlarge"),
-            new LabelledValue("High-CPU Medium", "c1.medium"),
-            new LabelledValue("High-CPU Extra Large", "c1.xlarge"),
-        };
         private static readonly LabelledValue[] availabilityZones = new LabelledValue[]
         {
             new LabelledValue("Any", null),
@@ -39,6 +27,7 @@ namespace Ec2Manager.ViewModels
         };
 
         private Config config;
+        private Ec2Connection connection;
 
         private string instanceName = "My Server";
         public string InstanceName
@@ -64,13 +53,13 @@ namespace Ec2Manager.ViewModels
             }
         }
 
-        public LabelledValue[] InstanceTypes
+        public InstanceSize[] InstanceTypes
         {
-            get { return instanceTypes; }
+            get { return Ec2Connection.InstanceSizes; }
         }
 
-        private LabelledValue activeInstanceType;
-        public LabelledValue ActiveInstanceType
+        private InstanceSize activeInstanceType;
+        public InstanceSize ActiveInstanceType
         {
             get { return this.activeInstanceType; }
             set
@@ -108,8 +97,8 @@ namespace Ec2Manager.ViewModels
             }
         }
 
-        private LabelledValue[] runningInstances = new[] { new LabelledValue("Loading...", null) };
-        public LabelledValue[] RunningInstances
+        private LabelledValue<Ec2Instance>[] runningInstances = new[] { new LabelledValue<Ec2Instance>("Loading...", null) };
+        public LabelledValue<Ec2Instance>[] RunningInstances
         {
             get { return this.runningInstances; }
             set
@@ -119,8 +108,8 @@ namespace Ec2Manager.ViewModels
             }
         }
 
-        private LabelledValue activeRunningInstance;
-        public LabelledValue ActiveRunningInstance
+        private LabelledValue<Ec2Instance> activeRunningInstance;
+        public LabelledValue<Ec2Instance> ActiveRunningInstance
         {
             get { return this.activeRunningInstance; }
             set
@@ -180,18 +169,24 @@ namespace Ec2Manager.ViewModels
         private IEventAggregator events;
 
         [ImportingConstructor]
-        public ConnectViewModel(Config config, IEventAggregator events)
+        public ConnectViewModel(MainModel model, IEventAggregator events)
         {
-            this.config = config;
+            this.config = model.Config;
+            this.connection = model.Connection;
             this.events = events;
 
             this.config.Bind(s => s.MainConfig, (o, e) => 
                 {
                     this.LoadFromConfig();
-                    this.NotifyOfPropertyChange(() => CanCreate);
-                    this.NotifyOfPropertyChange(() => CanRefreshRunningInstances);
-                    this.NotifyOfPropertyChange(() => CanTerminateInstance);
+                });
+
+            this.connection.Bind(s => s.IsConnected, (o, e) =>
+                {
                     this.RefreshRunningInstances();
+                    this.NotifyOfPropertyChange(() => CanRefreshRunningInstances);
+                    this.NotifyOfPropertyChange(() => CanCreate);
+                    this.NotifyOfPropertyChange(() => CanReconnectInstance);
+                    this.NotifyOfPropertyChange(() => CanTerminateInstance);
                     var spotPriceTask = this.RefreshCurrentSpotPriceAsync();
                 });
 
@@ -200,7 +195,7 @@ namespace Ec2Manager.ViewModels
             this.DisplayName = "Create New Instance";
             this.LoadFromConfig();
 
-            this.ActiveInstanceType = this.InstanceTypes.FirstOrDefault(x => x.Value == "t1.micro");
+            this.ActiveInstanceType = this.InstanceTypes.FirstOrDefault(x => x.Key == "t1.micro");
             this.ActiveRunningInstance = this.RunningInstances[0];
 
             this.RefreshRunningInstances();
@@ -223,8 +218,7 @@ namespace Ec2Manager.ViewModels
 
             try
             {
-                var manager = new Ec2Manager(this.config.MainConfig.AwsAccessKey, this.config.MainConfig.AwsSecretKey);
-                this.CurrentSpotPrice = await manager.GetCurrentSpotPriceAsync(this.ActiveInstanceType.Value);
+                this.CurrentSpotPrice = await this.connection.GetCurrentSpotPriceAsync(this.ActiveInstanceType);
             }
             catch (Exception)
             {
@@ -236,8 +230,7 @@ namespace Ec2Manager.ViewModels
         {
             get
             {
-                return !string.IsNullOrWhiteSpace(this.config.MainConfig.AwsAccessKey) &&
-                    !string.IsNullOrWhiteSpace(this.config.MainConfig.AwsSecretKey) &&
+                return this.connection.IsConnected &&
                     !string.IsNullOrWhiteSpace(this.InstanceName) &&
                     !string.IsNullOrWhiteSpace(this.LoginAs) &&
                     !string.IsNullOrWhiteSpace(this.AMI);
@@ -258,49 +251,38 @@ namespace Ec2Manager.ViewModels
                     return;
             }
 
-            var manager = new Ec2Manager(this.config.MainConfig.AwsAccessKey, this.config.MainConfig.AwsSecretKey);
-            manager.Name = this.InstanceName;
             this.events.Publish(new CreateInstanceEvent()
             {
-                InstanceAmi = this.AMI,
-                InstanceSize = this.ActiveInstanceType.Value,
-                Manager = manager,
+                Instance = this.connection.CreateInstance(this.InstanceName, this.AMI, this.ActiveInstanceType, this.SelectedAvailabilityZone.Value, this.UseSpotMarket ? (double?)this.SpotBidAmount : null),
                 LoginAs = this.LoginAs,
-                SpotBidAmount = this.UseSpotMarket ? (double?)this.SpotBidAmount : null,
-                AvailabilityZone = this.SelectedAvailabilityZone.Value,
             });
         }
 
         public bool CanRefreshRunningInstances
         {
-            get
-            {
-                return !string.IsNullOrWhiteSpace(this.config.MainConfig.AwsAccessKey) &&
-                    !string.IsNullOrWhiteSpace(this.config.MainConfig.AwsSecretKey);
-            }
+            get { return this.connection.IsConnected; }
         }
         public async void RefreshRunningInstances()
         {
             if (!this.CanRefreshRunningInstances)
             {
-                this.RunningInstances = new[] { new LabelledValue("Can't load. Try refreshing", null) };
+                this.RunningInstances = new[] { new LabelledValue<Ec2Instance>("Can't load. Try refreshing", null) };
                 this.ActiveRunningInstance = this.RunningInstances[0];
                 return;
             }
 
             try
             {
-                var manager = new Ec2Manager(this.config.MainConfig.AwsAccessKey, this.config.MainConfig.AwsSecretKey);
-                this.RunningInstances = (await manager.ListInstancesAsync()).Select(x => new LabelledValue(x.Item2, x.Item1)).ToArray();
+                this.RunningInstances = (await this.connection.ListInstancesAsync()).Select(x => new LabelledValue<Ec2Instance>(x.Name, x)).ToArray();
                 if (this.RunningInstances.Length == 0)
                 {
-                    this.RunningInstances = new[] { new LabelledValue("No Running Instances", null) };
+                    this.RunningInstances = new[] { new LabelledValue<Ec2Instance>("No Running Instances", null) };
                 }
                 this.ActiveRunningInstance = this.RunningInstances[0];
             }
             catch (Exception)
             {
-                this.RunningInstances = new[] { new LabelledValue("Error loading. Bad credentials?", null) };
+                this.RunningInstances = new[] { new LabelledValue<Ec2Instance>("Error loading. Bad credentials?", null) };
                 this.ActiveRunningInstance = this.RunningInstances[0];
             }
         }
@@ -309,18 +291,15 @@ namespace Ec2Manager.ViewModels
         {
             get
             {
-                return !string.IsNullOrWhiteSpace(this.config.MainConfig.AwsAccessKey) &&
-                    !string.IsNullOrWhiteSpace(this.config.MainConfig.AwsSecretKey) &&
-                    this.ActiveRunningInstance != null && !string.IsNullOrEmpty(this.ActiveRunningInstance.Value);
+                return this.connection.IsConnected &&
+                    this.ActiveRunningInstance != null && this.ActiveRunningInstance.IsSet;
             }
         }
         public void ReconnectInstance()
         {
-            var manager = new Ec2Manager(this.config.MainConfig.AwsAccessKey, this.config.MainConfig.AwsSecretKey, this.ActiveRunningInstance.Value);
-            manager.Name = this.ActiveRunningInstance.Label;
             events.Publish(new ReconnectInstanceEvent()
             {
-                Manager = manager,
+                Instance = this.ActiveRunningInstance.Value,
             });
         }
 
@@ -328,18 +307,15 @@ namespace Ec2Manager.ViewModels
         {
             get
             {
-                return !string.IsNullOrWhiteSpace(this.config.MainConfig.AwsAccessKey) &&
-                    !string.IsNullOrWhiteSpace(this.config.MainConfig.AwsSecretKey) &&
-                    this.ActiveRunningInstance != null && !string.IsNullOrEmpty(this.ActiveRunningInstance.Value);
+                return this.connection.IsConnected &&
+                    this.ActiveRunningInstance != null && this.ActiveRunningInstance.IsSet;
             }
         }
         public void TerminateInstance()
         {
-            var manager = new Ec2Manager(this.config.MainConfig.AwsAccessKey, this.config.MainConfig.AwsSecretKey, this.ActiveRunningInstance.Value);
-            manager.Name = this.ActiveRunningInstance.Label;
             events.Publish(new TerminateInstanceEvent()
             {
-                Manager = manager,
+                Instance = this.ActiveRunningInstance.Value,
             });
         }
     }

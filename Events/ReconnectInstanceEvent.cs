@@ -1,4 +1,5 @@
-﻿using System;
+﻿using Ec2Manager.Ec2Manager;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -8,6 +9,6 @@ namespace Ec2Manager.Events
 {
     public class ReconnectInstanceEvent
     {
-        public Ec2Manager Manager { get; set; }
+        public Ec2Instance Instance { get; set; }
     }
 }

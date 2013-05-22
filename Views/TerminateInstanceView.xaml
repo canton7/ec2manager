@@ -10,7 +10,7 @@
     <DockPanel>
         <GroupBox Header="Instance Properties" DockPanel.Dock="Top" Padding="10" VerticalAlignment="Top">
             <Grid>
-                <TextBlock Grid.Column="1" Text="{Binding Manager.InstanceState, StringFormat='State: {0}'}"/>
+                <TextBlock Grid.Column="1" Text="{Binding Instance.InstanceState, StringFormat='State: {0}'}"/>
             </Grid>
         </GroupBox>
 

@@ -25,9 +25,9 @@
                     <RowDefinition/>
                 </Grid.RowDefinitions>
 
-                <TextBox Grid.Row="0" Grid.Column="0" Background="Transparent" BorderThickness="0" IsReadOnly="True" Text="{Binding Manager.PublicIp, StringFormat='IP: {0}'}"/>
-                <TextBlock Grid.Row="0" Grid.Column="1" Text="{Binding Manager.InstanceState, StringFormat='State: {0}'}"/>
-                <TextBlock Grid.Row="0" Grid.Column="2" Text="{Binding Manager.BidStatus, StringFormat='Bid Status: {0}'}" Visibility="{Binding IsSpotInstance, Converter={StaticResource booleanToVisibilityConverter}}"/>
+                <TextBox Grid.Row="0" Grid.Column="0" Background="Transparent" BorderThickness="0" IsReadOnly="True" Text="{Binding Instance.PublicIp, StringFormat='IP: {0}'}"/>
+                <TextBlock Grid.Row="0" Grid.Column="1" Text="{Binding Instance.InstanceState, StringFormat='State: {0}'}"/>
+                <TextBlock Grid.Row="0" Grid.Column="2" Text="{Binding Instance.BidStatus, StringFormat='Bid Status: {0}'}" Visibility="{Binding IsSpotInstance, Converter={StaticResource booleanToVisibilityConverter}}"/>
 
                 <TextBlock Name="Uptime" Grid.Row="1" Grid.ColumnSpan="3"/>
                 

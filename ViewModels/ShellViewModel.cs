@@ -97,8 +97,7 @@ namespace Ec2Manager.ViewModels
         {
             var instanceViewModel = IoC.Get<InstanceViewModel>();
             this.ActivateItem(instanceViewModel);
-
-            await instanceViewModel.SetupAsync(message.Manager, message.InstanceAmi, message.InstanceSize, message.LoginAs, message.AvailabilityZone, message.SpotBidAmount);
+            await instanceViewModel.SetupAsync(message.Instance, message.LoginAs);
         }
 
         public async void Handle(TerminateInstanceEvent message)
@@ -106,7 +105,7 @@ namespace Ec2Manager.ViewModels
             var terminateViewModel = IoC.Get<TerminateInstanceViewModel>();
             this.ActivateItem(terminateViewModel);
 
-            await terminateViewModel.SetupAsync(message.Manager);
+            await terminateViewModel.SetupAsync(message.Instance);
         }
 
         public async void Handle(ReconnectInstanceEvent message)
@@ -114,7 +113,7 @@ namespace Ec2Manager.ViewModels
             var instanceViewModel = IoC.Get<InstanceViewModel>();
             this.ActivateItem(instanceViewModel);
 
-            await instanceViewModel.ReconnectAsync(message.Manager);
+            await instanceViewModel.ReconnectAsync(message.Instance);
         }
     }
 }

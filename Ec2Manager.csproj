@@ -98,9 +98,18 @@
     <Compile Include="Configuration\Config.cs" />
     <Compile Include="Configuration\MainConfig.cs" />
     <Compile Include="Configuration\VolumeType.cs" />
+    <Compile Include="Ec2Manager\AmazonEC2ClientExtensions.cs" />
+    <Compile Include="Ec2Manager\Credentials.cs" />
+    <Compile Include="Ec2Manager\Ec2Instance.cs" />
+    <Compile Include="Ec2Manager\Ec2Connection.cs" />
+    <Compile Include="Ec2Manager\InstanceSize.cs" />
+    <Compile Include="Ec2Manager\InstanceSpecification.cs" />
+    <Compile Include="Ec2Manager\StubLogger.cs" />
+    <Compile Include="Ec2Manager\Ec2Volume.cs" />
     <Compile Include="Events\ReconnectInstanceEvent.cs" />
     <Compile Include="Events\TerminateInstanceEvent.cs" />
     <Compile Include="ILogger.cs" />
+    <Compile Include="Model\MainModel.cs" />
     <Compile Include="Support\HyperlinkUtilities.cs" />
     <Compile Include="Support\TextBoxUtilities.cs" />
     <Compile Include="Classes\LabelledValue.cs" />
@@ -154,7 +163,6 @@
       <SubType>Code</SubType>
     </Compile>
     <Compile Include="AppBootstrapper.cs" />
-    <Compile Include="Ec2Manager.cs" />
     <Compile Include="IMachineInteractionProvider.cs" />
     <Compile Include="InstanceClient.cs" />
     <Compile Include="Logger.cs" />

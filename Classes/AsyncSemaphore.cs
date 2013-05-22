@@ -82,5 +82,18 @@ namespace Ec2Manager.Classes
                 Task.Run(() => toRelease.SetResult(true));
             }
         }
+
+        public async Task WithLock(Func<Task> task)
+        {
+            await this.WaitAsync();
+            try
+            {
+                await task();
+            }
+            finally
+            {
+                this.Release();
+            }
+        }
     }
 }

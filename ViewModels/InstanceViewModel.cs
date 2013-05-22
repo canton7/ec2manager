@@ -12,6 +12,7 @@ using Ec2Manager.Configuration;
 using System.Windows.Threading;
 using System.Windows;
 using System.Threading;
+using Ec2Manager.Ec2Manager;
 
 namespace Ec2Manager.ViewModels
 {
@@ -21,11 +22,10 @@ namespace Ec2Manager.ViewModels
     {
         private static readonly List<VolumeType> defaultVolumeTypes = new List<VolumeType>
             {
-                //new VolumeType("theSnapshotName", "Left 4 Dead 2"),
                 VolumeType.Custom("Custom Snapshot or Volume"),
             };
 
-        public Ec2Manager Manager { get; private set; }
+        public Ec2Instance Instance { get; private set; }
         public InstanceClient Client { get; private set; }
         private IWindowManager windowManager;
 
@@ -111,12 +111,12 @@ namespace Ec2Manager.ViewModels
             this.ActivateItem(instanceDetailsModel);
         }
 
-        private void SetupWithManager()
+        private void SetupWithInstance()
         {
-            this.DisplayName = this.Manager.Name;
-            this.Manager.DefaultLogger = this.Logger;
+            this.DisplayName = this.Instance.Name;
+            this.Instance.Logger = this.Logger;
 
-            this.Manager.Bind(s => s.InstanceState, (o, e) =>
+            this.Instance.Bind(s => s.InstanceState, (o, e) =>
             {
                 this.NotifyOfPropertyChange(() => CanTerminate);
                 this.NotifyOfPropertyChange(() => CanMountVolume);
@@ -133,22 +133,24 @@ namespace Ec2Manager.ViewModels
             this.NotifyOfPropertyChange(() => VolumeTypes);
         }
 
-        public async Task SetupAsync(Ec2Manager manager, string instanceAmi, string instanceSize, string loginAs, string availabilityZone, double? spotBidAmount = null)
+        public async Task SetupAsync(Ec2Instance instance, string loginAs)
         {
-            this.Manager = manager;
-            this.SetupWithManager();
-            this.IsSpotInstance = spotBidAmount.HasValue;
+            this.Instance = instance;
+            this.SetupWithInstance();
+            this.IsSpotInstance = instance.Specification.IsSpotInstance;
+
+            this.Instance.Logger = this.Logger;
 
             this.CancelCts = new CancellationTokenSource();
             var createTask = Task.Run(async () =>
                 {
-                    await this.Manager.CreateAsync(instanceAmi, instanceSize, availabilityZone, spotBidAmount, this.CancelCts.Token);
+                    await this.Instance.SetupAsync(this.CancelCts.Token);
 
-                    this.Client = new InstanceClient(this.Manager.PublicIp, loginAs, this.Manager.PrivateKey);
+                    this.Client = new InstanceClient(this.Instance.PublicIp, loginAs, this.Instance.PrivateKey);
                     this.Client.Bind(s => s.IsConnected, (o, e) => this.NotifyOfPropertyChange(() => CanMountVolume));
 
                     await this.Client.ConnectAsync(this.Logger);
-                    this.config.SaveKeyAndUser(this.Manager.InstanceId, loginAs, this.Manager.PrivateKey);
+                    this.config.SaveKeyAndUser(this.Instance.InstanceId, loginAs, this.Instance.PrivateKey);
                 }, this.CancelCts.Token);
 
             try
@@ -172,19 +174,22 @@ namespace Ec2Manager.ViewModels
             }
         }
 
-        public async Task ReconnectAsync(Ec2Manager manager)
+        public async Task ReconnectAsync(Ec2Instance instance)
         {
-            this.Manager = manager;
-            this.SetupWithManager();
+            this.Instance = instance;
+            this.SetupWithInstance();
 
+            this.Instance.Logger = this.Logger;
+
+            this.CancelCts = new CancellationTokenSource();
             var reconnectTask = Task.Run(async () =>
                 {
-                    await this.Manager.ReconnectAsync(this.Logger);
+                    await this.Instance.SetupAsync();
 
                     Tuple<string, string> keyAndUser = null;
                     try
                     {
-                        keyAndUser = this.config.RetrieveKeyAndUser(this.Manager.InstanceId);
+                        keyAndUser = this.config.RetrieveKeyAndUser(this.Instance.InstanceId);
                     }
                     catch (FileNotFoundException)
                     {
@@ -201,7 +206,7 @@ namespace Ec2Manager.ViewModels
                         if (result.HasValue && result.Value)
                         {
                             keyAndUser = new Tuple<string, string>(reconnectDetails.PrivateKey, reconnectDetails.LoginAs);
-                            this.config.SaveKeyAndUser(this.Manager.InstanceId, keyAndUser.Item2, keyAndUser.Item1);
+                            this.config.SaveKeyAndUser(this.Instance.InstanceId, keyAndUser.Item2, keyAndUser.Item1);
                         }
                         else
                         {
@@ -209,17 +214,17 @@ namespace Ec2Manager.ViewModels
                         }
                     }
 
-                    this.Client = new InstanceClient(this.Manager.PublicIp, keyAndUser.Item2, keyAndUser.Item1);
+                    this.Client = new InstanceClient(this.Instance.PublicIp, keyAndUser.Item2, keyAndUser.Item1);
                     this.Client.Bind(s => s.IsConnected, (o, e) => this.NotifyOfPropertyChange(() => CanMountVolume));
                     await this.Client.ConnectAsync(this.Logger);
 
-                    await Task.WhenAll((await this.Manager.GetAttachedVolumeDescriptionsAsync()).Select(volume =>
+                    await Task.WhenAll((await this.Instance.ListVolumesAsync()).Select(volume =>
                         {
                             var volumeViewModel = IoC.Get<VolumeViewModel>();
                             this.ActivateItem(volumeViewModel);
-                            return volumeViewModel.ReconnectAsync(this.Manager, this.Client, volume.VolumeName, volume.VolumeId, volume.MountPointDir);
+                            return volumeViewModel.ReconnectAsync(volume, this.Client);
                         }));
-                });
+                }, this.CancelCts.Token);
 
             try
             {
@@ -230,7 +235,10 @@ namespace Ec2Manager.ViewModels
                 this.Logger.Log("Error occurred: {0}", e.Message);
                 MessageBox.Show(Application.Current.MainWindow, "Error occurred: " + e.Message, "Error occurred", MessageBoxButton.OK, MessageBoxImage.Error);
                 this.TryClose();
-                return;
+            }
+            finally
+            {
+                this.CancelCts = null;
             }
 
             this.uptimeTimer.Start();
@@ -252,14 +260,14 @@ namespace Ec2Manager.ViewModels
 
         public bool CanTerminate
         {
-            get { return this.Manager != null && this.Manager.InstanceState == "running"; }
+            get { return this.Instance != null && this.Instance.InstanceState == "running"; }
         }
 
         public async void Terminate()
         {
             this.ActivateItem(this.Items[0]);
             this.uptimeTimer.Stop();
-            await this.Manager.DestroyAsync();
+            await this.Instance.DestroyAsync();
             this.TryClose();
         }
 
@@ -267,8 +275,8 @@ namespace Ec2Manager.ViewModels
         {
             get
             {
-                return this.Manager != null &&
-                    this.Manager.InstanceState == "running" && this.Client != null &&
+                return this.Instance != null &&
+                    this.Instance.InstanceState == "running" && this.Client != null &&
                     (this.SelectedVolumeType.IsCustom == true || this.SelectedVolumeType.SnapshotId != null) &&
                     (!this.selectedVolumeType.IsCustom || !string.IsNullOrWhiteSpace(this.CustomVolumeSnapshotId)) &&
                     this.Client.IsConnected;
@@ -296,7 +304,8 @@ namespace Ec2Manager.ViewModels
 
             try
             {
-                await volumeViewModel.SetupAsync(this.Manager, this.Client, volumeName, volumeId);
+                var volume = this.Instance.CreateVolume(volumeId, volumeName);
+                await volumeViewModel.SetupAsync(volume, this.Client);
             }
             catch (OperationCanceledException)
             {
@@ -313,7 +322,7 @@ namespace Ec2Manager.ViewModels
 
         public bool CanSavePrivateKey
         {
-            get { return this.Manager != null && this.Manager.InstanceState == "running"; }
+            get { return this.Instance != null && this.Instance.InstanceState == "running"; }
         }
         public void SavePrivateKey()
         {
@@ -325,7 +334,7 @@ namespace Ec2Manager.ViewModels
             if (result == true)
             {
                 string fileName = dialog.FileName;
-                File.WriteAllText(fileName, this.Manager.PrivateKey);
+                File.WriteAllText(fileName, this.Instance.PrivateKey);
             }
         }
     }

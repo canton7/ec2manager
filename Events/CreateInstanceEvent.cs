@@ -1,4 +1,5 @@
-﻿using System;
+﻿using Ec2Manager.Ec2Manager;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -8,11 +9,7 @@ namespace Ec2Manager.Events
 {
     public class CreateInstanceEvent
     {
-        public string InstanceAmi { get; set; }
-        public string InstanceSize { get; set; }
-        public Ec2Manager Manager { get; set; }
+        public Ec2Instance Instance { get; set; }
         public string LoginAs { get; set; }
-        public string AvailabilityZone { get; set; }
-        public double? SpotBidAmount { get; set; }
     }
 }
