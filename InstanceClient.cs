@@ -20,6 +20,11 @@ namespace Ec2Manager
         private string key;
         private AsyncSemaphore setupCmdLock = new AsyncSemaphore(1, 1);
 
+        public static readonly Dictionary<string, ScriptArgumentType> scriptArgumentTypeMapping = new Dictionary<string, ScriptArgumentType>()
+        {
+            { "string", ScriptArgumentType.String },
+        };
+
         private bool isConnected = false;
         public bool IsConnected
         {
@@ -158,6 +163,29 @@ namespace Ec2Manager
             return this.client.RunCommand("uptime").Result.Trim();
         }
 
+        public string[] ListScripts(string mountPointDir)
+        {
+            var mountPoint = this.mountBase + mountPointDir;
+
+            var lsOutput = this.client.RunCommand("[ -d \"" + mountPoint + "/ec2manager/scripts\" ] && ls -m \"" + mountPoint + "/ec2manager/scripts\"").Result.Trim();
+            return lsOutput.Split(new[] { ", " }, StringSplitOptions.None);
+        }
+
+        public ScriptArgument[] GetScriptArguments(string mountPointDir, string script)
+        {
+            var mountPoint = this.mountBase + mountPointDir;
+
+            var output = this.client.RunCommand("[ -f \"" + mountPoint + "/ec2manager/scripts/" + script + "\" ] && \"" + mountPoint + "/ec2manager/scripts/" + script + "\" --args").Result.Trim();
+            var lines = output.Split(new[] { "\n", "\r\n" }, StringSplitOptions.RemoveEmptyEntries);
+            return lines.Select(line =>
+                {
+                    var parts = line.Split(new[] { '\t' });
+                    if (scriptArgumentTypeMapping.ContainsKey(parts[0]))
+                        throw new Exception("Script return argument type " + parts[0] + ", which we don't know how to handle");
+                    return new ScriptArgument(scriptArgumentTypeMapping[parts[0]], parts[1]);
+                }).ToArray();
+        }
+
         private async Task RunAndLogAsync(string command, ILogger logger, bool logResult = false, int retryTimes = 0)
         {
             logger.Log(command);
@@ -257,5 +285,22 @@ namespace Ec2Manager
             if (this.client != null)
                 this.client.Disconnect();
         }
+    }
+
+    public enum ScriptArgumentType
+    {
+        String
+    };
+
+    public struct ScriptArgument
+    {
+        public ScriptArgumentType Type;
+        public string Description;
+
+        public ScriptArgument (ScriptArgumentType type, string description)
+	    {
+            this.Type = type;
+            this.Description = description;
+	    }
     }
 }

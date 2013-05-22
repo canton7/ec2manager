@@ -71,6 +71,29 @@ namespace Ec2Manager.ViewModels
             }
         }
 
+        private LabelledValue<bool>[] scripts;
+        public LabelledValue<bool>[] Scripts
+        {
+            get { return this.scripts; }
+            set
+            {
+                this.scripts = value;
+                this.NotifyOfPropertyChange();
+            }
+        }
+
+        private LabelledValue<bool> selectedScript = new LabelledValue<bool>("Loading...", false);
+        public LabelledValue<bool> SelectedScript
+        {
+            get { return this.selectedScript; }
+            set
+            {
+                this.selectedScript = value;
+                this.NotifyOfPropertyChange();
+            }
+        }
+
+
         [ImportingConstructor]
         public VolumeViewModel(Logger logger, IWindowManager windowManager)
         {
@@ -94,6 +117,7 @@ namespace Ec2Manager.ViewModels
                 this.VolumeState = "mounted";
                 this.RunCommand = this.Client.GetRunCommand(this.Volume.MountPoint, this.Logger);
                 this.UserInstruction = this.Client.GetUserInstruction(this.Volume.MountPoint, this.Logger).Replace("<PUBLIC-IP>", this.Volume.Instance.PublicIp);
+                this.UpdateScripts();
             }
             finally
             {
@@ -117,11 +141,21 @@ namespace Ec2Manager.ViewModels
                 this.VolumeState = "started";
                 this.gameCts = new CancellationTokenSource();
                 await this.Client.ResumeSessionAsync(this.Volume.MountPoint, this.Logger, this.gameCts.Token);
+                this.UpdateScripts();
             }
             else
             {
                 this.VolumeState = "mounted";
             }
+        }
+
+        private void UpdateScripts()
+        {
+            this.Scripts = this.Client.ListScripts(this.Volume.MountPoint).Select(x => new LabelledValue<bool>(x, true)).ToArray();
+            if (this.Scripts.Length > 0)
+                this.SelectedScript = this.Scripts[0];
+            else
+                this.SelectedScript = new LabelledValue<bool>("No scripts", false);
         }
 
         public bool CanStartGame
