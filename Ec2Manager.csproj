@@ -124,6 +124,8 @@
     <Compile Include="ViewModels\InstanceDetailsViewModel.cs" />
     <Compile Include="ViewModels\InstanceViewModel.cs" />
     <Compile Include="ViewModels\ReconnectDetailsViewModel.cs" />
+    <Compile Include="ViewModels\ScriptArgumentViewModel.cs" />
+    <Compile Include="ViewModels\ScriptDetailsViewModel.cs" />
     <Compile Include="ViewModels\SettingsViewModel.cs" />
     <Compile Include="ViewModels\ShellViewModel.cs" />
     <Compile Include="ViewModels\TerminateInstanceViewModel.cs" />
@@ -145,6 +147,12 @@
     </Compile>
     <Compile Include="Views\ReconnectDetailsView.xaml.cs">
       <DependentUpon>ReconnectDetailsView.xaml</DependentUpon>
+    </Compile>
+    <Compile Include="Views\ScriptArgumentView.xaml.cs">
+      <DependentUpon>ScriptArgumentView.xaml</DependentUpon>
+    </Compile>
+    <Compile Include="Views\ScriptDetailsView.xaml.cs">
+      <DependentUpon>ScriptDetailsView.xaml</DependentUpon>
     </Compile>
     <Compile Include="Views\SettingsView.xaml.cs">
       <DependentUpon>SettingsView.xaml</DependentUpon>
@@ -187,6 +195,14 @@
       <Generator>MSBuild:Compile</Generator>
     </Page>
     <Page Include="Views\ReconnectDetailsView.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Include="Views\ScriptArgumentView.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Include="Views\ScriptDetailsView.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>

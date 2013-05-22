@@ -20,9 +20,9 @@ namespace Ec2Manager
         private string key;
         private AsyncSemaphore setupCmdLock = new AsyncSemaphore(1, 1);
 
-        public static readonly Dictionary<string, ScriptArgumentType> scriptArgumentTypeMapping = new Dictionary<string, ScriptArgumentType>()
+        public static readonly Dictionary<string, Type> scriptArgumentTypeMapping = new Dictionary<string, Type>()
         {
-            { "string", ScriptArgumentType.String },
+            { "string", typeof(string) },
         };
 
         private bool isConnected = false;
@@ -168,7 +168,7 @@ namespace Ec2Manager
             var mountPoint = this.mountBase + mountPointDir;
 
             var lsOutput = this.client.RunCommand("[ -d \"" + mountPoint + "/ec2manager/scripts\" ] && ls -m \"" + mountPoint + "/ec2manager/scripts\"").Result.Trim();
-            return lsOutput.Split(new[] { ", " }, StringSplitOptions.None);
+            return lsOutput.Split(new[] { ", " }, StringSplitOptions.RemoveEmptyEntries);
         }
 
         public ScriptArgument[] GetScriptArguments(string mountPointDir, string script)
@@ -186,6 +186,13 @@ namespace Ec2Manager
                 }).ToArray();
         }
 
+        public async Task RunScriptAsync(string mountPointDir, string script, string[] args, ILogger logger)
+        {
+            var mountPoint = this.mountBase + mountPointDir;
+
+            await this.RunAndLogStreamAsync("echo \"" + mountPoint + "/ec2manager/scripts/" + script + "\" " + string.Join(" ", args.Select(x => "\"" + x + "\"")), logger, true);
+        }
+
         private async Task RunAndLogAsync(string command, ILogger logger, bool logResult = false, int retryTimes = 0)
         {
             logger.Log(command);
@@ -194,16 +201,12 @@ namespace Ec2Manager
             for (int i = 0; ; i++)
             {
                 if (cmd.ExitStatus == 0)
-                {
                     break;
-                }
-                else
-                {
-                    logger.Log("Error: {0}. Retrying in 5 seconds", cmd.Error);
-                    if (i == retryTimes)
-                        throw new Exception(string.Format("Command {0} failed with error {1}", command, cmd.Error));
-                    await Task.Delay(5000);
-                }
+
+                logger.Log("Error: {0}. Retrying in 5 seconds", cmd.Error);
+                if (i == retryTimes)
+                    throw new Exception(string.Format("Command {0} failed with error {1}", command, cmd.Error));
+                await Task.Delay(5000);
             }
 
             if (logResult)
@@ -287,17 +290,12 @@ namespace Ec2Manager
         }
     }
 
-    public enum ScriptArgumentType
-    {
-        String
-    };
-
     public struct ScriptArgument
     {
-        public ScriptArgumentType Type;
+        public Type Type;
         public string Description;
 
-        public ScriptArgument (ScriptArgumentType type, string description)
+        public ScriptArgument (Type type, string description)
 	    {
             this.Type = type;
             this.Description = description;
