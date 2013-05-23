@@ -45,11 +45,12 @@ namespace Ec2Manager
             {
                 while (!asynch.IsCompleted)
                 {
-                    Thread.Sleep(100);
-                    var result = sr.ReadToEnd();
+                    var result = sr.ReadLine();
+
                     if (string.IsNullOrEmpty(result))
-                        continue;
-                    this.newLogEntry(result.Trim());
+                        Thread.Sleep(500);
+                    else
+                        this.newLogEntry(result.Trim());
                 }
             }
         }

@@ -7,6 +7,7 @@ using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Text;
+using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -20,9 +21,11 @@ namespace Ec2Manager
         private string key;
         private AsyncSemaphore setupCmdLock = new AsyncSemaphore(1, 1);
 
-        public static readonly Dictionary<string, Type> scriptArgumentTypeMapping = new Dictionary<string, Type>()
+        public static readonly Dictionary<string, ScriptArgumentType> scriptArgumentTypeMapping = new Dictionary<string, ScriptArgumentType>()
         {
-            { "string", typeof(string) },
+            { "string", ScriptArgumentType.String },
+            { "bool",   ScriptArgumentType.Bool },
+            { "enum",   ScriptArgumentType.Enum },
         };
 
         private bool isConnected = false;
@@ -167,8 +170,8 @@ namespace Ec2Manager
         {
             var mountPoint = this.mountBase + mountPointDir;
 
-            var lsOutput = this.client.RunCommand("[ -d \"" + mountPoint + "/ec2manager/scripts\" ] && ls -m \"" + mountPoint + "/ec2manager/scripts\"").Result.Trim();
-            return lsOutput.Split(new[] { ", " }, StringSplitOptions.RemoveEmptyEntries);
+            var lsOutput = this.client.RunCommand("[ -d \"" + mountPoint + "/ec2manager/scripts\" ] && find \"" + mountPoint + "/ec2manager/scripts\" -perm /u=x -type f -printf \"%f\n\"").Result.Trim();
+            return lsOutput.Split(new[] { "\n" }, StringSplitOptions.RemoveEmptyEntries);
         }
 
         public ScriptArgument[] GetScriptArguments(string mountPointDir, string script)
@@ -180,9 +183,17 @@ namespace Ec2Manager
             return lines.Select(line =>
                 {
                     var parts = line.Split(new[] { '\t' });
-                    if (scriptArgumentTypeMapping.ContainsKey(parts[0]))
-                        throw new Exception("Script return argument type " + parts[0] + ", which we don't know how to handle");
-                    return new ScriptArgument(scriptArgumentTypeMapping[parts[0]], parts[1]);
+
+                    var match = Regex.Match(parts[0], @"^(\w+)(?:\[(.*)\])?$");
+                    var typeKey = match.Groups[1].Value;
+                    var args = match.Groups[2].Value;
+
+                    if (!scriptArgumentTypeMapping.ContainsKey(typeKey))
+                        throw new Exception("Script return argument type " + typeKey + ", which we don't know how to handle");
+
+                    var argumentType = scriptArgumentTypeMapping[typeKey];
+
+                    return new ScriptArgument(parts[1], parts[2], argumentType, string.IsNullOrEmpty(args) ? new string[0] : args.Split(new[]{ ',' }).ToArray());
                 }).ToArray();
         }
 
@@ -190,7 +201,7 @@ namespace Ec2Manager
         {
             var mountPoint = this.mountBase + mountPointDir;
 
-            await this.RunAndLogStreamAsync("echo \"" + mountPoint + "/ec2manager/scripts/" + script + "\" " + string.Join(" ", args.Select(x => "\"" + x + "\"")), logger, true);
+            await this.RunAndLogStreamAsync("\"" + mountPoint + "/ec2manager/scripts/" + script + "\" " + string.Join(" ", args.Select(x => "\"" + x + "\"")), logger, true);
         }
 
         private async Task RunAndLogAsync(string command, ILogger logger, bool logResult = false, int retryTimes = 0)
@@ -222,7 +233,7 @@ namespace Ec2Manager
             {
                 var cmd = this.client.CreateCommand(command);
                 var result = cmd.BeginExecute();
-                logger.LogFromStream(cmd.OutputStream, result);
+                logger.LogFromStream(cmd.ExtendedOutputStream, result);
                 cmd.EndExecute(result);
             });
         }
@@ -288,17 +299,5 @@ namespace Ec2Manager
             if (this.client != null)
                 this.client.Disconnect();
         }
-    }
-
-    public struct ScriptArgument
-    {
-        public Type Type;
-        public string Description;
-
-        public ScriptArgument (Type type, string description)
-	    {
-            this.Type = type;
-            this.Description = description;
-	    }
     }
 }

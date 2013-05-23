@@ -1,4 +1,5 @@
 ﻿using Caliburn.Micro;
+using Ec2Manager.Classes;
 using System;
 using System.Collections.Generic;
 using System.ComponentModel.Composition;
@@ -32,8 +33,12 @@ namespace Ec2Manager.ViewModels
             this.ScriptArguments = arguments.Select(arg =>
                 {
                     var vm = IoC.Get<ScriptArgumentViewModel>();
+
                     vm.Description = arg.Description;
                     vm.Type = arg.Type;
+                    vm.TypeParams = arg.TypeParams;
+                    vm.Value = arg.DefaultValue;
+
                     return vm;
                 }).ToArray();
         }
