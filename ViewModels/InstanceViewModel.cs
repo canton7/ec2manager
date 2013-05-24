@@ -267,6 +267,10 @@ namespace Ec2Manager.ViewModels
         {
             this.ActivateItem(this.Items[0]);
             this.uptimeTimer.Stop();
+
+            this.Logger.Log("Umounting all volumes");
+            await Task.WhenAll(this.Items.Where(x => x is VolumeViewModel).Select(x => ((VolumeViewModel)x).UnmountVolumeAsync()));
+
             await this.Instance.DestroyAsync();
             this.TryClose();
         }

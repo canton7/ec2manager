@@ -215,6 +215,11 @@ namespace Ec2Manager.ViewModels
         }
         public async void UnmountVolume()
         {
+            await this.UnmountVolumeAsync();
+        }
+
+        public async Task UnmountVolumeAsync()
+        {
             this.Logger.Log("Starting volume unmount sequence");
 
             if (this.VolumeState == "started")
