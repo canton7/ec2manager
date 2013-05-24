@@ -20,20 +20,28 @@ namespace Ec2Manager
         public string Message { get; private set; }
         public DateTime Time { get; private set; }
         public int RepititionCount { get; private set; }
+        public bool IsComplete { get; set; }
 
-        public LogEntry(string message)
+        public LogEntry(string message, bool isComplete = true)
         {
             this.Message = message;
             this.Time = DateTime.Now;
             this.RepititionCount = 0;
+            this.IsComplete = isComplete;
         }
 
         public LogEntry(int repititionCount)
         {
             this.RepititionCount = repititionCount;
             this.Time = DateTime.Now;
+            this.IsComplete = true;
 
             this.Message = string.Format("Last message repeated {0} times", this.RepititionCount);
+        }
+
+        public void AddMessagePart(string message)
+        {
+            this.Message += message;
         }
     }
 }

@@ -94,10 +94,12 @@
     <Compile Include="Classes\AsyncLazy.cs" />
     <Compile Include="Classes\AsyncSemaphore.cs" />
     <Compile Include="Classes\ScreenExtensions.cs" />
+    <Compile Include="Classes\ScriptArgument.cs" />
     <Compile Include="Classes\StringExtensions.cs" />
     <Compile Include="Configuration\Config.cs" />
     <Compile Include="Configuration\MainConfig.cs" />
     <Compile Include="Configuration\VolumeType.cs" />
+    <Compile Include="Converters\StringToBooleanConverter.cs" />
     <Compile Include="Ec2Manager\AmazonEC2ClientExtensions.cs" />
     <Compile Include="Ec2Manager\Credentials.cs" />
     <Compile Include="Ec2Manager\Ec2Instance.cs" />
@@ -124,6 +126,8 @@
     <Compile Include="ViewModels\InstanceDetailsViewModel.cs" />
     <Compile Include="ViewModels\InstanceViewModel.cs" />
     <Compile Include="ViewModels\ReconnectDetailsViewModel.cs" />
+    <Compile Include="ViewModels\ScriptArgumentViewModel.cs" />
+    <Compile Include="ViewModels\ScriptDetailsViewModel.cs" />
     <Compile Include="ViewModels\SettingsViewModel.cs" />
     <Compile Include="ViewModels\ShellViewModel.cs" />
     <Compile Include="ViewModels\TerminateInstanceViewModel.cs" />
@@ -145,6 +149,12 @@
     </Compile>
     <Compile Include="Views\ReconnectDetailsView.xaml.cs">
       <DependentUpon>ReconnectDetailsView.xaml</DependentUpon>
+    </Compile>
+    <Compile Include="Views\ScriptArgumentView.xaml.cs">
+      <DependentUpon>ScriptArgumentView.xaml</DependentUpon>
+    </Compile>
+    <Compile Include="Views\ScriptDetailsView.xaml.cs">
+      <DependentUpon>ScriptDetailsView.xaml</DependentUpon>
     </Compile>
     <Compile Include="Views\SettingsView.xaml.cs">
       <DependentUpon>SettingsView.xaml</DependentUpon>
@@ -187,6 +197,14 @@
       <Generator>MSBuild:Compile</Generator>
     </Page>
     <Page Include="Views\ReconnectDetailsView.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Include="Views\ScriptArgumentView.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Include="Views\ScriptDetailsView.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>

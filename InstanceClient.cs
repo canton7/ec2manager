@@ -7,6 +7,7 @@ using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Text;
+using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -19,6 +20,13 @@ namespace Ec2Manager
         private string user;
         private string key;
         private AsyncSemaphore setupCmdLock = new AsyncSemaphore(1, 1);
+
+        public static readonly Dictionary<string, ScriptArgumentType> scriptArgumentTypeMapping = new Dictionary<string, ScriptArgumentType>()
+        {
+            { "string", ScriptArgumentType.String },
+            { "bool",   ScriptArgumentType.Bool },
+            { "enum",   ScriptArgumentType.Enum },
+        };
 
         private bool isConnected = false;
         public bool IsConnected
@@ -158,6 +166,46 @@ namespace Ec2Manager
             return this.client.RunCommand("uptime").Result.Trim();
         }
 
+        public string[] ListScripts(string mountPointDir)
+        {
+            var mountPoint = this.mountBase + mountPointDir;
+
+            var lsOutput = this.client.RunCommand("[ -d \"" + mountPoint + "/ec2manager/scripts\" ] && find \"" + mountPoint + "/ec2manager/scripts\" -perm /u=x -type f -printf \"%f\n\"").Result.Trim();
+            return lsOutput.Split(new[] { "\n" }, StringSplitOptions.RemoveEmptyEntries);
+        }
+
+        public ScriptArgument[] GetScriptArguments(string mountPointDir, string script)
+        {
+            var mountPoint = this.mountBase + mountPointDir;
+
+            var output = this.client.RunCommand("[ -f \"" + mountPoint + "/ec2manager/scripts/" + script + "\" ] && \"" + mountPoint + "/ec2manager/scripts/" + script + "\" --args").Result.Trim();
+            var lines = output.Split(new[] { "\n", "\r\n" }, StringSplitOptions.RemoveEmptyEntries);
+            return lines.Select(line =>
+                {
+                    var parts = line.Split(new[] { '\t' });
+
+                    var match = Regex.Match(parts[0], @"^(\w+)(?:\[(.*)\])?$");
+                    var typeKey = match.Groups[1].Value;
+                    var args = match.Groups[2].Value;
+
+                    if (!scriptArgumentTypeMapping.ContainsKey(typeKey))
+                        throw new Exception("Script return argument type " + typeKey + ", which we don't know how to handle");
+
+                    var argumentType = scriptArgumentTypeMapping[typeKey];
+
+                    return new ScriptArgument(parts[1], parts[2], argumentType, string.IsNullOrEmpty(args) ? new string[0] : args.Split(new[]{ ',' }).ToArray());
+                }).ToArray();
+        }
+
+        public async Task RunScriptAsync(string mountPointDir, string script, string[] args, ILogger logger)
+        {
+            var mountPoint = this.mountBase + mountPointDir;
+
+            await this.RunAndLogStreamAsync("\"" + mountPoint + "/ec2manager/scripts/" + script + "\" " + string.Join(" ", args.Select(x => "\"" + x + "\"")), logger, true);
+
+            logger.Log("Script finished");
+        }
+
         private async Task RunAndLogAsync(string command, ILogger logger, bool logResult = false, int retryTimes = 0)
         {
             logger.Log(command);
@@ -166,16 +214,12 @@ namespace Ec2Manager
             for (int i = 0; ; i++)
             {
                 if (cmd.ExitStatus == 0)
-                {
                     break;
-                }
-                else
-                {
-                    logger.Log("Error: {0}. Retrying in 5 seconds", cmd.Error);
-                    if (i == retryTimes)
-                        throw new Exception(string.Format("Command {0} failed with error {1}", command, cmd.Error));
-                    await Task.Delay(5000);
-                }
+
+                logger.Log("Error: {0}. Retrying in 5 seconds", cmd.Error);
+                if (i == retryTimes)
+                    throw new Exception(string.Format("Command {0} failed with error {1}", command, cmd.Error));
+                await Task.Delay(5000);
             }
 
             if (logResult)
@@ -191,7 +235,7 @@ namespace Ec2Manager
             {
                 var cmd = this.client.CreateCommand(command);
                 var result = cmd.BeginExecute();
-                logger.LogFromStream(cmd.OutputStream, result);
+                logger.LogFromStream(cmd.ExtendedOutputStream, result);
                 cmd.EndExecute(result);
             });
         }

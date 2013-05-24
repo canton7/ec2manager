@@ -71,11 +71,40 @@ namespace Ec2Manager.ViewModels
             }
         }
 
+        private LabelledValue<bool>[] scripts = new[] { new LabelledValue<bool>("Loading...", false) };
+        public LabelledValue<bool>[] Scripts
+        {
+            get { return this.scripts; }
+            set
+            {
+                this.scripts = value;
+                if (this.scripts.Length == 0)
+                    this.scripts = new[] { new LabelledValue<bool>("No Scripts", false) };
+                this.SelectedScript = this.scripts[0];
+                this.NotifyOfPropertyChange();
+            }
+        }
+
+        private LabelledValue<bool> selectedScript;
+        public LabelledValue<bool> SelectedScript
+        {
+            get { return this.selectedScript; }
+            set
+            {
+                this.selectedScript = value;
+                this.NotifyOfPropertyChange();
+                this.NotifyOfPropertyChange(() => CanStartScript);
+            }
+        }
+
+
         [ImportingConstructor]
         public VolumeViewModel(Logger logger, IWindowManager windowManager)
         {
             this.Logger = logger;
             this.windowManager = windowManager;
+
+            this.SelectedScript = this.Scripts[0];
         }
 
         public async Task SetupAsync(Ec2Volume volume, InstanceClient client)
@@ -94,6 +123,7 @@ namespace Ec2Manager.ViewModels
                 this.VolumeState = "mounted";
                 this.RunCommand = this.Client.GetRunCommand(this.Volume.MountPoint, this.Logger);
                 this.UserInstruction = this.Client.GetUserInstruction(this.Volume.MountPoint, this.Logger).Replace("<PUBLIC-IP>", this.Volume.Instance.PublicIp);
+                this.UpdateScripts();
             }
             finally
             {
@@ -111,17 +141,23 @@ namespace Ec2Manager.ViewModels
             this.RunCommand = this.Client.GetRunCommand(this.Volume.MountPoint, this.Logger);
             this.UserInstruction = this.Client.GetUserInstruction(this.Volume.MountPoint, this.Logger).Replace("<PUBLIC-IP>", this.Volume.Instance.PublicIp);
             this.Logger.Log("Reconnected to volume");
+            this.UpdateScripts();
 
             if (this.Client.IsCommandSessionStarted(this.Volume.MountPoint))
             {
                 this.VolumeState = "started";
                 this.gameCts = new CancellationTokenSource();
-                await this.Client.ResumeSessionAsync(this.Volume.MountPoint, this.Logger, this.gameCts.Token);
+                await this.Client.ResumeSessionAsync(this.Volume.MountPoint, this.Logger, this.gameCts.Token);                
             }
             else
             {
                 this.VolumeState = "mounted";
             }
+        }
+
+        private void UpdateScripts()
+        {
+            this.Scripts = this.Client.ListScripts(this.Volume.MountPoint).Select(x => new LabelledValue<bool>(x, true)).ToArray();
         }
 
         public bool CanStartGame
@@ -217,6 +253,30 @@ namespace Ec2Manager.ViewModels
                     this.VolumeState = "mounted";
                 }
             }
+        }
+
+        public bool CanStartScript
+        {
+            get { return true; }// return this.SelectedScript.Value; }
+        }
+        public async void StartScript()
+        {
+            var requiredArgs = this.Client.GetScriptArguments(this.Volume.MountPoint, this.SelectedScript.Label);
+            var arguments = new string[0];
+
+            if (requiredArgs.Length > 0)
+            {
+                var vm = IoC.Get<ScriptDetailsViewModel>();
+                vm.SetArguments(requiredArgs);
+
+                var result = this.windowManager.ShowDialog(vm);
+                if (!result.HasValue || !result.Value)
+                    return;
+
+                arguments = vm.ScriptArguments.Select(x => x.Value.ToString()).ToArray();
+            }
+
+            await this.Client.RunScriptAsync(this.Volume.MountPoint, this.SelectedScript.Label, arguments, this.Logger);
         }
     }
 }
