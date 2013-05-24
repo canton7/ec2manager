@@ -26,6 +26,7 @@ namespace Ec2Manager.ViewModels
         [ImportingConstructor]
         public ScriptDetailsViewModel()
         {
+            this.DisplayName = "Script Details";
         }
 
         public void SetArguments(ScriptArgument[] arguments)

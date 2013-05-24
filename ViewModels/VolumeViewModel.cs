@@ -138,6 +138,7 @@ namespace Ec2Manager.ViewModels
             this.Volume = volume;
 
             this.DisplayName = volume.Name;
+            this.Volume.Logger = this.Logger;
 
             this.RunCommand = this.Client.GetRunCommand(this.Volume.MountPoint, this.Logger);
             this.UserInstruction = this.Client.GetUserInstruction(this.Volume.MountPoint, this.Logger).Replace("<PUBLIC-IP>", this.Volume.Instance.PublicIp);
@@ -209,7 +210,7 @@ namespace Ec2Manager.ViewModels
         {
             get
             {
-                return this.VolumeState == "mounted" || this.VolumeState == "started";
+                return this.VolumeState == "mounted";
             }
         }
         public async void UnmountVolume()
