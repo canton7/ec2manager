@@ -31,54 +31,78 @@ namespace Ec2Manager
 
         public void Log(string message)
         {
-            this.newLogEntry(message);
+            this.newLogEntry(message.TrimEnd() + "\n");
         }
 
         public void Log(string format, params string[] parameters)
         {
-            this.newLogEntry(String.Format(format, parameters));
+            this.newLogEntry(String.Format(format, parameters).TrimEnd() + "\n");
         }
 
         public void LogFromStream(Stream stream, IAsyncResult asynch)
         {
             using (var sr = new StreamReader(stream))
             {
-                while (!asynch.IsCompleted)
+                while (true)
                 {
-                    var result = sr.ReadLine();
+                    var result = sr.ReadToEnd();
 
                     if (string.IsNullOrEmpty(result))
-                        Thread.Sleep(500);
+                    {
+                        if (asynch.IsCompleted)
+                            break;
+                        else
+                            Thread.Sleep(100);
+                    }
                     else
-                        this.newLogEntry(result.Trim());
+                    {
+                        this.newLogEntry(result, true);
+                    }
                 }
             }
         }
 
-        private void newLogEntry(string text)
+        private void newLogEntry(string text, bool allowRepititionMessages = false)
         {
-            foreach (var entry in text.Split(new[] { "\r\n", "\n" }, StringSplitOptions.None))
+            var lastMessageIsComplete = text.EndsWith("\n") || text.EndsWith("\r\n");
+
+            var entries = text.TrimEnd().Split(new[] { "\r\n", "\n" }, StringSplitOptions.None);
+            for (int i = 0; i < entries.Length; i++)
             {
+                var entry = entries[i];
+                var isCompleteMessage = lastMessageIsComplete || i < entries.Length - 1;
+                var allowRepititionMessage = allowRepititionMessages && !string.IsNullOrWhiteSpace(entry);
+
                 // Don't let the log grow too big
                 if (this.Entries.Count > maxLogEntries)
                 {
                     this.Entries.RemoveAt(0);
                 }
 
+                entry = entry.Trim();
+
                 // Logic to display 'last message repeated n times'
-                if (this.Entries.Count > 1 && entry == this.Entries[this.Entries.Count - 1].Message)
+                if (allowRepititionMessage && this.Entries.Count > 1 && entry == this.Entries[this.Entries.Count - 1].Message)
                 {
                     this.Entries.Add(new LogEntry(1));
                 }
-                else if (this.Entries.Count > 2 && entry == this.Entries[this.Entries.Count - 2].Message && this.Entries[this.Entries.Count - 1].RepititionCount > 0)
+                else if (allowRepititionMessage && this.Entries.Count > 2 && entry == this.Entries[this.Entries.Count - 2].Message && this.Entries[this.Entries.Count - 1].RepititionCount > 0)
                 {
                     int prevRepitition = this.Entries[this.Entries.Count - 1].RepititionCount;
                     this.Entries.RemoveAt(this.Entries.Count - 1);
                     this.Entries.Add(new LogEntry(prevRepitition + 1));
                 }
+                else if (this.Entries.Count > 0 && !this.Entries[this.Entries.Count - 1].IsComplete)
+                {
+                    var oldEntry = this.Entries[this.Entries.Count - 1];
+                    this.Entries.RemoveAt(this.Entries.Count - 1);
+                    oldEntry.AddMessagePart(entry);
+                    oldEntry.IsComplete = isCompleteMessage;
+                    this.Entries.Add(oldEntry);
+                }
                 else
                 {
-                    this.Entries.Add(new LogEntry(entry));
+                    this.Entries.Add(new LogEntry(entry, isCompleteMessage));
                 }
             }
         }

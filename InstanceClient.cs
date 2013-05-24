@@ -202,6 +202,8 @@ namespace Ec2Manager
             var mountPoint = this.mountBase + mountPointDir;
 
             await this.RunAndLogStreamAsync("\"" + mountPoint + "/ec2manager/scripts/" + script + "\" " + string.Join(" ", args.Select(x => "\"" + x + "\"")), logger, true);
+
+            logger.Log("Script finished");
         }
 
         private async Task RunAndLogAsync(string command, ILogger logger, bool logResult = false, int retryTimes = 0)
