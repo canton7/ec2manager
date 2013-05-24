@@ -197,11 +197,11 @@ namespace Ec2Manager
                 }).ToArray();
         }
 
-        public async Task RunScriptAsync(string mountPointDir, string script, string[] args, ILogger logger)
+        public async Task RunScriptAsync(string mountPointDir, string script, string[] args, ILogger logger, CancellationToken? cancellationToken = null)
         {
             var mountPoint = this.mountBase + mountPointDir;
 
-            await this.RunAndLogStreamAsync("\"" + mountPoint + "/ec2manager/scripts/" + script + "\" " + string.Join(" ", args.Select(x => "\"" + x + "\"")), logger, true);
+            await this.RunAndLogStreamAsync("\"" + mountPoint + "/ec2manager/scripts/" + script + "\" " + string.Join(" ", args.Select(x => "\"" + x + "\"")), logger, true, cancellationToken);
 
             logger.Log("Script finished");
         }
@@ -226,8 +226,10 @@ namespace Ec2Manager
                 logger.Log(cmd.Result.TrimEnd());
         }
 
-        private Task RunAndLogStreamAsync(string command, ILogger logger, bool logCommand = false)
+        private Task RunAndLogStreamAsync(string command, ILogger logger, bool logCommand = false, CancellationToken? cancellationToken = null)
         {
+            CancellationToken token = cancellationToken.HasValue ? cancellationToken.Value : new CancellationToken();
+
             if (logCommand)
                 logger.Log(command);
 
@@ -235,15 +237,23 @@ namespace Ec2Manager
             {
                 var cmd = this.client.CreateCommand(command);
                 var result = cmd.BeginExecute();
-                logger.LogFromStream(cmd.ExtendedOutputStream, result);
+                try
+                {
+                    logger.LogFromStream(cmd.ExtendedOutputStream, result, token);
+                }
+                catch (OperationCanceledException)
+                {
+                    cmd.CancelAsync();
+                    throw;
+                }
                 cmd.EndExecute(result);
-            });
+            }, token);
         }
 
         /// <summary>
         /// Note unintuitive behaviour - if command is null, tries to reconnect to session
         /// </summary>
-        private Task RunInShellAsync(string command, string sessionName, ILogger logger, System.Threading.CancellationToken? cancellationToken = null)
+        private Task RunInShellAsync(string command, string sessionName, ILogger logger, CancellationToken? cancellationToken = null)
         {
             System.Action runAction = () =>
                 {

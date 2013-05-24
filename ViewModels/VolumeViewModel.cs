@@ -68,6 +68,7 @@ namespace Ec2Manager.ViewModels
                 this.NotifyOfPropertyChange(() => CanStopGame);
                 this.NotifyOfPropertyChange(() => CanUnmountVolume);
                 this.NotifyOfPropertyChange(() => CanCreateSnapshot);
+                this.NotifyOfPropertyChange(() => CanStartScript);
             }
         }
 
@@ -247,6 +248,10 @@ namespace Ec2Manager.ViewModels
                     this.CancelCts = new CancellationTokenSource();
                     await this.Volume.CreateSnapshotAsync(detailsModel.Name, detailsModel.Description, detailsModel.IsPublic, this.CancelCts.Token);
                 }
+                catch (OperationCanceledException)
+                {
+                    this.Logger.Log("Snapshot creation cancelled");
+                }
                 finally
                 {
                     this.CancelCts = null;
@@ -257,7 +262,7 @@ namespace Ec2Manager.ViewModels
 
         public bool CanStartScript
         {
-            get { return true; }// return this.SelectedScript.Value; }
+            get { return this.SelectedScript.Value && this.VolumeState == "mounted"; }
         }
         public async void StartScript()
         {
@@ -276,7 +281,21 @@ namespace Ec2Manager.ViewModels
                 arguments = vm.ScriptArguments.Select(x => x.Value.ToString()).ToArray();
             }
 
-            await this.Client.RunScriptAsync(this.Volume.MountPoint, this.SelectedScript.Label, arguments, this.Logger);
+            this.VolumeState = "running-script";
+            try
+            {
+                this.CancelCts = new CancellationTokenSource();
+                await this.Client.RunScriptAsync(this.Volume.MountPoint, this.SelectedScript.Label, arguments, this.Logger, this.CancelCts.Token);
+            }
+            catch (OperationCanceledException)
+            {
+                this.Logger.Log("Script cancelled");
+            }
+            finally
+            {
+                this.CancelCts = null;
+                this.VolumeState = "mounted";
+            }
         }
     }
 }

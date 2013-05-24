@@ -31,20 +31,24 @@ namespace Ec2Manager
 
         public void Log(string message)
         {
-            this.newLogEntry(message.TrimEnd() + "\n");
+            this.newLogEntry(message.TrimEnd());
         }
 
         public void Log(string format, params string[] parameters)
         {
-            this.newLogEntry(String.Format(format, parameters).TrimEnd() + "\n");
+            this.newLogEntry(String.Format(format, parameters).TrimEnd());
         }
 
-        public void LogFromStream(Stream stream, IAsyncResult asynch)
+        public void LogFromStream(Stream stream, IAsyncResult asynch, CancellationToken? cancellationToken = null)
         {
+            CancellationToken token = cancellationToken.HasValue ? cancellationToken.Value : new CancellationToken();
+
             using (var sr = new StreamReader(stream))
             {
                 while (true)
                 {
+                    token.ThrowIfCancellationRequested();
+
                     var result = sr.ReadToEnd();
 
                     if (string.IsNullOrEmpty(result))
@@ -56,13 +60,13 @@ namespace Ec2Manager
                     }
                     else
                     {
-                        this.newLogEntry(result, true);
+                        this.newLogEntry(result, true, true);
                     }
                 }
             }
         }
 
-        private void newLogEntry(string text, bool allowRepititionMessages = false)
+        private void newLogEntry(string text, bool allowRepititionMessages = false, bool allowIncompleteMessages = false)
         {
             var lastMessageIsComplete = text.EndsWith("\n") || text.EndsWith("\r\n");
 
@@ -70,7 +74,7 @@ namespace Ec2Manager
             for (int i = 0; i < entries.Length; i++)
             {
                 var entry = entries[i];
-                var isCompleteMessage = lastMessageIsComplete || i < entries.Length - 1;
+                var isCompleteMessage = !allowIncompleteMessages || lastMessageIsComplete || i < entries.Length - 1;
                 var allowRepititionMessage = allowRepititionMessages && !string.IsNullOrWhiteSpace(entry);
 
                 // Don't let the log grow too big
@@ -92,7 +96,7 @@ namespace Ec2Manager
                     this.Entries.RemoveAt(this.Entries.Count - 1);
                     this.Entries.Add(new LogEntry(prevRepitition + 1));
                 }
-                else if (this.Entries.Count > 0 && !this.Entries[this.Entries.Count - 1].IsComplete)
+                else if (allowIncompleteMessages && this.Entries.Count > 0 && !this.Entries[this.Entries.Count - 1].IsComplete)
                 {
                     var oldEntry = this.Entries[this.Entries.Count - 1];
                     oldEntry.AddMessagePart(entry);

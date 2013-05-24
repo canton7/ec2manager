@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 
 namespace Ec2Manager
@@ -12,7 +13,7 @@ namespace Ec2Manager
     {
         void Log(string message);
         void Log(string format, params string[] parameters);
-        void LogFromStream(Stream stream, IAsyncResult asynch);
+        void LogFromStream(Stream stream, IAsyncResult asynch, CancellationToken? cancellationToken = null);
     }
 
     public class LogEntry

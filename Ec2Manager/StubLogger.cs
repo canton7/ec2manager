@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 
 namespace Ec2Manager.Ec2Manager
@@ -17,7 +18,7 @@ namespace Ec2Manager.Ec2Manager
         {
         }
 
-        public void LogFromStream(Stream stream, IAsyncResult asynch)
+        public void LogFromStream(Stream stream, IAsyncResult asynch, CancellationToken? cancellationToken = null)
         {
         }
     }
