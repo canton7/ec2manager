@@ -66,7 +66,7 @@ namespace Ec2Manager
         {
             var lastMessageIsComplete = text.EndsWith("\n") || text.EndsWith("\r\n");
 
-            var entries = text.TrimEnd().Split(new[] { "\r\n", "\n" }, StringSplitOptions.None);
+            var entries = text.TrimEnd(new[]{ '\r', '\n' }).Split(new[] { "\r\n", "\n" }, StringSplitOptions.None);
             for (int i = 0; i < entries.Length; i++)
             {
                 var entry = entries[i];
@@ -79,7 +79,7 @@ namespace Ec2Manager
                     this.Entries.RemoveAt(0);
                 }
 
-                entry = entry.Trim();
+                entry = entry.TrimEnd(new[] { '\r', '\n' });
 
                 // Logic to display 'last message repeated n times'
                 if (allowRepititionMessage && this.Entries.Count > 1 && entry == this.Entries[this.Entries.Count - 1].Message)
@@ -95,10 +95,9 @@ namespace Ec2Manager
                 else if (this.Entries.Count > 0 && !this.Entries[this.Entries.Count - 1].IsComplete)
                 {
                     var oldEntry = this.Entries[this.Entries.Count - 1];
-                    this.Entries.RemoveAt(this.Entries.Count - 1);
                     oldEntry.AddMessagePart(entry);
                     oldEntry.IsComplete = isCompleteMessage;
-                    this.Entries.Add(oldEntry);
+                    this.Entries.Refresh();
                 }
                 else
                 {

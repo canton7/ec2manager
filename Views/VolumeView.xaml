@@ -49,6 +49,9 @@
                  supp:TextBoxUtilities.AlwaysScrollToEnd="True"
                  ScrollViewer.VerticalScrollBarVisibility="Auto"
                  ScrollViewer.HorizontalScrollBarVisibility="Auto"
+                 FontFamily="Consolas"
+                 FontSize="11"
+                 IsReadOnly="True"
                  Text="{Binding Logger.Entries, Mode=OneWay, Converter={x:Static conv:LogEntriesToTextConverter.Instance}}"/>
     </DockPanel>
 </UserControl>
