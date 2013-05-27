@@ -18,7 +18,7 @@ namespace Ec2Manager.Ec2Manager
         {
         }
 
-        public void LogFromStream(Stream stream, IAsyncResult asynch, CancellationToken? cancellationToken = null)
+        public void LogFromStream(IAsyncResult asynch, Stream stdout, Stream stderr = null, CancellationToken? cancellationToken = null)
         {
         }
     }

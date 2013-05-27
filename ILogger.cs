@@ -13,7 +13,7 @@ namespace Ec2Manager
     {
         void Log(string message);
         void Log(string format, params string[] parameters);
-        void LogFromStream(Stream stream, IAsyncResult asynch, CancellationToken? cancellationToken = null);
+        void LogFromStream(IAsyncResult asynch, Stream stdout, Stream stderr = null, CancellationToken? cancellationToken = null);
     }
 
     public class LogEntry

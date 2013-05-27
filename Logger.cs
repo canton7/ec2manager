@@ -39,19 +39,21 @@ namespace Ec2Manager
             this.newLogEntry(String.Format(format, parameters).TrimEnd());
         }
 
-        public void LogFromStream(Stream stream, IAsyncResult asynch, CancellationToken? cancellationToken = null)
+        public void LogFromStream(IAsyncResult asynch, Stream stdout, Stream stderr = null, CancellationToken? cancellationToken = null)
         {
             CancellationToken token = cancellationToken.HasValue ? cancellationToken.Value : new CancellationToken();
 
-            using (var sr = new StreamReader(stream))
+            using (var outsr = new StreamReader(stdout))
+            using (var errsr = new StreamReader(stderr))
             {
                 while (true)
                 {
                     token.ThrowIfCancellationRequested();
 
-                    var result = sr.ReadToEnd();
+                    var outText = outsr.ReadToEnd();
+                    var errText = errsr.ReadToEnd();
 
-                    if (string.IsNullOrEmpty(result))
+                    if (string.IsNullOrEmpty(outText) && string.IsNullOrEmpty(errText))
                     {
                         if (asynch.IsCompleted)
                             break;
@@ -60,7 +62,11 @@ namespace Ec2Manager
                     }
                     else
                     {
-                        this.newLogEntry(result, true, true);
+                        if (!string.IsNullOrEmpty(outText))
+                            this.newLogEntry(outText, true, true);
+
+                        if (!string.IsNullOrEmpty(errText))
+                            this.newLogEntry(errText, true, true);
                     }
                 }
             }

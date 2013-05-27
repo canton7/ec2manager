@@ -239,7 +239,7 @@ namespace Ec2Manager
                 var result = cmd.BeginExecute();
                 try
                 {
-                    logger.LogFromStream(cmd.ExtendedOutputStream, result, token);
+                    logger.LogFromStream(result, cmd.OutputStream, cmd.ExtendedOutputStream, token);
                 }
                 catch (OperationCanceledException)
                 {
