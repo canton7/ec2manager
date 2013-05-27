@@ -190,6 +190,7 @@ namespace Ec2Manager.Ec2Manager
 
             this.Logger.Log("Waiting for snapshot to reach the 'completed' state");
             await this.UntilSnapshotStateAsync(snapshotId, "completed", cancellationToken);
+            this.Logger.Log("Snapshot {0} created", snapshotId);
 
             this.Logger.Log("Tagging snapshot");
             await this.Client.RequestAsync(s => s.CreateTags(new CreateTagsRequest()
