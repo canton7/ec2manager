@@ -267,7 +267,7 @@ namespace Ec2Manager
                         if (command != null)
                         {
                             // Start a new screen session, with A as the control character (as we can't send meta-characters like ctrl)
-                            writer.WriteLine("screen -eAa -S " + sessionName);
+                            writer.WriteLine("screen -e'$a' -S " + sessionName);
                             reader.ReadToEnd();
                             writer.WriteLine(command);
                         }
@@ -281,7 +281,7 @@ namespace Ec2Manager
                             // Command is cancelled by stream being disposed
                             if (cancellationToken.HasValue && cancellationToken.Value.IsCancellationRequested)
                             {
-                                writer.WriteLine("A:kill");
+                                writer.WriteLine("$:kill");
                                 cancellationToken.Value.ThrowIfCancellationRequested();
                             }
 
