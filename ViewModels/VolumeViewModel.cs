@@ -34,7 +34,7 @@ namespace Ec2Manager.ViewModels
             }
         }
 
-        private LabelledValue[] runCommands;
+        private LabelledValue[] runCommands = new LabelledValue[0];
         public LabelledValue[] RunCommands
         {
             get { return this.runCommands; }
