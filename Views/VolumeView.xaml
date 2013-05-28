@@ -7,6 +7,10 @@
              xmlns:supp="clr-namespace:Ec2Manager.Support"
              mc:Ignorable="d" 
              d:DesignHeight="400" d:DesignWidth="600">
+    <UserControl.Resources>
+        <conv:IntToVisibilityConverter x:Key="intToVis" Threshold="1"/>
+    </UserControl.Resources>
+    
     <DockPanel>
         <GroupBox Header="Launch Service" DockPanel.Dock="Top" Padding="10">
             <Grid>
@@ -21,9 +25,9 @@
                     <RowDefinition/>
                     <RowDefinition/>
                 </Grid.RowDefinitions>
-                
-                <TextBlock Grid.Row="0" Grid.Column="0">Command:</TextBlock>
-                <ComboBox Name="RunCommands" Grid.Row="0" Grid.Column="1" DisplayMemberPath="Label" Width="200" HorizontalAlignment="Left" Margin="10,0,10,5"/>
+
+                <TextBlock Grid.Row="0" Grid.Column="0" Visibility="{Binding RunCommands.Length, Converter={StaticResource intToVis}}">Command:</TextBlock>
+                <ComboBox Name="RunCommands" Grid.Row="0" Grid.Column="1" DisplayMemberPath="Label" Visibility="{Binding RunCommands.Length, Converter={StaticResource intToVis}}" Width="200" HorizontalAlignment="Left" Margin="10,0,10,5"/>
                 
                 <TextBox Name="SelectedRunCommand_Value" Grid.Row="1" Grid.Column="0" Grid.ColumnSpan="2" Margin="0,0,10,0" TextWrapping="Wrap"/>
                 <Button Name="StartGame" Grid.Row="1" Grid.Column="2" Margin="5,0">Launch</Button>
