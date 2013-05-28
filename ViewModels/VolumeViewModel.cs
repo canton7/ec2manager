@@ -34,14 +34,31 @@ namespace Ec2Manager.ViewModels
             }
         }
 
-        private string runCommand;
-        public string RunCommand
+        private LabelledValue[] runCommands;
+        public LabelledValue[] RunCommands
         {
-            get { return this.runCommand; }
+            get { return this.runCommands; }
             set
             {
-                this.runCommand = value;
+                this.runCommands = value;
                 this.NotifyOfPropertyChange();
+
+                if (this.runCommands.Length < 1)
+                    this.SelectedRunCommand = new LabelledValue("No Commands", null);
+                else
+                    this.SelectedRunCommand = this.runCommands[0];
+            }
+        }
+
+        private LabelledValue selectedRunCommand = new LabelledValue("Loading...", null);
+        public LabelledValue SelectedRunCommand
+        {
+            get { return this.selectedRunCommand; }
+            set
+            {
+                this.selectedRunCommand = value;
+                this.NotifyOfPropertyChange();
+                this.NotifyOfPropertyChange(() => CanStartGame);
             }
         }
 
@@ -72,7 +89,7 @@ namespace Ec2Manager.ViewModels
             }
         }
 
-        private LabelledValue<bool>[] scripts = new[] { new LabelledValue<bool>("Loading...", false) };
+        private LabelledValue<bool>[] scripts;
         public LabelledValue<bool>[] Scripts
         {
             get { return this.scripts; }
@@ -86,7 +103,7 @@ namespace Ec2Manager.ViewModels
             }
         }
 
-        private LabelledValue<bool> selectedScript;
+        private LabelledValue<bool> selectedScript = new LabelledValue<bool>("Loading...", false);
         public LabelledValue<bool> SelectedScript
         {
             get { return this.selectedScript; }
@@ -104,8 +121,6 @@ namespace Ec2Manager.ViewModels
         {
             this.Logger = logger;
             this.windowManager = windowManager;
-
-            this.SelectedScript = this.Scripts[0];
         }
 
         public async Task SetupAsync(Ec2Volume volume, InstanceClient client)
@@ -122,7 +137,7 @@ namespace Ec2Manager.ViewModels
                 this.cancelCts = new CancellationTokenSource();
                 await this.Volume.SetupAsync(this.Client, this.cancelCts.Token);
                 this.VolumeState = "mounted";
-                this.RunCommand = this.Client.GetRunCommand(this.Volume.MountPoint, this.Logger);
+                this.RunCommands = this.Client.GetRunCommands(this.Volume.MountPoint, this.Logger).ToArray();
                 this.UserInstruction = this.Client.GetUserInstruction(this.Volume.MountPoint, this.Logger).Replace("<PUBLIC-IP>", this.Volume.Instance.PublicIp);
                 this.UpdateScripts();
             }
@@ -140,7 +155,7 @@ namespace Ec2Manager.ViewModels
             this.DisplayName = volume.Name;
             this.Volume.Logger = this.Logger;
 
-            this.RunCommand = this.Client.GetRunCommand(this.Volume.MountPoint, this.Logger);
+            this.RunCommands = this.Client.GetRunCommands(this.Volume.MountPoint, this.Logger).ToArray();
             this.UserInstruction = this.Client.GetUserInstruction(this.Volume.MountPoint, this.Logger).Replace("<PUBLIC-IP>", this.Volume.Instance.PublicIp);
             this.Logger.Log("Reconnected to volume");
             this.UpdateScripts();
@@ -166,7 +181,7 @@ namespace Ec2Manager.ViewModels
         {
             get
             {
-                return this.VolumeState == "mounted";
+                return this.VolumeState == "mounted" && !string.IsNullOrWhiteSpace(this.SelectedRunCommand.Value);
             }
         }
         public void StartGame()
@@ -174,7 +189,7 @@ namespace Ec2Manager.ViewModels
             this.Logger.Log("Starting to launch game...");
             this.VolumeState = "started";
             this.gameCts = new CancellationTokenSource();
-            var runTask = this.Client.RunCommandAsync(this.Volume.MountPoint, this.RunCommand, this.Volume.MountPoint, this.Logger, this.gameCts.Token);
+            var runTask = this.Client.RunCommandAsync(this.Volume.MountPoint, this.SelectedRunCommand.Value, this.Volume.MountPoint, this.Logger, this.gameCts.Token);
         }
 
         public bool CanStopGame

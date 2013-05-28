@@ -131,11 +131,27 @@ namespace Ec2Manager
                 });
         }
 
-        public string GetRunCommand(string mountPointDir, ILogger logger)
+        public IEnumerable<LabelledValue> GetRunCommands(string mountPointDir, ILogger logger)
         {
             var mountPoint = this.mountBase + mountPointDir;
 
-            return this.client.RunCommand("[ -r \"" + mountPoint + "/ec2manager/runcmd\" ] && cat \"" + mountPoint + "/ec2manager/runcmd\"").Result.Trim();
+            var contents = this.client.RunCommand("[ -r \"" + mountPoint + "/ec2manager/runcmd\" ] && cat \"" + mountPoint + "/ec2manager/runcmd\"").Result.Trim();
+            var lines = contents.Split(new[] { "\n", "\r\n" }, StringSplitOptions.RemoveEmptyEntries);
+
+            if (lines.Length == 0)
+                return null;
+
+            // Is it an old-school run command (just the command on its own?)
+            if (lines.Length == 1 && !lines[0].Contains("\n"))
+            {
+                return new[] { new LabelledValue("Default Command", lines[0]) };
+            }
+
+            return lines.Select(entry =>
+                {
+                    var parts = entry.Split(new[] { '\t' }, 2);
+                    return new LabelledValue(parts[0], parts[1]);
+                });
         }
 
         public bool IsCommandSessionStarted(string sessionName)

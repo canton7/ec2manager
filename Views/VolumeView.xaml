@@ -17,10 +17,17 @@
                     <ColumnDefinition Width="80"/>
                 </Grid.ColumnDefinitions>
                 
-                <TextBlock Grid.Column="0">Command:</TextBlock>
-                <TextBox Name="RunCommand" Grid.Column="1" Margin="10,0" TextWrapping="Wrap"/>
-                <Button Name="StartGame" Grid.Column="2" Margin="5,0">Launch</Button>
-                <Button Name="StopGame" Grid.Column="3" Margin="5,0">Stop</Button>
+                <Grid.RowDefinitions>
+                    <RowDefinition/>
+                    <RowDefinition/>
+                </Grid.RowDefinitions>
+                
+                <TextBlock Grid.Row="0" Grid.Column="0">Command:</TextBlock>
+                <ComboBox Name="RunCommands" Grid.Row="0" Grid.Column="1" DisplayMemberPath="Label" Width="200" HorizontalAlignment="Left" Margin="10,0,10,5"/>
+                
+                <TextBox Name="SelectedRunCommand_Value" Grid.Row="1" Grid.Column="0" Grid.ColumnSpan="2" Margin="0,0,10,0" TextWrapping="Wrap"/>
+                <Button Name="StartGame" Grid.Row="1" Grid.Column="2" Margin="5,0">Launch</Button>
+                <Button Name="StopGame" Grid.Row="1" Grid.Column="3" Margin="5,0">Stop</Button>
             </Grid>
         </GroupBox>
         
