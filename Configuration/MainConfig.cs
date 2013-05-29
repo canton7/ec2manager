@@ -81,5 +81,7 @@ namespace Ec2Manager.Configuration
         {
             return this.DefaultLogonUser != Settings.Default.DefaultLogonUser;
         }
+
+        public string PuttyPath { get; set; }
     }
 }

@@ -16,9 +16,9 @@ namespace Ec2Manager
     public class InstanceClient : PropertyChangedBase, IDisposable, IMachineInteractionProvider
     {
         private SshClient client;
-        private string host;
-        private string user;
-        private string key;
+        public string Host { get; private set; }
+        public string User { get; private set; }
+        public string Key { get; private set; }
         private AsyncSemaphore setupCmdLock = new AsyncSemaphore(1, 1);
 
         public static readonly Dictionary<string, ScriptArgumentType> scriptArgumentTypeMapping = new Dictionary<string, ScriptArgumentType>()
@@ -41,22 +41,22 @@ namespace Ec2Manager
 
         private string mountBase
         {
-            get { return "/home/" + this.user + "/"; }
+            get { return "/home/" + this.User + "/"; }
         }
 
         public InstanceClient(string host, string user, string key)
         {
-            this.host = host;
-            this.user = user;
-            this.key = key;
+            this.Host = host;
+            this.User = user;
+            this.Key = key;
         }
 
         public Task ConnectAsync(ILogger logger)
         {
             return Task.Run(() =>
                 {
-                    logger.Log("Establishing connection with {0}@{1}", user, host);
-                    this.client = new SshClient(host, user, new PrivateKeyFile(new MemoryStream(Encoding.ASCII.GetBytes(key))));
+                    logger.Log("Establishing connection with {0}@{1}", User, Host);
+                    this.client = new SshClient(Host, User, new PrivateKeyFile(new MemoryStream(Encoding.ASCII.GetBytes(Key))));
                     while (!this.client.IsConnected)
                     {
                         try
@@ -75,7 +75,7 @@ namespace Ec2Manager
             var mountPoint = this.mountBase + mountPointDir;
             await this.RunAndLogAsync("sudo mkdir -p \"" + mountPoint + "\"", logger);
             await this.RunAndLogAsync("sudo mount " + device + " \"" + mountPoint + "\"", logger, false, 5);
-            await this.RunAndLogAsync("sudo chown -R " + user + "." + user + " \"" + mountPoint + "\"", logger);
+            await this.RunAndLogAsync("sudo chown -R " + User + "." + User + " \"" + mountPoint + "\"", logger);
 
             await this.setupCmdLock.WaitAsync();
             {

@@ -13,6 +13,7 @@ using System.Windows.Threading;
 using System.Windows;
 using System.Threading;
 using Ec2Manager.Ec2Manager;
+using System.Diagnostics;
 
 namespace Ec2Manager.ViewModels
 {
@@ -121,6 +122,7 @@ namespace Ec2Manager.ViewModels
                 this.NotifyOfPropertyChange(() => CanTerminate);
                 this.NotifyOfPropertyChange(() => CanMountVolume);
                 this.NotifyOfPropertyChange(() => CanSavePrivateKey);
+                this.NotifyOfPropertyChange(() => CanLaunchPutty);
             });
         }
 
@@ -148,9 +150,10 @@ namespace Ec2Manager.ViewModels
 
                     this.Client = new InstanceClient(this.Instance.PublicIp, loginAs, this.Instance.PrivateKey);
                     this.Client.Bind(s => s.IsConnected, (o, e) => this.NotifyOfPropertyChange(() => CanMountVolume));
+                    
+                    this.config.SaveKeyAndUser(this.Instance.InstanceId, loginAs, this.Instance.PrivateKey);
 
                     await this.Client.ConnectAsync(this.Logger);
-                    this.config.SaveKeyAndUser(this.Instance.InstanceId, loginAs, this.Instance.PrivateKey);
                 }, this.CancelCts.Token);
 
             try
@@ -322,6 +325,40 @@ namespace Ec2Manager.ViewModels
                 MessageBox.Show(Application.Current.MainWindow, "Error occurred: " + e.Message, "Error occurred", MessageBoxButton.OK, MessageBoxImage.Error);
                 volumeViewModel.TryClose();
             }
+        }
+
+        public bool CanLaunchPutty
+        {
+            get { return this.Instance != null && this.Instance.InstanceState == "running"; }
+        }
+        public void LaunchPutty()
+        {
+            var puttyPath = this.config.MainConfig.PuttyPath;
+            if (string.IsNullOrEmpty(puttyPath) || !File.Exists(puttyPath))
+            {
+                var dialog = new OpenFileDialog()
+                {
+                    CheckFileExists = true,
+                    Filter = "Executables (*.exe)|*.exe",
+                };
+                var result = dialog.ShowDialog();
+
+                if (!result.HasValue || !result.Value)
+                    return;
+
+                puttyPath = dialog.FileName;
+                this.config.MainConfig.PuttyPath = puttyPath;
+                this.config.SaveMainConfig();
+            }
+
+            var keyLines = this.Client.Key.Split(new[] { "\n", "\r\n" }, StringSplitOptions.None);
+            var keyBytes = System.Convert.FromBase64String(string.Join("", keyLines.Skip(1).Take(keyLines.Length - 2)));
+            var puttyKey = RSAConverter.FromDERPrivateKey(keyBytes).ToPuttyPrivateKey();
+
+            var tempFile = Path.GetTempFileName();
+            File.WriteAllText(tempFile, puttyKey);
+
+            Process.Start(puttyPath, "-i " + tempFile + " -ssh " + this.Client.User + "@" + this.Client.Host);
         }
 
         public bool CanSavePrivateKey
