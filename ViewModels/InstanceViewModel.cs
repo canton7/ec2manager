@@ -353,7 +353,9 @@ namespace Ec2Manager.ViewModels
 
             var keyLines = this.Client.Key.Split(new[] { "\n", "\r\n" }, StringSplitOptions.None);
             var keyBytes = System.Convert.FromBase64String(string.Join("", keyLines.Skip(1).Take(keyLines.Length - 2)));
-            var puttyKey = RSAConverter.FromDERPrivateKey(keyBytes).ToPuttyPrivateKey();
+            var rsaKey = RSAConverter.FromDERPrivateKey(keyBytes);
+            rsaKey.Comment = "Ec2manager: " + this.Instance.InstanceId;
+            var puttyKey = rsaKey.ToPuttyPrivateKey();
 
             var tempFile = Path.GetTempFileName();
             File.WriteAllText(tempFile, puttyKey);

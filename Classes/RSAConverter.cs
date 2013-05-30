@@ -75,23 +75,23 @@ namespace Ec2Manager.Classes
         public string ToPuttyPrivateKey()
         {
             var publicParameters = this.CryptoServiceProvider.ExportParameters(false);
-            byte[] publicBuffer = new byte[3 + 7 + 4 + publicParameters.Exponent.Length + 4 + 1 + publicParameters.Modulus.Length + 1];
+            byte[] publicBuffer = new byte[3 + 7 + 4 + 1 + publicParameters.Exponent.Length + 4 + 1 + publicParameters.Modulus.Length + 1];
 
             using (var bw = new BinaryWriter(new MemoryStream(publicBuffer)))
             {
                 bw.Write(new byte[] { 0x00, 0x00, 0x00 });
                 bw.Write("ssh-rsa");
-                PutPrefixed(bw, publicParameters.Exponent);
+                PutPrefixed(bw, publicParameters.Exponent, true);
                 PutPrefixed(bw, publicParameters.Modulus, true);
             }
             var publicBlob = System.Convert.ToBase64String(publicBuffer);
 
             var privateParameters = this.CryptoServiceProvider.ExportParameters(true);
-            byte[] privateBuffer = new byte[4 + privateParameters.D.Length + 4 + 1 + privateParameters.P.Length + 4 + 1 + privateParameters.Q.Length + 4 + 1 + privateParameters.InverseQ.Length];
+            byte[] privateBuffer = new byte[4 + 1 + privateParameters.D.Length + 4 + 1 + privateParameters.P.Length + 4 + 1 + privateParameters.Q.Length + 4 + 1 + privateParameters.InverseQ.Length];
 
             using (var bw = new BinaryWriter(new MemoryStream(privateBuffer)))
             {
-                PutPrefixed(bw, privateParameters.D);
+                PutPrefixed(bw, privateParameters.D, true);
                 PutPrefixed(bw, privateParameters.P, true);
                 PutPrefixed(bw, privateParameters.Q, true);
                 PutPrefixed(bw, privateParameters.InverseQ, true);
@@ -99,7 +99,7 @@ namespace Ec2Manager.Classes
             var privateBlob = System.Convert.ToBase64String(privateBuffer);
 
             HMACSHA1 hmacsha1 = new HMACSHA1(new SHA1CryptoServiceProvider().ComputeHash(Encoding.ASCII.GetBytes("putty-private-key-file-mac-key")));
-            byte[] bytesToHash = new byte[4 + 7 + 4 + 4 + 4 + 20 + 4 + publicBuffer.Length + 4 + privateBuffer.Length];
+            byte[] bytesToHash = new byte[4 + 7 + 4 + 4 + 4 + this.Comment.Length + 4 + publicBuffer.Length + 4 + privateBuffer.Length];
 
             using (var bw = new BinaryWriter(new MemoryStream(bytesToHash)))
             {
