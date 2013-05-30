@@ -104,7 +104,7 @@ namespace Ec2Manager.ViewModels
             this.config = config;
             this.windowManager = windowManager;
             this.uptimeTimer.Interval = TimeSpan.FromSeconds(3);
-            this.uptimeTimer.Tick += (o, e) => this.Uptime = this.Client.GetUptime();
+            this.uptimeTimer.Tick += async (o, e) => this.Uptime = await this.Client.GetUptimeAsync();
 
             instanceDetailsModel.Logger = logger;
 

@@ -266,11 +266,11 @@ namespace Ec2Manager.Ec2Manager
                 token.ThrowIfCancellationRequested();
 
                 this.Logger.Log("Mounting and setting up device");
-                await sshClient.MountAndSetupDeviceAsync(this.Device, this.MountPoint, this.Logger);
+                await sshClient.MountAndSetupDeviceAsync(this.Device, this.MountPoint, this.Logger, cancellationToken);
                 token.ThrowIfCancellationRequested();
 
                 this.Logger.Log("Retriving port settings");
-                var portSettings = sshClient.GetPortDescriptions(this.MountPoint, this.Logger).ToArray();
+                var portSettings = (await sshClient.GetPortDescriptionsAsync(this.MountPoint, this.Logger, cancellationToken)).ToArray();
                 token.ThrowIfCancellationRequested();
 
                 await this.Instance.AuthorizeIngressAsync(portSettings);

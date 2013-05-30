@@ -137,9 +137,9 @@ namespace Ec2Manager.ViewModels
                 this.cancelCts = new CancellationTokenSource();
                 await this.Volume.SetupAsync(this.Client, this.cancelCts.Token);
                 this.VolumeState = "mounted";
-                this.RunCommands = this.Client.GetRunCommands(this.Volume.MountPoint, this.Logger).ToArray();
-                this.UserInstruction = this.Client.GetUserInstruction(this.Volume.MountPoint, this.Logger).Replace("<PUBLIC-IP>", this.Volume.Instance.PublicIp);
-                this.UpdateScripts();
+                this.RunCommands = (await this.Client.GetRunCommandsAsync(this.Volume.MountPoint, this.Logger, this.cancelCts.Token)).ToArray();
+                this.UserInstruction = (await this.Client.GetUserInstructionAsync(this.Volume.MountPoint, this.Logger, cancellationToken: this.cancelCts.Token)).Replace("<PUBLIC-IP>", this.Volume.Instance.PublicIp);
+                await this.UpdateScriptsAsync();
             }
             finally
             {
@@ -147,7 +147,7 @@ namespace Ec2Manager.ViewModels
             }
         }
 
-        public async Task ReconnectAsync(Ec2Volume volume, InstanceClient client)
+        public async Task ReconnectAsync(Ec2Volume volume, InstanceClient client, CancellationToken? cancellationToken = null)
         {
             this.Client = client;
             this.Volume = volume;
@@ -155,12 +155,12 @@ namespace Ec2Manager.ViewModels
             this.DisplayName = volume.Name;
             this.Volume.Logger = this.Logger;
 
-            this.RunCommands = this.Client.GetRunCommands(this.Volume.MountPoint, this.Logger).ToArray();
-            this.UserInstruction = this.Client.GetUserInstruction(this.Volume.MountPoint, this.Logger).Replace("<PUBLIC-IP>", this.Volume.Instance.PublicIp);
+            this.RunCommands = (await this.Client.GetRunCommandsAsync(this.Volume.MountPoint, this.Logger)).ToArray();
+            this.UserInstruction = (await this.Client.GetUserInstructionAsync(this.Volume.MountPoint, this.Logger)).Replace("<PUBLIC-IP>", this.Volume.Instance.PublicIp);
             this.Logger.Log("Reconnected to volume");
-            this.UpdateScripts();
+            await this.UpdateScriptsAsync();
 
-            if (this.Client.IsCommandSessionStarted(this.Volume.MountPoint))
+            if (await this.Client.IsCommandSessionStartedAsync(this.Volume.MountPoint, cancellationToken))
             {
                 this.VolumeState = "started";
                 this.gameCts = new CancellationTokenSource();
@@ -172,9 +172,9 @@ namespace Ec2Manager.ViewModels
             }
         }
 
-        private void UpdateScripts()
+        private async Task UpdateScriptsAsync()
         {
-            this.Scripts = this.Client.ListScripts(this.Volume.MountPoint).Select(x => new LabelledValue<bool>(x, true)).ToArray();
+            this.Scripts = (await this.Client.ListScriptsAsync(this.Volume.MountPoint)).Select(x => new LabelledValue<bool>(x, true)).ToArray();
         }
 
         public bool CanStartGame
@@ -287,7 +287,7 @@ namespace Ec2Manager.ViewModels
         }
         public async void StartScript()
         {
-            var requiredArgs = this.Client.GetScriptArguments(this.Volume.MountPoint, this.SelectedScript.Label);
+            var requiredArgs = await this.Client.GetScriptArgumentsAsync(this.Volume.MountPoint, this.SelectedScript.Label);
             var arguments = new string[0];
 
             if (requiredArgs.Length > 0)
