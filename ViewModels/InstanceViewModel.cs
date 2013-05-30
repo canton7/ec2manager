@@ -338,6 +338,7 @@ namespace Ec2Manager.ViewModels
             {
                 var dialog = new OpenFileDialog()
                 {
+                    Title = "Browse to your PuTTY executable",
                     CheckFileExists = true,
                     Filter = "Executables (*.exe)|*.exe",
                 };
