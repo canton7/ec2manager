@@ -88,7 +88,7 @@ namespace Ec2Manager
         {
             var mountPoint = this.mountBase + mountPointDir;
 
-            var cmd = await this.RunAndLogAsync("[ -r \"" + mountPoint + "/ec2manager/ports\" ] && cat \"" + mountPoint + "/ec2manager/ports\"", logger, false, cancellationToken);
+            var cmd = await this.RunAndLogAsync("[ -r \"" + mountPoint + "/ec2manager/ports\" ] && cat \"" + mountPoint + "/ec2manager/ports\"", cancellationToken: cancellationToken);
             return cmd.Result.Split(new[] { "\r\n", "\n" }, StringSplitOptions.None).SelectMany(x =>
                 {
                     if (string.IsNullOrWhiteSpace(x))
@@ -131,11 +131,11 @@ namespace Ec2Manager
                 });
         }
 
-        public async Task<IEnumerable<LabelledValue>> GetRunCommandsAsync(string mountPointDir, ILogger logger, CancellationToken? cancellationToken = null)
+        public async Task<IEnumerable<LabelledValue>> GetRunCommandsAsync(string mountPointDir, CancellationToken? cancellationToken = null)
         {
             var mountPoint = this.mountBase + mountPointDir;
 
-            var contents = (await this.RunAndLogAsync("[ -r \"" + mountPoint + "/ec2manager/runcmd\" ] && cat \"" + mountPoint + "/ec2manager/runcmd\"", logger, false, cancellationToken)).Result.Trim();
+            var contents = (await this.RunAndLogAsync("[ -r \"" + mountPoint + "/ec2manager/runcmd\" ] && cat \"" + mountPoint + "/ec2manager/runcmd\"", cancellationToken: cancellationToken)).Result.Trim();
             var lines = contents.Split(new[] { "\n", "\r\n" }, StringSplitOptions.RemoveEmptyEntries);
 
             if (lines.Length == 0)
@@ -156,7 +156,7 @@ namespace Ec2Manager
 
         public async Task<bool> IsCommandSessionStartedAsync(string sessionName, CancellationToken? cancellationToken = null)
         {
-            return (await this.RunAndLogAsync("screen -ls | grep " + sessionName, cancellationToken: cancellationToken)).ExitStatus == 0;
+            return (await this.RunAndLogAsync("screen -ls | grep " + sessionName, checkExitStatus: false, cancellationToken: cancellationToken)).ExitStatus == 0;
         }
 
         public async Task RunCommandAsync(string from, string command, string sessionName, ILogger logger, CancellationToken? cancellationToken = null)
@@ -170,7 +170,7 @@ namespace Ec2Manager
             await this.RunInShellAsync(null, sessionName, logger, cancellationToken);
         }
 
-        public async Task<string> GetUserInstructionAsync(string mountPointDir, ILogger logger, CancellationToken? cancellationToken = null)
+        public async Task<string> GetUserInstructionAsync(string mountPointDir, CancellationToken? cancellationToken = null)
         {
             var mountPoint = this.mountBase + mountPointDir;
 
@@ -222,7 +222,7 @@ namespace Ec2Manager
             logger.Log("Script finished");
         }
 
-        private async Task<SshCommand> RunAndLogAsync(string command, ILogger logger = null, bool logResult = false, CancellationToken? cancellationToken = null)
+        private async Task<SshCommand> RunAndLogAsync(string command, ILogger logger = null, bool logResult = false, bool checkExitStatus = true, CancellationToken? cancellationToken = null)
         {
             CancellationToken token = cancellationToken.HasValue ? cancellationToken.Value : new CancellationToken();
 
@@ -251,7 +251,7 @@ namespace Ec2Manager
 
             cmd.EndExecute(result);
 
-            if (cmd.ExitStatus > 0)
+            if (checkExitStatus && cmd.ExitStatus > 0)
             {
                 throw new Exception(string.Format("Command {0} failed with error {1}", command, cmd.Error));
             }

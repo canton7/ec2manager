@@ -137,8 +137,8 @@ namespace Ec2Manager.ViewModels
                 this.cancelCts = new CancellationTokenSource();
                 await this.Volume.SetupAsync(this.Client, this.cancelCts.Token);
                 this.VolumeState = "mounted";
-                this.RunCommands = (await this.Client.GetRunCommandsAsync(this.Volume.MountPoint, this.Logger, this.cancelCts.Token)).ToArray();
-                this.UserInstruction = (await this.Client.GetUserInstructionAsync(this.Volume.MountPoint, this.Logger, cancellationToken: this.cancelCts.Token)).Replace("<PUBLIC-IP>", this.Volume.Instance.PublicIp);
+                this.RunCommands = (await this.Client.GetRunCommandsAsync(this.Volume.MountPoint, this.cancelCts.Token)).ToArray();
+                this.UserInstruction = (await this.Client.GetUserInstructionAsync(this.Volume.MountPoint, this.cancelCts.Token)).Replace("<PUBLIC-IP>", this.Volume.Instance.PublicIp);
                 await this.UpdateScriptsAsync();
             }
             finally
@@ -155,8 +155,8 @@ namespace Ec2Manager.ViewModels
             this.DisplayName = volume.Name;
             this.Volume.Logger = this.Logger;
 
-            this.RunCommands = (await this.Client.GetRunCommandsAsync(this.Volume.MountPoint, this.Logger)).ToArray();
-            this.UserInstruction = (await this.Client.GetUserInstructionAsync(this.Volume.MountPoint, this.Logger)).Replace("<PUBLIC-IP>", this.Volume.Instance.PublicIp);
+            this.RunCommands = (await this.Client.GetRunCommandsAsync(this.Volume.MountPoint)).ToArray();
+            this.UserInstruction = (await this.Client.GetUserInstructionAsync(this.Volume.MountPoint)).Replace("<PUBLIC-IP>", this.Volume.Instance.PublicIp);
             this.Logger.Log("Reconnected to volume");
             await this.UpdateScriptsAsync();
 
