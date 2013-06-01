@@ -47,9 +47,7 @@
                 </StackPanel>
 
                 <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
-                    <Button Name="CreateSnapshot" Margin="5,0" Padding="5,0">Create Snapshot</Button>
-                    <Button Name="UnmountVolume" Margin="5,0" Padding="5,0">Unmount Volume</Button>
-                    <Button Name="CancelAction" Margin="5,0" Padding="5,0">Cancel</Button>
+                    <Button Name="CancelAction" Margin="5,0" Padding="5,0">Cancel Operation</Button>
                 </StackPanel>
             </DockPanel>
         </GroupBox>

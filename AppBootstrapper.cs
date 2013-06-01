@@ -28,6 +28,22 @@ namespace Ec2Manager
             batch.AddExportedValue(container);
 
             container.Compose(batch);
+
+            ActionMessage.ApplyAvailabilityEffect = (context) =>
+                {
+                    var source = context.Source;
+                    if (ConventionManager.HasBinding(source, UIElement.IsEnabledProperty)){
+                        return source.IsEnabled;
+                    }
+                    if (context.CanExecute != null) {
+                        source.IsEnabled = context.CanExecute();
+                    }
+                    else if (context.Target == null) {
+                        source.IsEnabled = false;
+                    }
+
+                    return source.IsEnabled;
+                };
         }
 
         protected override object GetInstance(Type service, string key)

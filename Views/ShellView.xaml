@@ -2,7 +2,8 @@
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
-             xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:cal="http://www.caliburnproject.org"
              mc:Ignorable="d"
              Width="600" Height="700">
     <DockPanel>
@@ -12,6 +13,14 @@
                 <MenuItem x:Name="ShowEc2Console" Header="EC2 _Console"/>
                 <MenuItem x:Name="ShowEc2Pricing" Header="EC2 _Pricing"/>
                 <MenuItem x:Name="TryClose" Header="_Exit"/>
+            </MenuItem>
+            <MenuItem Header="_Instance">
+                <MenuItem cal:Action.TargetWithoutContext="{Binding ActiveItem}" cal:Message.Attach="LaunchPutty" Header="Launch PuTTY"/>
+                <MenuItem cal:Action.TargetWithoutContext="{Binding ActiveItem}" cal:Message.Attach="SavePrivateKey" Header="Save OpenSSL Key"/>
+            </MenuItem>
+            <MenuItem Header="_Volume">
+                <MenuItem cal:Action.TargetWithoutContext="{Binding SubActiveItem}" cal:Message.Attach="UnmountVolume" Header="Unmount"/>
+                <MenuItem cal:Action.TargetWithoutContext="{Binding SubActiveItem}" cal:Message.Attach="CreateSnapshot" Header="Create Snapshot"/>
             </MenuItem>
             <MenuItem Header="_Help">
                 <MenuItem x:Name="ShowAbout" Header="_About"/>
