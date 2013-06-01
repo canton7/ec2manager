@@ -17,8 +17,8 @@
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="Auto"/>
                     <ColumnDefinition/>
-                    <ColumnDefinition Width="80"/>
-                    <ColumnDefinition Width="80"/>
+                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="Auto"/>
                 </Grid.ColumnDefinitions>
                 
                 <Grid.RowDefinitions>
@@ -30,8 +30,8 @@
                 <ComboBox Name="RunCommands" Grid.Row="0" Grid.Column="1" DisplayMemberPath="Label" Visibility="{Binding RunCommands.Length, Converter={StaticResource intToVis}}" Width="200" HorizontalAlignment="Left" Margin="10,0,10,5"/>
                 
                 <TextBox Name="SelectedRunCommand_Value" Grid.Row="1" Grid.Column="0" Grid.ColumnSpan="2" Margin="0,0,10,0" TextWrapping="Wrap"/>
-                <Button Name="StartGame" Grid.Row="1" Grid.Column="2" Margin="5,0">Launch</Button>
-                <Button Name="StopGame" Grid.Row="1" Grid.Column="3" Margin="5,0">Stop</Button>
+                <Button Name="StartGame" Grid.Row="1" Grid.Column="2" Margin="5" Style="{StaticResource buttonStyle}">Launch</Button>
+                <Button Name="StopGame" Grid.Row="1" Grid.Column="3" Margin="5"  Style="{StaticResource buttonStyle}">Stop</Button>
             </Grid>
         </GroupBox>
         
@@ -43,11 +43,11 @@
             <DockPanel>
                 <StackPanel Orientation="Horizontal" HorizontalAlignment="Left">
                     <ComboBox Name="Scripts" HorizontalAlignment="Left" Width="150" DisplayMemberPath="Label"/>
-                    <Button Name="StartScript" Margin="5,0" Padding="5,0">Run Script</Button>
+                    <Button Name="StartScript" Margin="5,0" Style="{StaticResource buttonStyle}">Run Script</Button>
                 </StackPanel>
 
                 <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
-                    <Button Name="CancelAction" Margin="5,0" Padding="5,0">Cancel Operation</Button>
+                    <Button Name="CancelAction" Margin="5,0" Style="{StaticResource buttonStyle}">Cancel Operation</Button>
                 </StackPanel>
             </DockPanel>
         </GroupBox>

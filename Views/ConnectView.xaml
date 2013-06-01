@@ -46,7 +46,7 @@
                 <StackPanel Orientation="Horizontal" DockPanel.Dock="Top">
                     <TextBlock>Instance:</TextBlock>
                     <ComboBox x:Name="RunningInstances" Margin="15,0" Width="200" DisplayMemberPath="Label"/>
-                    <Button cal:Message.Attach="RefreshRunningInstances">Refresh List</Button>
+                    <Button cal:Message.Attach="RefreshRunningInstances" Style="{StaticResource buttonStyle}">Refresh List</Button>
                 </StackPanel>
 
                 <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" HorizontalAlignment="Center">

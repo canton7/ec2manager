@@ -32,8 +32,8 @@
                 <TextBlock Name="Uptime" Grid.Row="1" Grid.ColumnSpan="3"/>
                 
                 <StackPanel Grid.Row="2" Grid.ColumnSpan="3" Orientation="Horizontal" HorizontalAlignment="Right">
-                    <Button Name="CancelAction" Margin="5,0" Padding="5,0">Cancel Operation</Button>
-                    <Button Name="Terminate" Margin="5,0" Padding="5,0">Terminate Instance</Button>
+                    <Button Name="CancelAction" Margin="5,0" Style="{StaticResource buttonStyle}">Cancel Operation</Button>
+                    <Button Name="Terminate" Margin="5,0"  Style="{StaticResource buttonStyle}">Terminate Instance</Button>
                 </StackPanel>
             </Grid>
         </GroupBox>
@@ -43,12 +43,12 @@
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition/>
                     <ColumnDefinition/>
-                    <ColumnDefinition Width="120"/>
+                    <ColumnDefinition Width="Auto"/>
                 </Grid.ColumnDefinitions>
 
                 <ComboBox Grid.Column="0" Name="VolumeTypes" DisplayMemberPath="Name"/>
                 <TextBox Name="CustomVolumeSnapshotId" Grid.Column="1" Visibility="{Binding SelectedVolumeType, Converter={x:Static conv:VolumeTypeToIdVisibilityConverter.Instance}}" Margin="10,0"/>
-                <Button Name="MountVolume" Grid.Column="2">Mount Volume</Button>
+                <Button Name="MountVolume" Grid.Column="2" Style="{StaticResource buttonStyle}">Mount Volume</Button>
             </Grid>
         </GroupBox>
         

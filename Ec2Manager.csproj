@@ -178,6 +178,10 @@
     <Compile Include="IMachineInteractionProvider.cs" />
     <Compile Include="InstanceClient.cs" />
     <Compile Include="Logger.cs" />
+    <Page Include="ResourceDictionary.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
     <Page Include="Views\AboutView.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
