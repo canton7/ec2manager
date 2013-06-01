@@ -89,7 +89,7 @@ namespace Ec2Manager.ViewModels
             }
         }
 
-        private LabelledValue<bool>[] scripts;
+        private LabelledValue<bool>[] scripts = new[] { new LabelledValue<bool>("Loading...", false) };
         public LabelledValue<bool>[] Scripts
         {
             get { return this.scripts; }
@@ -103,7 +103,7 @@ namespace Ec2Manager.ViewModels
             }
         }
 
-        private LabelledValue<bool> selectedScript = new LabelledValue<bool>("Loading...", false);
+        private LabelledValue<bool> selectedScript;
         public LabelledValue<bool> SelectedScript
         {
             get { return this.selectedScript; }
@@ -121,6 +121,8 @@ namespace Ec2Manager.ViewModels
         {
             this.Logger = logger;
             this.windowManager = windowManager;
+
+            this.SelectedScript = this.Scripts[0];
         }
 
         public async Task SetupAsync(Ec2Volume volume, InstanceClient client)

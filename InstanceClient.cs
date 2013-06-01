@@ -194,7 +194,7 @@ namespace Ec2Manager
         {
             var mountPoint = this.mountBase + mountPointDir;
 
-            var output = (await this.RunAndLogAsync("[ -f \"" + mountPoint + "/ec2manager/scripts/" + script + "\" ] && \"" + mountPoint + "/ec2manager/scripts/" + script + "\" --args", cancellationToken: cancellationToken)).Result.Trim();
+            var output = (await this.RunAndLogAsync("[ -f \"" + mountPoint + "/ec2manager/scripts/" + script + "\" ] && \"" + mountPoint + "/ec2manager/scripts/" + script + "\" --args", checkExitStatus: false, cancellationToken: cancellationToken)).Result.Trim();
             var lines = output.Split(new[] { "\n", "\r\n" }, StringSplitOptions.RemoveEmptyEntries);
             return lines.Select(line =>
                 {
