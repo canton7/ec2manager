@@ -202,6 +202,13 @@ namespace Ec2Manager.ViewModels
             var spotPriceTaskMain = this.RefreshCurrentSpotPriceAsync();
         }
 
+        protected override void OnActivate()
+        {
+            // Refresh when we get switched to - means that it auto-updates after terminating
+            // an instance for example
+            this.RefreshRunningInstances();
+        }
+
         private void LoadFromConfig()
         {
             this.AMI = this.config.MainConfig.DefaultAmi;
