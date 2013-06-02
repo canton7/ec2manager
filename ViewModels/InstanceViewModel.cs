@@ -117,13 +117,17 @@ namespace Ec2Manager.ViewModels
             this.DisplayName = this.Instance.Name;
             this.Instance.Logger = this.Logger;
 
-            this.Instance.Bind(s => s.InstanceState, (o, e) =>
-            {
-                this.NotifyOfPropertyChange(() => CanTerminate);
-                this.NotifyOfPropertyChange(() => CanMountVolume);
-                this.NotifyOfPropertyChange(() => CanSavePrivateKey);
-                this.NotifyOfPropertyChange(() => CanLaunchPutty);
-            });
+            System.Action update = () =>
+                {
+                    this.NotifyOfPropertyChange(() => CanTerminate);
+                    this.NotifyOfPropertyChange(() => CanMountVolume);
+                    this.NotifyOfPropertyChange(() => CanSavePrivateKey);
+                    this.NotifyOfPropertyChange(() => CanSavePuttyKey);
+                    this.NotifyOfPropertyChange(() => CanLaunchPutty);
+                };
+
+            this.Instance.Bind(s => s.InstanceState, (o, e) => update());
+            update();
         }
 
         private async Task RefreshVolumes()
@@ -133,6 +137,15 @@ namespace Ec2Manager.ViewModels
             this.volumeTypes.AddRange(snapshots);
             this.SelectedVolumeType = this.volumeTypes[0];
             this.NotifyOfPropertyChange(() => VolumeTypes);
+        }
+
+        private string CreatePuttyKey()
+        {
+            var keyLines = this.Client.Key.Split(new[] { "\n", "\r\n" }, StringSplitOptions.None);
+            var keyBytes = System.Convert.FromBase64String(string.Join("", keyLines.Skip(1).Take(keyLines.Length - 2)));
+            var rsaKey = RSAConverter.FromDERPrivateKey(keyBytes);
+            rsaKey.Comment = "Ec2manager: " + this.Instance.InstanceId;
+            return rsaKey.ToPuttyPrivateKey();
         }
 
         public async Task SetupAsync(Ec2Instance instance, string loginAs)
@@ -352,12 +365,7 @@ namespace Ec2Manager.ViewModels
                 this.config.SaveMainConfig();
             }
 
-            var keyLines = this.Client.Key.Split(new[] { "\n", "\r\n" }, StringSplitOptions.None);
-            var keyBytes = System.Convert.FromBase64String(string.Join("", keyLines.Skip(1).Take(keyLines.Length - 2)));
-            var rsaKey = RSAConverter.FromDERPrivateKey(keyBytes);
-            rsaKey.Comment = "Ec2manager: " + this.Instance.InstanceId;
-            var puttyKey = rsaKey.ToPuttyPrivateKey();
-
+            var puttyKey = this.CreatePuttyKey();
             var tempFile = Path.GetTempFileName();
             File.WriteAllText(tempFile, puttyKey);
 
@@ -373,12 +381,35 @@ namespace Ec2Manager.ViewModels
             var dialog = new SaveFileDialog()
             {
                 FileName = "id_rsa",
+                Filter = "All Files|*.*",
             };
             var result = dialog.ShowDialog();
             if (result == true)
             {
                 string fileName = dialog.FileName;
                 File.WriteAllText(fileName, this.Instance.PrivateKey);
+            }
+        }
+
+        public bool CanSavePuttyKey
+        {
+            get { return this.Instance != null && this.Instance.InstanceState == "running"; }
+        }
+        public void SavePuttyKey()
+        {
+            var puttyKey = this.CreatePuttyKey();
+            var dialog = new SaveFileDialog()
+            {
+                FileName = "key.ppk",
+                DefaultExt = "ppk",
+                AddExtension = true,
+                Filter = "PuTTY Key (*.ppk)|*.ppk",
+            };
+            var result = dialog.ShowDialog();
+            if (result == true)
+            {
+                string fileName = dialog.FileName;
+                File.WriteAllText(fileName, puttyKey);
             }
         }
     }
