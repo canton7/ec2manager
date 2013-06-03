@@ -1,4 +1,5 @@
 ﻿using Caliburn.Micro;
+using Ec2Manager.Ec2Manager;
 using System;
 using System.Collections.Generic;
 using System.ComponentModel.Composition;
@@ -23,13 +24,13 @@ namespace Ec2Manager.ViewModels
             }
         }
 
-        private Ec2Manager manager;
-        public Ec2Manager Manager
+        private Ec2Instance instance;
+        public Ec2Instance Instance
         {
-            get { return this.manager; }
+            get { return this.instance; }
             private set
             {
-                this.manager = value;
+                this.instance = value;
                 this.NotifyOfPropertyChange();
             }
         }
@@ -41,11 +42,12 @@ namespace Ec2Manager.ViewModels
             this.DisplayName = "Terminating Instance";
         }
 
-        public async Task SetupAsync(Ec2Manager manager)
+        public async Task SetupAsync(Ec2Instance instance)
         {
-            this.Manager = manager;
-            this.DisplayName = "Terminating " + this.Manager.Name;
-            await this.Manager.DestroyAsync(this.Logger);
+            this.Instance = instance;
+            this.Instance.Logger = this.logger;
+            this.DisplayName = "Terminating " + this.Instance.Name;
+            await this.Instance.DestroyAsync();
             this.TryClose();
         }
     }

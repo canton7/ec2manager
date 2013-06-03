@@ -7,31 +7,60 @@
              xmlns:supp="clr-namespace:Ec2Manager.Support"
              mc:Ignorable="d" 
              d:DesignHeight="400" d:DesignWidth="600">
+    <UserControl.Resources>
+        <conv:IntToVisibilityConverter x:Key="intToVis" Threshold="1"/>
+    </UserControl.Resources>
+    
     <DockPanel>
         <GroupBox Header="Launch Service" DockPanel.Dock="Top" Padding="10">
             <Grid>
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="Auto"/>
                     <ColumnDefinition/>
-                    <ColumnDefinition Width="80"/>
-                    <ColumnDefinition Width="80"/>
+                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="Auto"/>
                 </Grid.ColumnDefinitions>
                 
-                <TextBlock Grid.Column="0">Command:</TextBlock>
-                <TextBox Name="RunCommand" Grid.Column="1" Margin="10,0" TextWrapping="Wrap"/>
-                <Button Name="StartGame" Grid.Column="2" Margin="5,0">Launch</Button>
-                <Button Name="StopGame" Grid.Column="3" Margin="5,0">Stop</Button>
+                <Grid.RowDefinitions>
+                    <RowDefinition/>
+                    <RowDefinition/>
+                </Grid.RowDefinitions>
+
+                <TextBlock Grid.Row="0" Grid.Column="0" Visibility="{Binding RunCommands.Length, Converter={StaticResource intToVis}}">Command:</TextBlock>
+                <ComboBox Name="RunCommands" Grid.Row="0" Grid.Column="1" DisplayMemberPath="Label" Visibility="{Binding RunCommands.Length, Converter={StaticResource intToVis}}" Width="200" HorizontalAlignment="Left" Margin="10,0,10,5"/>
+                
+                <TextBox Name="SelectedRunCommand_Value" Grid.Row="1" Grid.Column="0" Grid.ColumnSpan="2" Margin="0,0,10,0" TextWrapping="Wrap"/>
+                <Button Name="StartGame" Grid.Row="1" Grid.Column="2" Margin="5" Style="{StaticResource buttonStyle}">Launch</Button>
+                <Button Name="StopGame" Grid.Row="1" Grid.Column="3" Margin="5"  Style="{StaticResource buttonStyle}">Stop</Button>
             </Grid>
         </GroupBox>
         
         <GroupBox Header="User Instruction" DockPanel.Dock="Top" Padding="10">
             <TextBox Name="UserInstruction" Background="Transparent" BorderThickness="0" IsReadOnly="True" TextWrapping="Wrap"/>
         </GroupBox>
+
+        <GroupBox Header="Volume Control" DockPanel.Dock="Top" Padding="5">
+            <DockPanel>
+                <StackPanel Orientation="Horizontal" HorizontalAlignment="Left">
+                    <ComboBox Name="Scripts" HorizontalAlignment="Left" Width="150" DisplayMemberPath="Label"/>
+                    <Button Name="StartScript" Margin="5,0" Style="{StaticResource buttonStyle}">Run Script</Button>
+                </StackPanel>
+
+                <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
+                    <Button Name="CancelAction" Margin="5,0" Style="{StaticResource buttonStyle}">Cancel Operation</Button>
+                </StackPanel>
+            </DockPanel>
+        </GroupBox>
         
+
         <TextBox DockPanel.Dock="Top"
+                 VerticalAlignment="Stretch"
                  supp:TextBoxUtilities.AlwaysScrollToEnd="True"
                  ScrollViewer.VerticalScrollBarVisibility="Auto"
                  ScrollViewer.HorizontalScrollBarVisibility="Auto"
+                 FontFamily="Consolas"
+                 FontSize="11"
+                 IsReadOnly="True"
                  Text="{Binding Logger.Entries, Mode=OneWay, Converter={x:Static conv:LogEntriesToTextConverter.Instance}}"/>
     </DockPanel>
 </UserControl>

@@ -7,6 +7,8 @@ using System.Text;
 using System.Threading.Tasks;
 using Ec2Manager.Classes;
 using System.Threading;
+using System.Windows;
+using Ec2Manager.Ec2Manager;
 
 namespace Ec2Manager.ViewModels
 {
@@ -15,20 +17,48 @@ namespace Ec2Manager.ViewModels
     public class VolumeViewModel : Screen
     {
         public Logger Logger { get; private set; }
+        private IWindowManager windowManager;
 
         public InstanceClient Client { get; private set; }
-        public Ec2Manager Manager { get; private set; }
-        public string MountPointDir { get; private set; }
+        public Ec2Volume Volume { get; private set; }
         private CancellationTokenSource gameCts;
-
-        private string runCommand;
-        public string RunCommand
+        private CancellationTokenSource cancelCts;
+        public CancellationTokenSource CancelCts
         {
-            get { return this.runCommand; }
+            get { return this.cancelCts; }
+            private set
+            {
+                this.cancelCts = value;
+                this.NotifyOfPropertyChange();
+                this.NotifyOfPropertyChange(() => CanCancelAction);
+            }
+        }
+
+        private LabelledValue[] runCommands = new LabelledValue[0];
+        public LabelledValue[] RunCommands
+        {
+            get { return this.runCommands; }
             set
             {
-                this.runCommand = value;
+                this.runCommands = value;
                 this.NotifyOfPropertyChange();
+
+                if (this.runCommands.Length < 1)
+                    this.SelectedRunCommand = new LabelledValue("No Commands", null);
+                else
+                    this.SelectedRunCommand = this.runCommands[0];
+            }
+        }
+
+        private LabelledValue selectedRunCommand = new LabelledValue("Loading...", null);
+        public LabelledValue SelectedRunCommand
+        {
+            get { return this.selectedRunCommand; }
+            set
+            {
+                this.selectedRunCommand = value;
+                this.NotifyOfPropertyChange();
+                this.NotifyOfPropertyChange(() => CanStartGame);
             }
         }
 
@@ -53,45 +83,90 @@ namespace Ec2Manager.ViewModels
                 this.NotifyOfPropertyChange();
                 this.NotifyOfPropertyChange(() => CanStartGame);
                 this.NotifyOfPropertyChange(() => CanStopGame);
+                this.NotifyOfPropertyChange(() => CanUnmountVolume);
+                this.NotifyOfPropertyChange(() => CanCreateSnapshot);
+                this.NotifyOfPropertyChange(() => CanStartScript);
             }
         }
 
+        private LabelledValue<bool>[] scripts = new[] { new LabelledValue<bool>("Loading...", false) };
+        public LabelledValue<bool>[] Scripts
+        {
+            get { return this.scripts; }
+            set
+            {
+                this.scripts = value;
+                if (this.scripts.Length == 0)
+                    this.scripts = new[] { new LabelledValue<bool>("No Scripts", false) };
+                this.SelectedScript = this.scripts[0];
+                this.NotifyOfPropertyChange();
+            }
+        }
+
+        private LabelledValue<bool> selectedScript;
+        public LabelledValue<bool> SelectedScript
+        {
+            get { return this.selectedScript; }
+            set
+            {
+                this.selectedScript = value;
+                this.NotifyOfPropertyChange();
+                this.NotifyOfPropertyChange(() => CanStartScript);
+            }
+        }
+
+
         [ImportingConstructor]
-        public VolumeViewModel(Logger logger)
+        public VolumeViewModel(Logger logger, IWindowManager windowManager)
         {
             this.Logger = logger;
+            this.windowManager = windowManager;
+
+            this.SelectedScript = this.Scripts[0];
         }
 
-        public async Task SetupAsync(Ec2Manager manager, InstanceClient client, string volumeName, string volumeId, CancellationToken? cancellationToken = null)
+        public async Task SetupAsync(Ec2Volume volume, InstanceClient client)
         {
             this.Client = client;
-            this.Manager = manager;
+            this.Volume = volume;
 
-            this.DisplayName = volumeName;
+            this.Volume.Logger = this.Logger;
 
-            this.MountPointDir = await this.Manager.MountVolumeAsync(volumeId, this.Client, volumeName, cancellationToken, this.Logger);
-            this.VolumeState = "mounted";
-            this.RunCommand = this.Client.GetRunCommand(this.MountPointDir, this.Logger);
-            this.UserInstruction = this.Client.GetUserInstruction(this.MountPointDir, this.Logger).Replace("<PUBLIC-IP>", this.Manager.PublicIp);
+            this.DisplayName = volume.Name;
+
+            try
+            {
+                this.cancelCts = new CancellationTokenSource();
+                await this.Volume.SetupAsync(this.Client, this.cancelCts.Token);
+                this.VolumeState = "mounted";
+                this.RunCommands = (await this.Client.GetRunCommandsAsync(this.Volume.MountPoint, this.cancelCts.Token)).ToArray();
+                this.UserInstruction = (await this.Client.GetUserInstructionAsync(this.Volume.MountPoint, this.cancelCts.Token)).Replace("<PUBLIC-IP>", this.Volume.Instance.PublicIp);
+                await this.UpdateScriptsAsync();
+            }
+            finally
+            {
+                this.cancelCts = null;
+            }
         }
 
-        public void Reconnect(Ec2Manager manager, InstanceClient client, string volumeName, string volumeId, string mountPointDir)
+        public async Task ReconnectAsync(Ec2Volume volume, InstanceClient client, CancellationToken? cancellationToken = null)
         {
             this.Client = client;
-            this.Manager = manager;
-            this.MountPointDir = mountPointDir;
+            this.Volume = volume;
 
-            this.DisplayName = volumeName;
+            this.DisplayName = volume.Name;
+            this.Volume.Logger = this.Logger;
 
-            this.RunCommand = this.Client.GetRunCommand(this.MountPointDir, this.Logger);
-            this.UserInstruction = this.Client.GetUserInstruction(this.MountPointDir, this.Logger).Replace("<PUBLIC-IP>", this.Manager.PublicIp);
+            this.RunCommands = (await this.Client.GetRunCommandsAsync(this.Volume.MountPoint)).ToArray();
+            this.UserInstruction = (await this.Client.GetUserInstructionAsync(this.Volume.MountPoint)).Replace("<PUBLIC-IP>", this.Volume.Instance.PublicIp);
             this.Logger.Log("Reconnected to volume");
+            await this.UpdateScriptsAsync();
 
-            if (this.Client.IsCommandSessionStarted(this.MountPointDir))
+            if (await this.Client.IsCommandSessionStartedAsync(this.Volume.MountPoint, cancellationToken))
             {
                 this.VolumeState = "started";
                 this.gameCts = new CancellationTokenSource();
-                var resumeTask = this.Client.ResumeSessionAsync(this.MountPointDir, this.Logger, this.gameCts.Token);
+                await this.Client.ResumeSessionAsync(this.Volume.MountPoint, this.Logger, this.gameCts.Token);                
             }
             else
             {
@@ -99,11 +174,16 @@ namespace Ec2Manager.ViewModels
             }
         }
 
+        private async Task UpdateScriptsAsync()
+        {
+            this.Scripts = (await this.Client.ListScriptsAsync(this.Volume.MountPoint)).Select(x => new LabelledValue<bool>(x, true)).ToArray();
+        }
+
         public bool CanStartGame
         {
             get
             {
-                return this.VolumeState == "mounted";
+                return this.VolumeState == "mounted" && !string.IsNullOrWhiteSpace(this.SelectedRunCommand.Value);
             }
         }
         public void StartGame()
@@ -111,7 +191,7 @@ namespace Ec2Manager.ViewModels
             this.Logger.Log("Starting to launch game...");
             this.VolumeState = "started";
             this.gameCts = new CancellationTokenSource();
-            var runTask = this.Client.RunCommandAsync(this.MountPointDir, this.RunCommand, this.MountPointDir, this.Logger, this.gameCts.Token);
+            var runTask = this.Client.RunCommandAsync(this.Volume.MountPoint, this.SelectedRunCommand.Value, this.Volume.MountPoint, this.Logger, this.gameCts.Token);
         }
 
         public bool CanStopGame
@@ -127,6 +207,118 @@ namespace Ec2Manager.ViewModels
             this.gameCts.Cancel();
             this.VolumeState = "mounted";
             this.Logger.Log("Game stopped");
+        }
+
+        public bool CanCancelAction
+        {
+            get { return this.cancelCts != null && !this.cancelCts.IsCancellationRequested; }
+        }
+        public void CancelAction()
+        {
+            if (this.CancelCts == null)
+                return;
+
+            this.Logger.Log("Starting to cancel operation");
+            this.CancelCts.Cancel();
+            this.NotifyOfPropertyChange(() => CanCancelAction);
+        }
+
+        public bool CanUnmountVolume
+        {
+            get
+            {
+                return this.VolumeState == "mounted";
+            }
+        }
+        public async void UnmountVolume()
+        {
+            await this.UnmountVolumeAsync();
+        }
+
+        public async Task UnmountVolumeAsync()
+        {
+            this.Logger.Log("Starting volume unmount sequence");
+
+            if (this.VolumeState == "started")
+                this.StopGame();
+
+            this.VolumeState = "unmounting";
+            this.Logger.Log("Deleting volume");
+            await this.Volume.DeleteAsync();
+            this.VolumeState = "unmounted";
+            this.Logger.Log("Done");
+            this.TryClose();
+        }
+
+        public bool CanCreateSnapshot
+        {
+            get { return this.VolumeState == "mounted"; }
+        }
+        public async void CreateSnapshot()
+        {
+            var detailsModel = IoC.Get<CreateSnapshotDetailsViewModel>();
+            var result = this.windowManager.ShowDialog(detailsModel, settings: new Dictionary<string, object>()
+            {
+                { "ResizeMode", ResizeMode.NoResize },
+            });
+
+            if (result.HasValue && result.Value)
+            {
+                try
+                {
+                    this.VolumeState = "creating-snapshot";
+
+                    this.CancelCts = new CancellationTokenSource();
+                    await this.Volume.CreateSnapshotAsync(detailsModel.Name, detailsModel.Description, detailsModel.IsPublic, this.CancelCts.Token);
+                }
+                catch (OperationCanceledException)
+                {
+                    this.Logger.Log("Snapshot creation cancelled");
+                }
+                finally
+                {
+                    this.CancelCts = null;
+                    this.VolumeState = "mounted";
+                }
+            }
+        }
+
+        public bool CanStartScript
+        {
+            get { return this.SelectedScript.Value && this.VolumeState == "mounted"; }
+        }
+        public async void StartScript()
+        {
+            var requiredArgs = await this.Client.GetScriptArgumentsAsync(this.Volume.MountPoint, this.SelectedScript.Label);
+            var arguments = new string[0];
+
+            if (requiredArgs.Length > 0)
+            {
+                var vm = IoC.Get<ScriptDetailsViewModel>();
+                vm.SetArguments(requiredArgs);
+
+                var result = this.windowManager.ShowDialog(vm);
+                if (!result.HasValue || !result.Value)
+                    return;
+
+                arguments = vm.ScriptArguments.Select(x => x.Value.ToString()).ToArray();
+            }
+
+            this.VolumeState = "running-script";
+            try
+            {
+                this.CancelCts = new CancellationTokenSource();
+                await this.Client.RunScriptAsync(this.Volume.MountPoint, this.SelectedScript.Label, arguments, this.Logger, this.CancelCts.Token);
+            }
+            catch (OperationCanceledException)
+            {
+                this.Logger.Log("Script cancelled");
+            }
+            finally
+            {
+                this.CancelCts = null;
+                this.VolumeState = "mounted";
+            }
         }
     }
 }

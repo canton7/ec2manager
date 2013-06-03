@@ -10,13 +10,16 @@
     <DockPanel>
         <GroupBox Header="Instance Properties" DockPanel.Dock="Top" Padding="10" VerticalAlignment="Top">
             <Grid>
-                <TextBlock Grid.Column="1" Text="{Binding Manager.InstanceState, StringFormat='State: {0}'}"/>
+                <TextBlock Grid.Column="1" Text="{Binding Instance.InstanceState, StringFormat='State: {0}'}"/>
             </Grid>
         </GroupBox>
 
         <TextBox supp:TextBoxUtilities.AlwaysScrollToEnd="True"
                  ScrollViewer.VerticalScrollBarVisibility="Auto"
                  ScrollViewer.HorizontalScrollBarVisibility="Auto"
+                 FontFamily="Consolas"
+                 FontSize="11"
+                 IsReadOnly="True"
                  Text="{Binding Logger.Entries, Mode=OneWay, Converter={x:Static conv:LogEntriesToTextConverter.Instance}}"/>
     </DockPanel>
 </UserControl>

@@ -1,7 +1,7 @@
 Ec2Manager
 ==========
 
-**Important! This tool uses your Amazon AWS account to creates (and destroy) EC2 instances and EBS volumes.
+**Important! This tool uses your Amazon AWS account to create (and destroy) EC2 instances and EBS volumes.
 While they are cheap, if you leave something running and forget about it, it is going to cost you.
 I am not responsible for any money you spend!**
 
@@ -112,15 +112,12 @@ Otherwise it may well cost you lots of money!**
 SSHing into your instance
 -------------------------
 
-Once you've created and connected to an instance, you have the option of saving the private key used to log into the instance.
-This is in OpenSSH format, so you can use it directly with OpenSSH clients.
-If you want to use it with [PuTTY](http://the.earth.li/~sgtatham/putty/latest/x86/putty.exe), you'll need to convert this key to PuTTY's format using [PuTTYgen](http://the.earth.li/~sgtatham/putty/latest/x86/puttygen.exe).
-Go to Conversions -> Import Key, and browse to the key you saved from Ec2Manager.
-Then click `Save Private Key`, click `Yes`, and save this somewhere.
+Once you've created and connected to an instance, you can save its private key in OpenSSL or PuTTY format, or launch PuTTY directly.
+To launch PuTTY directly, you'll first need to [download it](http://the.earth.li/~sgtatham/putty/latest/x86/putty.exe), then click Instance -> Launch PuTTY in the menu bar.
+Browse to where you downloaded PuTTY, and Ec2Manager will launch it with the appropriate parameters to connect to your instance.
 
-Next, fire up PuTTY, and in the Host Name box put `username@public-ip`, where `username` is from the `Login as` box in Ec2Manager, and `public-ip` is from the `IP` field in the header of instance's tab in Ec2Manager, for example `ubuntu@123.456.789.012`.
-Go to Connection -> SSH -> Auth, and browse to the key you saved a second ago in the `Private key file for authentication` box.
-Click open and you're in!
+You'll probably get a message saying that the host isn't recognised, or maybe "POTENTIAL SECURITY BREACH".
+That's fine - just click "Yes".
 
 Reconnecting to an Instance
 ---------------------------
@@ -146,18 +143,21 @@ The best approach here is to fire up a new instance, and build the contents of t
 When it's finished (and most importantly you know the size, as volumes aren't resizable) you can move that over to a volume.
 
 So, fire up a new instance.
-You can use Ec2Manager for that (launch a new volume but don't mount anything), or launch it with EC2 Console.
+You can use Ec2Manager for that (launch a new instance but don't mount anything), or launch it with EC2 Console.
 SSH in, and create a new folder.
-Install whatever you need to install, and get it working, tweaking the firewall rules in Ec2 Console - Security Group as appropriate.
+
+If whatever you're installing is likely to be larger than 5 gigs or so, it's probably worth choosing an instance size larger than Micro, and using the ephemeral storance in `/mnt` to setup your server.
+
+Install whatever you need to install, and get it working, tweaking the firewall rules in EC2 Console - Security Group as appropriate.
 If you're creating a snapshot for a new game, please check below to make sure the ports it's using don't clash with any other server.
 
 When you're done (ish), check the size of your folder (`du -sch .` from just inside the folder is a big help), then create a new volume of corresponding size.
-Attach it (I suggest not using /dev/sdf or /dev/sdg, in case you want to mount a volume from Ec2Manager to compare ec2manager-specific configuration files), then mount it using e.g. (assuming you attached the volume as `/dev/sdg` or `/dev/xvdg`) `sudo mkfs.ext4 /dev/xvdg; mkdir xvdg; sudo mount /dev/xvdg xvdg; sudo chown ubuntu.ubuntu xvdg`.
+Attach it, then mount it using e.g. (assuming you attached the volume as `/dev/sdg` or `/dev/xvdg`) `sudo mkfs.ext4 /dev/xvdg; mkdir xvdg; sudo mount /dev/xvdg xvdg; sudo chown -R ubuntu.ubuntu xvdg`.
 Move over your files, and create the Ec2Manager-specific configuration files (see below).
 
 When you're done, detach the volume, terminate the instance, and spin up a new instance in Ec2Manager.
 Load a custom snapshot or volume, and specify the volume you just created to test it.
-When you're sure it works (SSH in and fix things if it doesn't), terminate the instance and create a new snapshot from the volume in EC2 Console.
+When you're sure it works (SSH in and fix things if it doesn't), terminate the instance and create a new snapshot from the volume (Menu - Volume -> Create Snapshot).
 You're done!
 
 ### Creating a new snapshot from an existing snapshot
@@ -191,6 +191,29 @@ If you only want to open one port, that's allowed -- e.g. `1000/tcp` -- and if y
 3. `ec2manager/runcmd`: This text file has a single line, which is the suggested command used to start the server.
 This is run from the root of the mounted volume.
 4. `ec2manager/user_instruction`: This is displayed to the user, verbatim. The string `<PUBLIC-IP>` is replaced with the actual public IP of the server.
+5. `ec2manager/scripts`: A directory containing optional scripts. See the section below.
+
+Scripts
+-------
+
+Scripts are executables which are stored on a volume, and can be executed from Ec2Manager.
+They're useful for creating little tools, e.g. for downloading a map or setting some game parameters.
+
+Scripts reside in `ec2manager/scripts`.
+They must be executable, and can have spaces in their name.
+
+When a script is called with the single argument `--args`, it must list all of its parameters in a special format:
+```
+parameter 1 type<TAB>description<TAB>default value<LF>
+parameter 2 type<TAB>description<TAB>default value
+```
+
+The `type` can be one of 'string' or 'bool' (support for others, e.g. enums, is planned).
+The description can be anything you want, and the default value is the value initially presented to the user.
+Not that boolean types have the values 'True' for true, and anything else (normally 'False' but this is not guarenteed) for false.
+
+When the user actually runs your script, the arguments given are passed in in the order given by the `--args` output, each one quoted.
+For example `ec2manager/scripts/YourScript "String Argument" "True"`.
 
 Choosing another AMI
 --------------------

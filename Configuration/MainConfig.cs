@@ -1,4 +1,5 @@
-﻿using Ec2Manager.Properties;
+﻿using Caliburn.Micro;
+using Ec2Manager.Properties;
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -10,7 +11,7 @@ using System.Xml.Serialization;
 namespace Ec2Manager.Configuration
 {
     [XmlRoot("MainConfig")]
-    public class MainConfig
+    public class MainConfig : PropertyChangedBase
     {
         public MainConfig()
         {
@@ -36,10 +37,38 @@ namespace Ec2Manager.Configuration
             }
         }
 
-        public string AwsAccessKey { get; set; }
-        public string AwsSecretKey { get; set; }
-        
-        public string DefaultAmi { get; set; }
+        private string awsAccessKey;
+        public string AwsAccessKey
+        {
+            get { return this.awsAccessKey; }
+            set
+            {
+                this.awsAccessKey = value;
+                this.NotifyOfPropertyChange();
+            }
+        }
+
+        private string awsSecretKey;
+        public string AwsSecretKey
+        {
+            get { return this.awsSecretKey; }
+            set
+            {
+                this.awsSecretKey = value;
+                this.NotifyOfPropertyChange();
+            }
+        }
+
+        private string defaultAmi;
+        public string DefaultAmi
+        {
+            get { return this.defaultAmi; }
+            set
+            {
+                this.defaultAmi = value;
+                this.NotifyOfPropertyChange();
+            }
+        }
         // If they don't change it, use the one from App.config. This allows us to change the default easily
         public bool ShouldSerializeDefaultAmi()
         {
@@ -52,5 +81,7 @@ namespace Ec2Manager.Configuration
         {
             return this.DefaultLogonUser != Settings.Default.DefaultLogonUser;
         }
+
+        public string PuttyPath { get; set; }
     }
 }

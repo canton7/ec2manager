@@ -7,6 +7,7 @@ using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Text;
+using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -15,10 +16,17 @@ namespace Ec2Manager
     public class InstanceClient : PropertyChangedBase, IDisposable, IMachineInteractionProvider
     {
         private SshClient client;
-        private string host;
-        private string user;
-        private string key;
+        public string Host { get; private set; }
+        public string User { get; private set; }
+        public string Key { get; private set; }
         private AsyncSemaphore setupCmdLock = new AsyncSemaphore(1, 1);
+
+        public static readonly Dictionary<string, ScriptArgumentType> scriptArgumentTypeMapping = new Dictionary<string, ScriptArgumentType>()
+        {
+            { "string", ScriptArgumentType.String },
+            { "bool",   ScriptArgumentType.Bool },
+            { "enum",   ScriptArgumentType.Enum },
+        };
 
         private bool isConnected = false;
         public bool IsConnected
@@ -33,22 +41,22 @@ namespace Ec2Manager
 
         private string mountBase
         {
-            get { return "/home/" + this.user + "/"; }
+            get { return "/home/" + this.User + "/"; }
         }
 
         public InstanceClient(string host, string user, string key)
         {
-            this.host = host;
-            this.user = user;
-            this.key = key;
+            this.Host = host;
+            this.User = user;
+            this.Key = key;
         }
 
         public Task ConnectAsync(ILogger logger)
         {
             return Task.Run(() =>
                 {
-                    logger.Log("Establishing connection with {0}@{1}", user, host);
-                    this.client = new SshClient(host, user, new PrivateKeyFile(new MemoryStream(Encoding.ASCII.GetBytes(key))));
+                    logger.Log("Establishing connection with {0}@{1}", User, Host);
+                    this.client = new SshClient(Host, User, new PrivateKeyFile(new MemoryStream(Encoding.ASCII.GetBytes(Key))));
                     while (!this.client.IsConnected)
                     {
                         try
@@ -62,12 +70,12 @@ namespace Ec2Manager
                 });
         }
 
-        public async Task MountAndSetupDeviceAsync(string device, string mountPointDir, ILogger logger)
+        public async Task MountAndSetupDeviceAsync(string device, string mountPointDir, ILogger logger, CancellationToken? cancellationToken = null)
         {
             var mountPoint = this.mountBase + mountPointDir;
-            await this.RunAndLogAsync("sudo mkdir -p \"" + mountPoint + "\"", logger);
-            await this.RunAndLogAsync("sudo mount " + device + " \"" + mountPoint + "\"", logger, false, 5);
-            await this.RunAndLogAsync("sudo chown -R " + user + "." + user + " \"" + mountPoint + "\"", logger);
+            await this.RunAndLogAsync("sudo mkdir -p \"" + mountPoint + "\"", logger, cancellationToken: cancellationToken);
+            await this.RunAndLogAsync("sudo mount " + device + " \"" + mountPoint + "\"", logger, false, cancellationToken: cancellationToken);
+            await this.RunAndLogAsync("sudo chown -R " + User + "." + User + " \"" + mountPoint + "\"", logger, cancellationToken: cancellationToken);
 
             await this.setupCmdLock.WaitAsync();
             {
@@ -76,11 +84,11 @@ namespace Ec2Manager
             this.setupCmdLock.Release();
         }
 
-        public IEnumerable<PortRangeDescription> GetPortDescriptions(string mountPointDir, ILogger logger)
+        public async Task<IEnumerable<PortRangeDescription>> GetPortDescriptionsAsync(string mountPointDir, ILogger logger, CancellationToken? cancellationToken = null)
         {
             var mountPoint = this.mountBase + mountPointDir;
 
-            var cmd = this.client.RunCommand("[ -r \"" + mountPoint + "/ec2manager/ports\" ] && cat \"" + mountPoint + "/ec2manager/ports\"");
+            var cmd = await this.RunAndLogAsync("[ -r \"" + mountPoint + "/ec2manager/ports\" ] && cat \"" + mountPoint + "/ec2manager/ports\"", cancellationToken: cancellationToken);
             return cmd.Result.Split(new[] { "\r\n", "\n" }, StringSplitOptions.None).SelectMany(x =>
                 {
                     if (string.IsNullOrWhiteSpace(x))
@@ -123,16 +131,32 @@ namespace Ec2Manager
                 });
         }
 
-        public string GetRunCommand(string mountPointDir, ILogger logger)
+        public async Task<IEnumerable<LabelledValue>> GetRunCommandsAsync(string mountPointDir, CancellationToken? cancellationToken = null)
         {
             var mountPoint = this.mountBase + mountPointDir;
 
-            return this.client.RunCommand("[ -r \"" + mountPoint + "/ec2manager/runcmd\" ] && cat \"" + mountPoint + "/ec2manager/runcmd\"").Result.Trim();
+            var contents = (await this.RunAndLogAsync("[ -r \"" + mountPoint + "/ec2manager/runcmd\" ] && cat \"" + mountPoint + "/ec2manager/runcmd\"", cancellationToken: cancellationToken)).Result.Trim();
+            var lines = contents.Split(new[] { "\n", "\r\n" }, StringSplitOptions.RemoveEmptyEntries);
+
+            if (lines.Length == 0)
+                return null;
+
+            // Is it an old-school run command (just the command on its own?)
+            if (lines.Length == 1 && !lines[0].Contains("\n"))
+            {
+                return new[] { new LabelledValue("Default Command", lines[0]) };
+            }
+
+            return lines.Select(entry =>
+                {
+                    var parts = entry.Split(new[] { '\t' }, 2);
+                    return new LabelledValue(parts[0], parts[1]);
+                });
         }
 
-        public bool IsCommandSessionStarted(string sessionName)
+        public async Task<bool> IsCommandSessionStartedAsync(string sessionName, CancellationToken? cancellationToken = null)
         {
-            return this.client.RunCommand("screen -ls | grep " + sessionName).ExitStatus == 0;
+            return (await this.RunAndLogAsync("screen -ls | grep " + sessionName, checkExitStatus: false, cancellationToken: cancellationToken)).ExitStatus == 0;
         }
 
         public async Task RunCommandAsync(string from, string command, string sessionName, ILogger logger, CancellationToken? cancellationToken = null)
@@ -146,44 +170,102 @@ namespace Ec2Manager
             await this.RunInShellAsync(null, sessionName, logger, cancellationToken);
         }
 
-        public string GetUserInstruction(string mountPointDir, ILogger logger)
+        public async Task<string> GetUserInstructionAsync(string mountPointDir, CancellationToken? cancellationToken = null)
         {
             var mountPoint = this.mountBase + mountPointDir;
 
-            return this.client.RunCommand("[ -r \"" + mountPoint + "/ec2manager/user_instruction\" ] && cat \"" + mountPoint + "/ec2manager/user_instruction\"").Result.Trim();
+            return (await this.RunAndLogAsync("[ -r \"" + mountPoint + "/ec2manager/user_instruction\" ] && cat \"" + mountPoint + "/ec2manager/user_instruction\"", cancellationToken: cancellationToken)).Result.Trim();
         }
 
-        public string GetUptime()
+        public async Task<string> GetUptimeAsync(CancellationToken? cancellationToken = null)
         {
-            return this.client.RunCommand("uptime").Result.Trim();
+            return (await this.RunAndLogAsync("uptime", cancellationToken: cancellationToken)).Result.Trim();
         }
 
-        private async Task RunAndLogAsync(string command, ILogger logger, bool logResult = false, int retryTimes = 0)
+        public async Task<string[]> ListScriptsAsync(string mountPointDir, CancellationToken? cancellationToken = null)
         {
-            logger.Log(command);
-            var cmd = this.client.RunCommand(command);
+            var mountPoint = this.mountBase + mountPointDir;
 
-            for (int i = 0; ; i++)
+            var lsOutput = (await this.RunAndLogAsync("[ -d \"" + mountPoint + "/ec2manager/scripts\" ] && find \"" + mountPoint + "/ec2manager/scripts\" -perm /u=x -type f -printf \"%f\n\"", cancellationToken: cancellationToken)).Result.Trim();
+            return lsOutput.Split(new[] { "\n" }, StringSplitOptions.RemoveEmptyEntries);
+        }
+
+        public async Task<ScriptArgument[]> GetScriptArgumentsAsync(string mountPointDir, string script, CancellationToken? cancellationToken = null)
+        {
+            var mountPoint = this.mountBase + mountPointDir;
+
+            var output = (await this.RunAndLogAsync("[ -f \"" + mountPoint + "/ec2manager/scripts/" + script + "\" ] && \"" + mountPoint + "/ec2manager/scripts/" + script + "\" --args", checkExitStatus: false, cancellationToken: cancellationToken)).Result.Trim();
+            var lines = output.Split(new[] { "\n", "\r\n" }, StringSplitOptions.RemoveEmptyEntries);
+            return lines.Select(line =>
+                {
+                    var parts = line.Split(new[] { '\t' });
+
+                    var match = Regex.Match(parts[0], @"^(\w+)(?:\[(.*)\])?$");
+                    var typeKey = match.Groups[1].Value;
+                    var args = match.Groups[2].Value;
+
+                    if (!scriptArgumentTypeMapping.ContainsKey(typeKey))
+                        throw new Exception("Script return argument type " + typeKey + ", which we don't know how to handle");
+
+                    var argumentType = scriptArgumentTypeMapping[typeKey];
+
+                    return new ScriptArgument(parts[1], parts[2], argumentType, string.IsNullOrEmpty(args) ? new string[0] : args.Split(new[]{ ',' }).ToArray());
+                }).ToArray();
+        }
+
+        public async Task RunScriptAsync(string mountPointDir, string script, string[] args, ILogger logger, CancellationToken? cancellationToken = null)
+        {
+            var mountPoint = this.mountBase + mountPointDir;
+
+            await this.RunAndLogStreamAsync("\"" + mountPoint + "/ec2manager/scripts/" + script + "\" " + string.Join(" ", args.Select(x => "\"" + x + "\"")), logger, true, cancellationToken);
+
+            logger.Log("Script finished");
+        }
+
+        private async Task<SshCommand> RunAndLogAsync(string command, ILogger logger = null, bool logResult = false, bool checkExitStatus = true, CancellationToken? cancellationToken = null)
+        {
+            CancellationToken token = cancellationToken.HasValue ? cancellationToken.Value : new CancellationToken();
+
+            if (logger != null)
+                logger.Log(command);
+
+            var cmd = this.client.CreateCommand(command);
+            var tcs = new TaskCompletionSource<bool>();
+
+            var result = cmd.BeginExecute((asr) => 
+                {
+                    if (asr.IsCompleted)
+                        tcs.TrySetResult(true);
+                });
+
+            using (var registration = token.Register(() =>
+                {
+                    cmd.CancelAsync();
+                    tcs.TrySetResult(false);
+                }))
             {
-                if (cmd.ExitStatus == 0)
-                {
-                    break;
-                }
-                else
-                {
-                    logger.Log("Error: {0}. Retrying in 5 seconds", cmd.Error);
-                    if (i == retryTimes)
-                        throw new Exception(string.Format("Command {0} failed with error {1}", command, cmd.Error));
-                    await Task.Delay(5000);
-                }
+                await tcs.Task;
+            };
+
+            token.ThrowIfCancellationRequested();
+
+            cmd.EndExecute(result);
+
+            if (checkExitStatus && cmd.ExitStatus > 0)
+            {
+                throw new Exception(string.Format("Command {0} failed with error {1}", command, cmd.Error));
             }
 
-            if (logResult)
+            if (logger != null && logResult)
                 logger.Log(cmd.Result.TrimEnd());
+
+            return cmd;
         }
 
-        private Task RunAndLogStreamAsync(string command, ILogger logger, bool logCommand = false)
+        private Task RunAndLogStreamAsync(string command, ILogger logger, bool logCommand = false, CancellationToken? cancellationToken = null)
         {
+            CancellationToken token = cancellationToken.HasValue ? cancellationToken.Value : new CancellationToken();
+
             if (logCommand)
                 logger.Log(command);
 
@@ -191,15 +273,23 @@ namespace Ec2Manager
             {
                 var cmd = this.client.CreateCommand(command);
                 var result = cmd.BeginExecute();
-                logger.LogFromStream(cmd.OutputStream, result);
+                try
+                {
+                    logger.LogFromStream(result, cmd.OutputStream, cmd.ExtendedOutputStream, token);
+                }
+                catch (OperationCanceledException)
+                {
+                    cmd.CancelAsync();
+                    throw;
+                }
                 cmd.EndExecute(result);
-            });
+            }, token);
         }
 
         /// <summary>
         /// Note unintuitive behaviour - if command is null, tries to reconnect to session
         /// </summary>
-        private Task RunInShellAsync(string command, string sessionName, ILogger logger, System.Threading.CancellationToken? cancellationToken = null)
+        private Task RunInShellAsync(string command, string sessionName, ILogger logger, CancellationToken? cancellationToken = null)
         {
             System.Action runAction = () =>
                 {
@@ -213,7 +303,7 @@ namespace Ec2Manager
                         if (command != null)
                         {
                             // Start a new screen session, with A as the control character (as we can't send meta-characters like ctrl)
-                            writer.WriteLine("screen -eAa -S " + sessionName);
+                            writer.WriteLine("screen -e'$a' -S " + sessionName);
                             reader.ReadToEnd();
                             writer.WriteLine(command);
                         }
@@ -227,7 +317,7 @@ namespace Ec2Manager
                             // Command is cancelled by stream being disposed
                             if (cancellationToken.HasValue && cancellationToken.Value.IsCancellationRequested)
                             {
-                                writer.WriteLine("A:kill");
+                                writer.WriteLine("$:kill");
                                 cancellationToken.Value.ThrowIfCancellationRequested();
                             }
 

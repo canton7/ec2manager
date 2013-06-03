@@ -23,12 +23,29 @@ namespace Ec2Manager.ViewModels
         private IWindowManager windowManager;
         private Config config;
 
+        // Caliburn micro's target implementation has some weird behaviour, in that if the target's binding changes
+        // to null, the target isn't updated. This is the case if we bind to ActiveItem.ActiveItem directly.
+        // I've raised an issue, but until this is looked at use the following workaround (return a real value
+        // instead of null if ActiveItem.ActiveItem doesn't exist).
+        public object SubActiveItem
+        {
+            get
+            {
+                if (this.ActiveItem is ConductorBaseWithActiveItem<IScreen>)
+                    return ((ConductorBaseWithActiveItem<IScreen>)this.ActiveItem).ActiveItem;
+                else
+                    return new object();
+            }
+        }
+
         [ImportingConstructor]
         public ShellViewModel(ConnectViewModel connectModel, IEventAggregator events, IWindowManager windowManager, Config config)
         {
             this.DisplayName = "Ec2Manager";
             this.windowManager = windowManager;
             this.config = config;
+
+            this.Bind(s => s.ActiveItem, (o, e) => this.NotifyOfPropertyChange(() => SubActiveItem));
 
             events.Subscribe(this);
 
@@ -96,9 +113,11 @@ namespace Ec2Manager.ViewModels
         public async void Handle(CreateInstanceEvent message)
         {
             var instanceViewModel = IoC.Get<InstanceViewModel>();
+
+            instanceViewModel.Bind(s => s.ActiveItem, (o, e) => this.NotifyOfPropertyChange(() => SubActiveItem));
             this.ActivateItem(instanceViewModel);
 
-            await instanceViewModel.SetupAsync(message.Manager, message.InstanceAmi, message.InstanceSize, message.LoginAs, message.AvailabilityZone, message.SpotBidAmount);
+            await instanceViewModel.SetupAsync(message.Instance, message.LoginAs);
         }
 
         public async void Handle(TerminateInstanceEvent message)
@@ -106,15 +125,17 @@ namespace Ec2Manager.ViewModels
             var terminateViewModel = IoC.Get<TerminateInstanceViewModel>();
             this.ActivateItem(terminateViewModel);
 
-            await terminateViewModel.SetupAsync(message.Manager);
+            await terminateViewModel.SetupAsync(message.Instance);
         }
 
         public async void Handle(ReconnectInstanceEvent message)
         {
             var instanceViewModel = IoC.Get<InstanceViewModel>();
+
+            instanceViewModel.Bind(s => s.ActiveItem, (o, e) => this.NotifyOfPropertyChange(() => SubActiveItem));
             this.ActivateItem(instanceViewModel);
 
-            await instanceViewModel.ReconnectAsync(message.Manager);
+            await instanceViewModel.ReconnectAsync(message.Instance);
         }
     }
 }

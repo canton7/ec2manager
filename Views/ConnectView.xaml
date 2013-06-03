@@ -19,7 +19,7 @@
 
                 <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Margin="0,0,0,20">
                     <TextBlock>Instance type:</TextBlock>
-                    <ComboBox x:Name="InstanceTypes" DisplayMemberPath="Label" Margin="15,0" HorizontalAlignment="Stretch" Width="200"/>
+                    <ComboBox x:Name="InstanceTypes" DisplayMemberPath="Name" Margin="15,0" HorizontalAlignment="Stretch" Width="200"/>
                     <TextBlock>AMI:</TextBlock>
                     <TextBox Name="AMI" Width="150" Margin="15,0"></TextBox>
                 </StackPanel>
@@ -46,7 +46,7 @@
                 <StackPanel Orientation="Horizontal" DockPanel.Dock="Top">
                     <TextBlock>Instance:</TextBlock>
                     <ComboBox x:Name="RunningInstances" Margin="15,0" Width="200" DisplayMemberPath="Label"/>
-                    <Button cal:Message.Attach="RefreshRunningInstances">Refresh List</Button>
+                    <Button cal:Message.Attach="RefreshRunningInstances" Style="{StaticResource buttonStyle}">Refresh List</Button>
                 </StackPanel>
 
                 <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" HorizontalAlignment="Center">
