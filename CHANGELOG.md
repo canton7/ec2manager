@@ -1,6 +1,15 @@
 Changelog
 =========
 
+v1.2.0
+------
+
+ - PuTTY key conversion - can launch PuTTY directly
+ - Menu bar additions
+ - Better responsiveness
+ - Script support
+ - Snapshot creation
+
 v1.1.1
 ------
 
