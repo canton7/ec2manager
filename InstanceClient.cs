@@ -70,12 +70,23 @@ namespace Ec2Manager
                 });
         }
 
-        public async Task MountAndSetupDeviceAsync(string device, string mountPointDir, ILogger logger, CancellationToken? cancellationToken = null)
+        public async Task SetupFilesystemAsync(string device, ILogger logger)
+        {
+            await this.RunAndLogAsync("sudo mkfs.ext4 " + device, logger: logger, logResult: true);
+        }
+
+        public async Task MountDeviceAsync(string device, string mountPointDir, ILogger logger, CancellationToken? cancellationToken = null)
         {
             var mountPoint = this.mountBase + mountPointDir;
+
             await this.RunAndLogAsync("sudo mkdir -p \"" + mountPoint + "\"", logger, cancellationToken: cancellationToken);
-            await this.RunAndLogAsync("sudo mount " + device + " \"" + mountPoint + "\"", logger, false, cancellationToken: cancellationToken);
+            await this.RunAndLogAsync("sudo mount " + device + " \"" + mountPoint + "\"", logger, logResult: false, cancellationToken: cancellationToken);
             await this.RunAndLogAsync("sudo chown -R " + User + "." + User + " \"" + mountPoint + "\"", logger, cancellationToken: cancellationToken);
+        }
+
+        public async Task SetupDeviceAsync(string device, string mountPointDir, ILogger logger)
+        {
+            var mountPoint = this.mountBase + mountPointDir;
 
             await this.setupCmdLock.WaitAsync();
             {
@@ -88,7 +99,7 @@ namespace Ec2Manager
         {
             var mountPoint = this.mountBase + mountPointDir;
 
-            var cmd = await this.RunAndLogAsync("[ -r \"" + mountPoint + "/ec2manager/ports\" ] && cat \"" + mountPoint + "/ec2manager/ports\"", cancellationToken: cancellationToken);
+            var cmd = await this.RunAndLogAsync("[ -r \"" + mountPoint + "/ec2manager/ports\" ] && cat \"" + mountPoint + "/ec2manager/ports\"", checkExitStatus: false, cancellationToken: cancellationToken);
             return cmd.Result.Split(new[] { "\r\n", "\n" }, StringSplitOptions.None).SelectMany(x =>
                 {
                     if (string.IsNullOrWhiteSpace(x))
@@ -135,11 +146,11 @@ namespace Ec2Manager
         {
             var mountPoint = this.mountBase + mountPointDir;
 
-            var contents = (await this.RunAndLogAsync("[ -r \"" + mountPoint + "/ec2manager/runcmd\" ] && cat \"" + mountPoint + "/ec2manager/runcmd\"", cancellationToken: cancellationToken)).Result.Trim();
+            var contents = (await this.RunAndLogAsync("[ -r \"" + mountPoint + "/ec2manager/runcmd\" ] && cat \"" + mountPoint + "/ec2manager/runcmd\"", checkExitStatus: false, cancellationToken: cancellationToken)).Result.Trim();
             var lines = contents.Split(new[] { "\n", "\r\n" }, StringSplitOptions.RemoveEmptyEntries);
 
             if (lines.Length == 0)
-                return null;
+                return Enumerable.Empty<LabelledValue>();
 
             // Is it an old-school run command (just the command on its own?)
             if (lines.Length == 1 && !lines[0].Contains("\n"))
@@ -174,7 +185,7 @@ namespace Ec2Manager
         {
             var mountPoint = this.mountBase + mountPointDir;
 
-            return (await this.RunAndLogAsync("[ -r \"" + mountPoint + "/ec2manager/user_instruction\" ] && cat \"" + mountPoint + "/ec2manager/user_instruction\"", cancellationToken: cancellationToken)).Result.Trim();
+            return (await this.RunAndLogAsync("[ -r \"" + mountPoint + "/ec2manager/user_instruction\" ] && cat \"" + mountPoint + "/ec2manager/user_instruction\"", checkExitStatus: false, cancellationToken: cancellationToken)).Result.Trim();
         }
 
         public async Task<string> GetUptimeAsync(CancellationToken? cancellationToken = null)
@@ -186,7 +197,7 @@ namespace Ec2Manager
         {
             var mountPoint = this.mountBase + mountPointDir;
 
-            var lsOutput = (await this.RunAndLogAsync("[ -d \"" + mountPoint + "/ec2manager/scripts\" ] && find \"" + mountPoint + "/ec2manager/scripts\" -perm /u=x -type f -printf \"%f\n\"", cancellationToken: cancellationToken)).Result.Trim();
+            var lsOutput = (await this.RunAndLogAsync("[ -d \"" + mountPoint + "/ec2manager/scripts\" ] && find \"" + mountPoint + "/ec2manager/scripts\" -perm /u=x -type f -printf \"%f\n\"", checkExitStatus: false,  cancellationToken: cancellationToken)).Result.Trim();
             return lsOutput.Split(new[] { "\n" }, StringSplitOptions.RemoveEmptyEntries);
         }
 
@@ -217,7 +228,7 @@ namespace Ec2Manager
         {
             var mountPoint = this.mountBase + mountPointDir;
 
-            await this.RunAndLogStreamAsync("\"" + mountPoint + "/ec2manager/scripts/" + script + "\" " + string.Join(" ", args.Select(x => "\"" + x + "\"")), logger, true, cancellationToken);
+            await this.RunAndLogStreamAsync("\"" + mountPoint + "/ec2manager/scripts/" + script + "\" " + string.Join(" ", args.Select(x => "\"" + x + "\"")), logger, false, cancellationToken);
 
             logger.Log("Script finished");
         }

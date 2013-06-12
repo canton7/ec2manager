@@ -1,6 +1,12 @@
 Changelog
 =========
 
+v.1.2.1
+--------
+
+ - Bug fix: Successful commands were sometimes misinterpreted as having error'd
+ - Menu item to allow creation of a new empty volume
+
 v1.2.0
 ------
 

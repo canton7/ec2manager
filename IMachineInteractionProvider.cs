@@ -10,7 +10,9 @@ namespace Ec2Manager
 {
     public interface IMachineInteractionProvider
     {
-        Task MountAndSetupDeviceAsync(string device, string mountPoint, ILogger logger, CancellationToken? cancellationToken = null);
+        Task MountDeviceAsync(string device, string mountPointDir, ILogger logger, CancellationToken? cancellationToken = null);
+        Task SetupDeviceAsync(string device, string mountPointDir, ILogger logger);
         Task<IEnumerable<PortRangeDescription>> GetPortDescriptionsAsync(string mountPointDir, ILogger logger, CancellationToken? cancellationToken = null);
+        Task SetupFilesystemAsync(string device, ILogger logger);
     }
 }

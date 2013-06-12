@@ -313,6 +313,13 @@ namespace Ec2Manager.Ec2Manager
             return volume;
         }
 
+        public Ec2Volume CreateVolume(int sizeGb, string name)
+        {
+            var volume = new Ec2Volume(this, name, sizeGb);
+            volume.Logger = this.Logger;
+            return volume;
+        }
+
         public async Task<string> AttachVolumeAsync(Ec2Volume volume)
         {
             string mountPoint = null;
