@@ -257,6 +257,11 @@ namespace Ec2Manager.ViewModels
         public async void CreateSnapshot()
         {
             var detailsModel = IoC.Get<CreateSnapshotDetailsViewModel>();
+
+            var nameAndDescription = await this.Volume.GetSourceSnapshotNameDescriptionAsync();
+            detailsModel.Name = nameAndDescription.Item1;
+            detailsModel.Description = nameAndDescription.Item2;
+
             var result = this.windowManager.ShowDialog(detailsModel, settings: new Dictionary<string, object>()
             {
                 { "ResizeMode", ResizeMode.NoResize },

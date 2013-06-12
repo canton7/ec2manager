@@ -174,21 +174,59 @@ namespace Ec2Manager.Ec2Manager
 
             this.Logger.Log("Tagging volume, so we know we can remove it later");
             var name = this.Name == null ? "Unnamed" : this.Instance.Name + " - " + this.Name;
-            await this.Client.RequestAsync(s => s.CreateTags(new CreateTagsRequest()
-            {
-                ResourceId = new List<string>() { volumeId },
-                Tag = new List<Tag>()
+
+            var tags = new List<Tag>()
                 {
                     new Tag() { Key = "CreatedByEc2Manager", Value = "true" },
                     new Tag() { Key = "Name", Value = name },
                     new Tag() { Key = "VolumeName", Value = this.Name },
-                },
+                };
+
+            if (!string.IsNullOrWhiteSpace(snapshotId))
+                tags.Add(new Tag() { Key = "SourceSnapshot", Value = snapshotId });
+
+            await this.Client.RequestAsync(s => s.CreateTags(new CreateTagsRequest()
+            {
+                ResourceId = new List<string>() { volumeId },
+                Tag = tags,
             }));
 
             this.Logger.Log("Waiting for volume to reach the 'available' state");
             await this.UntilVolumeStateAsync(volumeId, "available", token);
 
             return volumeId;
+        }
+
+        public async Task<Tuple<string, string>> GetSourceSnapshotNameDescriptionAsync()
+        {
+            this.Logger.Log("Retrieving name and description of sourse snapshot");
+
+            var sourceSnapshotTag = (await this.Client.RequestAsync(s => s.DescribeVolumes(new DescribeVolumesRequest()
+            {
+                VolumeId = new List<string>() { this.VolumeId },
+            }))).DescribeVolumesResult.Volume[0].Tag.FirstOrDefault(x => x.Key == "SourceSnapshot");
+
+            if (sourceSnapshotTag == null)
+            {
+                this.Logger.Log("No source snapshot found");
+                return new Tuple<string, string>(null, null);
+            }
+
+            var snapshot = (await this.Client.RequestAsync(s => s.DescribeSnapshots(new DescribeSnapshotsRequest()
+            {
+                SnapshotId = new List<string>() { sourceSnapshotTag.Value },
+            }))).DescribeSnapshotsResult.Snapshot.FirstOrDefault();
+
+            if (snapshot == null)
+            {
+                this.Logger.Log("Could not find source snapshot with ID " + sourceSnapshotTag.Value);
+                return new Tuple<string, string>(null, null);
+            }
+
+            var nameTag = snapshot.Tag.FirstOrDefault(x => x.Key == "Name");
+            var descriptionTag = snapshot.Description;
+
+            return Tuple.Create(nameTag == null ? null : nameTag.Value, descriptionTag);
         }
 
         public async Task<string> CreateSnapshotAsync(string snapshotName, string snapshotDescription, bool isPublic, CancellationToken? cancellationToken = null)
