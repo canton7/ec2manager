@@ -151,8 +151,8 @@ If whatever you're installing is likely to be larger than 5 gigs or so, it's pro
 Install whatever you need to install, and get it working, tweaking the firewall rules in EC2 Console - Security Group as appropriate.
 If you're creating a snapshot for a new game, please check below to make sure the ports it's using don't clash with any other server.
 
-When you're done (ish), check the size of your folder (`du -sch .` from just inside the folder is a big help), then create a new volume of corresponding size.
-Attach it, then mount it using e.g. (assuming you attached the volume as `/dev/sdg` or `/dev/xvdg`) `sudo mkfs.ext4 /dev/xvdg; mkdir xvdg; sudo mount /dev/xvdg xvdg; sudo chown -R ubuntu.ubuntu xvdg`.
+When you're done (ish), check the size of your folder (`du -sch .` from just inside the folder is a big help).
+Create and mount a new empty volume using the menu item Instance -> Create New Empty Volume, specifying a large enough size.
 Move over your files, and create the Ec2Manager-specific configuration files (see below).
 
 When you're done, detach the volume, terminate the instance, and spin up a new instance in Ec2Manager.
