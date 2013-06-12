@@ -15,6 +15,7 @@
                 <MenuItem x:Name="TryClose" Header="_Exit"/>
             </MenuItem>
             <MenuItem Header="_Instance">
+                <MenuItem cal:Action.TargetWithoutContext="{Binding ActiveItem}" cal:Message.Attach="CreateVolume" Header="Create New Empty Volume"/>
                 <MenuItem cal:Action.TargetWithoutContext="{Binding ActiveItem}" cal:Message.Attach="LaunchPutty" Header="Launch PuTTY"/>
                 <MenuItem cal:Action.TargetWithoutContext="{Binding ActiveItem}" cal:Message.Attach="SavePrivateKey" Header="Save OpenSSL Key"/>
                 <MenuItem cal:Action.TargetWithoutContext="{Binding ActiveItem}" cal:Message.Attach="SavePuttyKey" Header="Save PuTTY Key"/>

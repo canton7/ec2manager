@@ -18,6 +18,7 @@ namespace Ec2Manager.Ec2Manager
             get { return this.Instance.Client; }
         }
         private string source;
+        private int? sizeGb; // Only used when creating a new one from scratch
         public string Name { get; private set; }
         public ILogger Logger;
         public bool IsSetup { get; private set; }
@@ -41,7 +42,7 @@ namespace Ec2Manager.Ec2Manager
             this.IsSetup = false;
         }
 
-        // Connection to existing
+        // Connection to existing. Currently only used for deletion
         public Ec2Volume(Ec2Instance instance, string volumeId)
         {
             this.Instance = instance;
@@ -63,6 +64,17 @@ namespace Ec2Manager.Ec2Manager
 
             this.Logger = instance.Logger;
             this.IsSetup = true;
+        }
+
+        // Create a new empty volume, not from snapshot
+        public Ec2Volume(Ec2Instance instance, string name, int sizeGb)
+        {
+            this.Instance = instance;
+            this.Name = name;
+            this.sizeGb = sizeGb;
+            this.Logger = instance.Logger;
+
+            this.IsSetup = false;
         }
 
         #region "Until" methods
@@ -140,18 +152,22 @@ namespace Ec2Manager.Ec2Manager
 
         #region Snapshot Interaction
 
-        private async Task<string> CreateVolumeFromSnapshotAsync(string snapshotId, CancellationToken? cancellationToken = null)
+        /// <param name="snapshotId">If null, create from scratch</param>
+        private async Task<string> CreateVolumeAsync(string snapshotId = null, float? size = null, CancellationToken? cancellationToken = null)
         {
             CancellationToken token = cancellationToken.HasValue ? cancellationToken.Value : new CancellationToken();
 
-            this.Logger.Log("Starting device mount process. Snapshot ID: {0}", snapshotId);
+            if (string.IsNullOrEmpty(snapshotId))
+                this.Logger.Log("Starting device mount process, with a new volume");
+            else
+                this.Logger.Log("Starting device mount process. Snapshot ID: {0}", snapshotId);
 
-            this.Logger.Log("Creating EBS volume based on snapshot");
             var createVolumeResponse = await this.Client.RequestAsync(s => s.CreateVolume(new CreateVolumeRequest()
             {
-                SnapshotId = snapshotId,
+                SnapshotId = string.IsNullOrEmpty(snapshotId) ? null : snapshotId,    // Null is the default value here
                 VolumeType = "standard",
                 AvailabilityZone = this.Instance.Specification.AvailabilityZone,
+                Size = size.HasValue ? size.Value.ToString() : null,
             }));
             var volumeId = createVolumeResponse.CreateVolumeResult.Volume.VolumeId;
             this.Logger.Log("Volume ID {0} created", volumeId);
@@ -231,6 +247,22 @@ namespace Ec2Manager.Ec2Manager
                 return;
             }
 
+            if (string.IsNullOrEmpty(this.source) && this.sizeGb.HasValue)
+            {
+                await this.SetupEmptyVolumeAsync(sshClient, sizeGb.Value, cancellationToken);
+            }
+            else if (!string.IsNullOrEmpty(this.source))
+            {
+                await this.SetupVolumeFromSourceAsync(sshClient, cancellationToken);
+            }
+            else
+            {
+                throw new Exception("Neither source not size specified. Don't know how to create volume");
+            }
+        }
+
+        public async Task SetupVolumeFromSourceAsync(IMachineInteractionProvider sshClient, CancellationToken? cancellationToken = null)
+        {
             CancellationToken token = cancellationToken.HasValue ? cancellationToken.Value : new CancellationToken();
             bool weCreatedVolume = false;
 
@@ -239,7 +271,7 @@ namespace Ec2Manager.Ec2Manager
                 weCreatedVolume = true;
                 try
                 {
-                    this.VolumeId = await this.CreateVolumeFromSnapshotAsync(this.source, token);
+                    this.VolumeId = await this.CreateVolumeAsync(snapshotId: this.source, cancellationToken: token);
                     token.ThrowIfCancellationRequested();
                 }
                 catch (Exception e)
@@ -266,7 +298,8 @@ namespace Ec2Manager.Ec2Manager
                 token.ThrowIfCancellationRequested();
 
                 this.Logger.Log("Mounting and setting up device");
-                await sshClient.MountAndSetupDeviceAsync(this.Device, this.MountPoint, this.Logger, cancellationToken);
+                await sshClient.MountDeviceAsync(this.Device, this.MountPoint, this.Logger, cancellationToken);
+                await sshClient.SetupDeviceAsync(this.Device, this.MountPoint, this.Logger);
                 token.ThrowIfCancellationRequested();
 
                 this.Logger.Log("Retriving port settings");
@@ -291,6 +324,52 @@ namespace Ec2Manager.Ec2Manager
             this.IsSetup = true;
 
             this.Logger.Log("Volume successfully mounted");
+        }
+
+        private async Task SetupEmptyVolumeAsync(IMachineInteractionProvider sshClient, float size, CancellationToken? cancellationToken = null)
+        {
+            CancellationToken token = cancellationToken.HasValue ? cancellationToken.Value : new CancellationToken();
+
+            try
+            {
+                this.VolumeId = await this.CreateVolumeAsync(size: size, cancellationToken: token);
+                token.ThrowIfCancellationRequested();  
+            }
+            catch (Exception e)
+            {
+                this.Logger.Log("Error creating new volume: {0}", e.Message);
+                throw;
+            }
+
+            Exception exception = null;
+            try
+            {
+                this.Logger.Log("Waiting for volume to reach the 'attached' state");
+                this.Device = await this.Instance.AttachVolumeAsync(this);
+                await this.UntilVolumeAttachedStateAsync("attached", cancellationToken: token);
+                token.ThrowIfCancellationRequested();
+
+                this.Logger.Log("Creating filesystem");
+                await sshClient.SetupFilesystemAsync(this.Device, this.Logger);
+                token.ThrowIfCancellationRequested();
+
+                this.Logger.Log("Mounting device");
+                await sshClient.MountDeviceAsync(this.Device, this.MountPoint, this.Logger, cancellationToken);
+                token.ThrowIfCancellationRequested();
+            }
+            catch (Exception e)
+            {
+                exception = e;
+            }
+            if (exception != null)
+            {
+                await this.DeleteAsync();
+                throw exception;
+            }
+
+            this.IsSetup = true;
+
+            this.Logger.Log("Volume successfully created");
         }
 
         public async Task DeleteAsync()

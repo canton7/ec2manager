@@ -70,12 +70,23 @@ namespace Ec2Manager
                 });
         }
 
-        public async Task MountAndSetupDeviceAsync(string device, string mountPointDir, ILogger logger, CancellationToken? cancellationToken = null)
+        public async Task SetupFilesystemAsync(string device, ILogger logger)
+        {
+            await this.RunAndLogAsync("sudo mkfs.ext4 " + device, logger: logger, logResult: true);
+        }
+
+        public async Task MountDeviceAsync(string device, string mountPointDir, ILogger logger, CancellationToken? cancellationToken = null)
         {
             var mountPoint = this.mountBase + mountPointDir;
+
             await this.RunAndLogAsync("sudo mkdir -p \"" + mountPoint + "\"", logger, cancellationToken: cancellationToken);
             await this.RunAndLogAsync("sudo mount " + device + " \"" + mountPoint + "\"", logger, logResult: false, cancellationToken: cancellationToken);
             await this.RunAndLogAsync("sudo chown -R " + User + "." + User + " \"" + mountPoint + "\"", logger, cancellationToken: cancellationToken);
+        }
+
+        public async Task SetupDeviceAsync(string device, string mountPointDir, ILogger logger)
+        {
+            var mountPoint = this.mountBase + mountPointDir;
 
             await this.setupCmdLock.WaitAsync();
             {
@@ -139,7 +150,7 @@ namespace Ec2Manager
             var lines = contents.Split(new[] { "\n", "\r\n" }, StringSplitOptions.RemoveEmptyEntries);
 
             if (lines.Length == 0)
-                return null;
+                return Enumerable.Empty<LabelledValue>();
 
             // Is it an old-school run command (just the command on its own?)
             if (lines.Length == 1 && !lines[0].Contains("\n"))

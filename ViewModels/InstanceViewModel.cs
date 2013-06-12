@@ -121,6 +121,7 @@ namespace Ec2Manager.ViewModels
                 {
                     this.NotifyOfPropertyChange(() => CanTerminate);
                     this.NotifyOfPropertyChange(() => CanMountVolume);
+                    this.NotifyOfPropertyChange(() => CanCreateVolume);
                     this.NotifyOfPropertyChange(() => CanSavePrivateKey);
                     this.NotifyOfPropertyChange(() => CanSavePuttyKey);
                     this.NotifyOfPropertyChange(() => CanLaunchPutty);
@@ -162,7 +163,11 @@ namespace Ec2Manager.ViewModels
                     await this.Instance.SetupAsync(this.CancelCts.Token);
 
                     this.Client = new InstanceClient(this.Instance.PublicIp, loginAs, this.Instance.PrivateKey);
-                    this.Client.Bind(s => s.IsConnected, (o, e) => this.NotifyOfPropertyChange(() => CanMountVolume));
+                    this.Client.Bind(s => s.IsConnected, (o, e) =>
+                        {
+                            this.NotifyOfPropertyChange(() => CanMountVolume);
+                            this.NotifyOfPropertyChange(() => CanCreateVolume);
+                        });
                     
                     this.config.SaveKeyAndUser(this.Instance.InstanceId, loginAs, this.Instance.PrivateKey);
 
@@ -231,7 +236,12 @@ namespace Ec2Manager.ViewModels
                     }
 
                     this.Client = new InstanceClient(this.Instance.PublicIp, keyAndUser.Item2, keyAndUser.Item1);
-                    this.Client.Bind(s => s.IsConnected, (o, e) => this.NotifyOfPropertyChange(() => CanMountVolume));
+                    this.Client.Bind(s => s.IsConnected, (o, e) =>
+                    {
+                        this.NotifyOfPropertyChange(() => CanMountVolume);
+                        this.NotifyOfPropertyChange(() => CanCreateVolume);
+                    });
+
                     await this.Client.ConnectAsync(this.Logger);
 
                     await Task.WhenAll((await this.Instance.ListVolumesAsync()).Select(volume =>
@@ -337,6 +347,44 @@ namespace Ec2Manager.ViewModels
                 this.Logger.Log("Error occurred: {0}", e.Message);
                 MessageBox.Show(Application.Current.MainWindow, "Error occurred: " + e.Message, "Error occurred", MessageBoxButton.OK, MessageBoxImage.Error);
                 volumeViewModel.TryClose();
+            }
+        }
+
+        public bool CanCreateVolume
+        {
+            get { return this.Instance != null && this.Instance.InstanceState == "running" && this.Client != null && this.Client.IsConnected; }
+        }
+
+        public async void CreateVolume()
+        {
+            var detailsModel = IoC.Get<CreateNewVolumeDetailsViewModel>();
+            var result = this.windowManager.ShowDialog(detailsModel, settings: new Dictionary<string, object>()
+            {
+                { "ResizeMode", ResizeMode.NoResize },
+            });
+
+            if (result.HasValue && result.Value)
+            {
+                var volumeViewModel = IoC.Get<VolumeViewModel>();
+
+                this.ActivateItem(volumeViewModel);
+
+                try
+                {
+                    var volume = this.Instance.CreateVolume(detailsModel.Size, detailsModel.Name);
+                    await volumeViewModel.SetupAsync(volume, this.Client);
+                }
+                catch (OperationCanceledException)
+                {
+                    this.Logger.Log("Volume mounting cancelled");
+                    volumeViewModel.TryClose();
+                }
+                catch (Exception e)
+                {
+                    this.Logger.Log("Error occurred: {0}", e.Message);
+                    MessageBox.Show(Application.Current.MainWindow, "Error occurred: " + e.Message, "Error occurred", MessageBoxButton.OK, MessageBoxImage.Error);
+                    volumeViewModel.TryClose();
+                }
             }
         }
 
