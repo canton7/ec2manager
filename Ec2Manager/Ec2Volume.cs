@@ -229,6 +229,17 @@ namespace Ec2Manager.Ec2Manager
             return Tuple.Create(nameTag == null ? null : nameTag.Value, descriptionTag);
         }
 
+        public async Task<bool> AnySnapshotsExistWithName(string name)
+        {
+            var result = await this.Client.RequestAsync(s => s.DescribeSnapshots(new DescribeSnapshotsRequest()
+            {
+                Filter = new List<Filter>() { new Filter() { Name = "tag:Name", Value = new List<string>() { name } } },
+                Owner = "self",
+            }));
+
+            return result.DescribeSnapshotsResult.Snapshot.Any();
+        }
+
         public async Task<string> CreateSnapshotAsync(string snapshotName, string snapshotDescription, bool isPublic, CancellationToken? cancellationToken = null)
         {
             CancellationToken token = cancellationToken.HasValue ? cancellationToken.Value : new CancellationToken();

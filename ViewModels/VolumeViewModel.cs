@@ -269,6 +269,13 @@ namespace Ec2Manager.ViewModels
 
             if (result.HasValue && result.Value)
             {
+                if (await this.Volume.AnySnapshotsExistWithName(detailsModel.Name))
+                {
+                    var confirmResult = MessageBox.Show(Application.Current.MainWindow, "Are you sure you want to create a snapshot called " + detailsModel.Name + "?\nYou already have a snapshot with this name", "Are you sure?", MessageBoxButton.YesNo, MessageBoxImage.Question, MessageBoxResult.No);
+                    if (confirmResult == MessageBoxResult.No)
+                        return;
+                }
+
                 try
                 {
                     this.VolumeState = "creating-snapshot";
