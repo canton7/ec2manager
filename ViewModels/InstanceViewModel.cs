@@ -32,7 +32,7 @@ namespace Ec2Manager.ViewModels
 
         public Logger Logger { get; private set; }
         private Config config;
-        private DispatcherTimer uptimeTimer = new DispatcherTimer();
+        private System.Timers.Timer uptimeTimer;
 
         private bool isSpotInstance = false;
         public bool IsSpotInstance
@@ -103,8 +103,14 @@ namespace Ec2Manager.ViewModels
             this.Logger = logger;
             this.config = config;
             this.windowManager = windowManager;
-            this.uptimeTimer.Interval = TimeSpan.FromSeconds(3);
-            this.uptimeTimer.Tick += async (o, e) => this.Uptime = await this.Client.GetUptimeAsync();
+            this.uptimeTimer = new System.Timers.Timer();
+            this.uptimeTimer.Elapsed += async (o, e) => 
+                {
+                    if (this.Client.IsConnected)
+                        this.Uptime = await this.Client.GetUptimeAsync();
+                };
+            this.uptimeTimer.AutoReset = true;
+            this.uptimeTimer.Interval = 3000;
 
             instanceDetailsModel.Logger = logger;
 
