@@ -194,9 +194,6 @@ namespace Ec2Manager.Ec2Manager
                     new Tag() { Key = "VolumeName", Value = this.Name },
                 };
 
-            if (!string.IsNullOrWhiteSpace(snapshotId))
-                tags.Add(new Tag() { Key = "SourceSnapshot", Value = snapshotId });
-
             await this.Client.RequestAsync(s => s.CreateTags(new CreateTagsRequest()
             {
                 ResourceId = new List<string>() { volumeId },
@@ -213,12 +210,12 @@ namespace Ec2Manager.Ec2Manager
         {
             this.Logger.Log("Retrieving name and description of sourse snapshot");
 
-            var sourceSnapshotTag = (await this.Client.RequestAsync(s => s.DescribeVolumes(new DescribeVolumesRequest()
+            var snapshotId = (await this.Client.RequestAsync(s => s.DescribeVolumes(new DescribeVolumesRequest()
             {
                 VolumeId = new List<string>() { this.VolumeId },
-            }))).DescribeVolumesResult.Volume[0].Tag.FirstOrDefault(x => x.Key == "SourceSnapshot");
+            }))).DescribeVolumesResult.Volume[0].SnapshotId;
 
-            if (sourceSnapshotTag == null)
+            if (string.IsNullOrWhiteSpace(snapshotId))
             {
                 this.Logger.Log("No source snapshot found");
                 return new Tuple<string, string>(null, null);
@@ -226,12 +223,12 @@ namespace Ec2Manager.Ec2Manager
 
             var snapshot = (await this.Client.RequestAsync(s => s.DescribeSnapshots(new DescribeSnapshotsRequest()
             {
-                SnapshotId = new List<string>() { sourceSnapshotTag.Value },
+                SnapshotId = new List<string>() { snapshotId },
             }))).DescribeSnapshotsResult.Snapshot.FirstOrDefault();
 
             if (snapshot == null)
             {
-                this.Logger.Log("Could not find source snapshot with ID " + sourceSnapshotTag.Value);
+                this.Logger.Log("Could not find source snapshot with ID " + snapshotId);
                 return new Tuple<string, string>(null, null);
             }
 
