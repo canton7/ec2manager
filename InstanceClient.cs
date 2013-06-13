@@ -1,11 +1,13 @@
 ﻿using Caliburn.Micro;
 using Ec2Manager.Classes;
 using Renci.SshNet;
+using Renci.SshNet.Common;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
+using System.Net.Sockets;
 using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading;
@@ -55,7 +57,8 @@ namespace Ec2Manager
         {
             return Task.Run(() =>
                 {
-                    logger.Log("Establishing connection with {0}@{1}", User, Host);
+                    if (logger != null)
+                        logger.Log("Establishing connection with {0}@{1}", User, Host);
                     this.client = new SshClient(Host, User, new PrivateKeyFile(new MemoryStream(Encoding.ASCII.GetBytes(Key))));
                     while (!this.client.IsConnected)
                     {
@@ -66,8 +69,35 @@ namespace Ec2Manager
                         catch (System.Net.Sockets.SocketException) { }
                     }
                     this.IsConnected = true;
-                    logger.Log("Connected");
+                    if (logger != null)
+                        logger.Log("Connected");
                 });
+        }
+
+        private async Task<T> ExecuteAction<T>(Func<T> action, ILogger logger)
+        {
+            try
+            {
+                return action();
+            }
+            catch (SocketException e)
+            {
+                if (logger != null)
+                    logger.Log("SocketException: " + e.Message);
+            }
+            catch (SshException e)
+            {
+                if (logger != null)
+                    logger.Log("SshException: " + e.Message);
+            }
+
+            this.IsConnected = false;
+
+            if (logger != null)
+                logger.Log("Trying to re-establish connection");
+            
+            await this.ConnectAsync(logger);
+            return action();
         }
 
         public async Task SetupFilesystemAsync(string device, ILogger logger)
@@ -243,11 +273,14 @@ namespace Ec2Manager
             var cmd = this.client.CreateCommand(command);
             var tcs = new TaskCompletionSource<bool>();
 
-            var result = cmd.BeginExecute((asr) => 
+            var result = await this.ExecuteAction(() =>
                 {
-                    if (asr.IsCompleted)
-                        tcs.TrySetResult(true);
-                });
+                    return cmd.BeginExecute((asr) =>
+                        {
+                            if (asr.IsCompleted)
+                                tcs.TrySetResult(true);
+                        });
+                }, logger);
 
             using (var registration = token.Register(() =>
                 {
@@ -280,10 +313,11 @@ namespace Ec2Manager
             if (logCommand)
                 logger.Log(command);
 
-            return Task.Run(() =>
+            return Task.Run(async () =>
             {
                 var cmd = this.client.CreateCommand(command);
-                var result = cmd.BeginExecute();
+
+                var result = await this.ExecuteAction(() => cmd.BeginExecute(), logger);
                 try
                 {
                     logger.LogFromStream(result, cmd.OutputStream, cmd.ExtendedOutputStream, token);
