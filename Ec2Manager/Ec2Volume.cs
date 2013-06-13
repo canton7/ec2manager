@@ -1,5 +1,6 @@
 ﻿using Amazon.EC2;
 using Amazon.EC2.Model;
+using Caliburn.Micro;
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -10,7 +11,7 @@ using System.Threading.Tasks;
 
 namespace Ec2Manager.Ec2Manager
 {
-    public class Ec2Volume
+    public class Ec2Volume : PropertyChangedBase
     {
         public Ec2Instance Instance { get; private set; }
         public AmazonEC2Client Client
@@ -25,7 +26,18 @@ namespace Ec2Manager.Ec2Manager
 
         public string VolumeId { get; private set; }
 
-        public string Device { get; private set; }
+        private string device;
+        public string Device
+        {
+            get { return this.device; }
+            private set
+            {
+                this.device = value;
+                this.NotifyOfPropertyChange();
+                this.NotifyOfPropertyChange(() => MountPoint);
+            }
+        }
+
         public string MountPoint
         {
             get { return Path.GetFileName(this.Device); }

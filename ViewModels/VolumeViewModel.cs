@@ -20,7 +20,18 @@ namespace Ec2Manager.ViewModels
         private IWindowManager windowManager;
 
         public InstanceClient Client { get; private set; }
-        public Ec2Volume Volume { get; private set; }
+
+        private Ec2Volume volume;
+        public Ec2Volume Volume
+        {
+            get { return this.volume; }
+            private set
+            {
+                this.volume = value;
+                this.NotifyOfPropertyChange();
+            }
+        }
+
         private CancellationTokenSource gameCts;
         private CancellationTokenSource cancelCts;
         public CancellationTokenSource CancelCts
