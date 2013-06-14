@@ -156,7 +156,7 @@ namespace Ec2Manager.ViewModels
             }
             finally
             {
-                this.cancelCts = null;
+                this.CancelCts = null;
             }
         }
 

@@ -345,6 +345,9 @@ namespace Ec2Manager.Ec2Manager
 
         public async Task DetachVolumeAsync(Ec2Volume volume)
         {
+            if (volume.VolumeId == null)
+                return;
+
             this.Logger.Log("Detaching volume {0}", volume.VolumeId);
             await this.Client.RequestAsync(s => s.DetachVolume(new DetachVolumeRequest()
             {

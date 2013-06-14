@@ -67,37 +67,15 @@ namespace Ec2Manager
                             this.client.Connect();
                         }
                         catch (System.Net.Sockets.SocketException) { }
+                        catch (SshException) { }
+
+                        if (!this.client.IsConnected && logger != null)
+                            logger.Log("Connection attempt failed. Retrying...");
                     }
                     this.IsConnected = true;
                     if (logger != null)
                         logger.Log("Connected");
                 });
-        }
-
-        private async Task<T> ExecuteAction<T>(Func<T> action, ILogger logger)
-        {
-            try
-            {
-                return action();
-            }
-            catch (SocketException e)
-            {
-                if (logger != null)
-                    logger.Log("SocketException: " + e.Message);
-            }
-            catch (SshException e)
-            {
-                if (logger != null)
-                    logger.Log("SshException: " + e.Message);
-            }
-
-            this.IsConnected = false;
-
-            if (logger != null)
-                logger.Log("Trying to re-establish connection");
-            
-            await this.ConnectAsync(logger);
-            return action();
         }
 
         public async Task SetupFilesystemAsync(string device, ILogger logger)
@@ -218,9 +196,9 @@ namespace Ec2Manager
             return (await this.RunAndLogAsync("[ -r \"" + mountPoint + "/ec2manager/user_instruction\" ] && cat \"" + mountPoint + "/ec2manager/user_instruction\"", checkExitStatus: false, cancellationToken: cancellationToken)).Result.Trim();
         }
 
-        public async Task<string> GetUptimeAsync(CancellationToken? cancellationToken = null)
+        public async Task<string> GetUptimeAsync(ILogger logger, CancellationToken? cancellationToken = null)
         {
-            return (await this.RunAndLogAsync("uptime", cancellationToken: cancellationToken)).Result.Trim();
+            return (await this.RunAndLogAsync("uptime", logger: logger, logCommand: false, cancellationToken: cancellationToken)).Result.Trim();
         }
 
         public async Task<string[]> ListScriptsAsync(string mountPointDir, CancellationToken? cancellationToken = null)
@@ -263,37 +241,71 @@ namespace Ec2Manager
             logger.Log("Script finished");
         }
 
-        private async Task<SshCommand> RunAndLogAsync(string command, ILogger logger = null, bool logResult = false, bool checkExitStatus = true, CancellationToken? cancellationToken = null)
+        private async Task<SshCommand> RunCommandAsync(string command, ILogger logger, System.Action<SshCommand, IAsyncResult> doWithResult = null, CancellationToken? cancellationToken = null)
+        {
+            CancellationToken token = cancellationToken ?? new CancellationToken();
+
+            SshCommand cmd;
+
+            while (true)
+            {
+                try
+                {
+                    cmd = this.client.CreateCommand(command);
+                    var tcs = new TaskCompletionSource<bool>();
+
+                    var result = cmd.BeginExecute((asr) =>
+                        {
+                            if (asr.IsCompleted)
+                                tcs.SetResult(true);
+                        });
+
+                    using (var registration = token.Register(() =>
+                    {
+                        cmd.CancelAsync();
+                        tcs.TrySetResult(false);
+                    }))
+                    {
+                        if (doWithResult != null)
+                            doWithResult(cmd, result);
+
+                        await tcs.Task;
+                    };
+
+                    cmd.EndExecute(result);
+
+                    break;
+                }
+                catch (SocketException e)
+                {
+                    if (logger != null)
+                        logger.Log("SocketException: " + e.Message);
+                }
+                catch (SshException e)
+                {
+                    if (logger != null)
+                        logger.Log("SshException: " + e.Message);
+                }
+
+                this.IsConnected = false;
+
+                if (logger != null)
+                    logger.Log("Trying to re-establish connection");
+
+                await this.ConnectAsync(logger);
+            }
+
+            return cmd;
+        }
+
+        private async Task<SshCommand> RunAndLogAsync(string command, ILogger logger = null, bool logCommand = true, bool logResult = false, bool checkExitStatus = true, CancellationToken? cancellationToken = null)
         {
             CancellationToken token = cancellationToken.HasValue ? cancellationToken.Value : new CancellationToken();
 
-            if (logger != null)
+            if (logger != null && logCommand)
                 logger.Log(command);
 
-            var cmd = this.client.CreateCommand(command);
-            var tcs = new TaskCompletionSource<bool>();
-
-            var result = await this.ExecuteAction(() =>
-                {
-                    return cmd.BeginExecute((asr) =>
-                        {
-                            if (asr.IsCompleted)
-                                tcs.TrySetResult(true);
-                        });
-                }, logger);
-
-            using (var registration = token.Register(() =>
-                {
-                    cmd.CancelAsync();
-                    tcs.TrySetResult(false);
-                }))
-            {
-                await tcs.Task;
-            };
-
-            token.ThrowIfCancellationRequested();
-
-            cmd.EndExecute(result);
+            var cmd = await this.RunCommandAsync(command, logger, null, token);
 
             if (checkExitStatus && cmd.ExitStatus > 0)
             {
@@ -315,19 +327,18 @@ namespace Ec2Manager
 
             return Task.Run(async () =>
             {
-                var cmd = this.client.CreateCommand(command);
-
-                var result = await this.ExecuteAction(() => cmd.BeginExecute(), logger);
-                try
-                {
-                    logger.LogFromStream(result, cmd.OutputStream, cmd.ExtendedOutputStream, token);
-                }
-                catch (OperationCanceledException)
-                {
-                    cmd.CancelAsync();
-                    throw;
-                }
-                cmd.EndExecute(result);
+                await this.RunCommandAsync(command, logger, (cmd, result) =>
+                    {
+                        try
+                        {
+                            logger.LogFromStream(result, cmd.OutputStream, cmd.ExtendedOutputStream, token);
+                        }
+                        catch (OperationCanceledException)
+                        {
+                            cmd.CancelAsync();
+                            throw;
+                        }
+                    }, token);
             }, token);
         }
 
