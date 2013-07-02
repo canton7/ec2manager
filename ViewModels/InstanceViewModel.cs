@@ -97,6 +97,20 @@ namespace Ec2Manager.ViewModels
             }
         }
 
+        private string instanceState = "starting";
+        public string InstanceState
+        {
+            get { return this.instanceState; }
+            set
+            {
+                this.instanceState = value;
+                this.NotifyOfPropertyChange();
+                this.NotifyOfPropertyChange(() => CanMountVolume);
+                this.NotifyOfPropertyChange(() => CanTerminate);
+                this.NotifyOfPropertyChange(() => CanCreateVolume);
+            }
+        }
+
         [ImportingConstructor]
         public InstanceViewModel(InstanceDetailsViewModel instanceDetailsModel, Logger logger, Config config, IWindowManager windowManager)
         {
@@ -167,6 +181,7 @@ namespace Ec2Manager.ViewModels
             var createTask = Task.Run(async () =>
                 {
                     await this.Instance.SetupAsync(this.CancelCts.Token);
+                    this.InstanceState = "running";
 
                     this.Client = new InstanceClient(this.Instance.PublicIp, loginAs, this.Instance.PrivateKey);
                     this.Client.Bind(s => s.IsConnected, (o, e) =>
@@ -212,6 +227,7 @@ namespace Ec2Manager.ViewModels
             var reconnectTask = Task.Run(async () =>
                 {
                     await this.Instance.SetupAsync();
+                    this.InstanceState = "running";
 
                     Tuple<string, string> keyAndUser = null;
                     try
@@ -292,13 +308,15 @@ namespace Ec2Manager.ViewModels
 
         public bool CanTerminate
         {
-            get { return this.Instance != null && this.Instance.InstanceState == "running"; }
+            get { return this.InstanceState == "running" && this.Instance != null && this.Instance.InstanceState == "running"; }
         }
 
         public async void Terminate()
         {
             this.ActivateItem(this.Items[0]);
             this.uptimeTimer.Stop();
+
+            this.InstanceState = "terminating";
 
             this.Logger.Log("Umounting all volumes");
             await Task.WhenAll(this.Items.Where(x => x is VolumeViewModel).Select(x => ((VolumeViewModel)x).UnmountVolumeAsync()));
@@ -311,7 +329,7 @@ namespace Ec2Manager.ViewModels
         {
             get
             {
-                return this.Instance != null &&
+                return this.InstanceState == "running" && this.Instance != null &&
                     this.Instance.InstanceState == "running" && this.Client != null &&
                     (this.SelectedVolumeType.IsCustom == true || this.SelectedVolumeType.SnapshotId != null) &&
                     (!this.selectedVolumeType.IsCustom || !string.IsNullOrWhiteSpace(this.CustomVolumeSnapshotId)) &&
@@ -358,7 +376,10 @@ namespace Ec2Manager.ViewModels
 
         public bool CanCreateVolume
         {
-            get { return this.Instance != null && this.Instance.InstanceState == "running" && this.Client != null && this.Client.IsConnected; }
+            get
+            {
+                return this.InstanceState == "running" && this.Instance != null &&
+                    this.Instance.InstanceState == "running" && this.Client != null && this.Client.IsConnected; }
         }
 
         public async void CreateVolume()
