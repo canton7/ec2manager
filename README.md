@@ -146,7 +146,10 @@ So, fire up a new instance.
 You can use Ec2Manager for that (launch a new instance but don't mount anything), or launch it with EC2 Console.
 SSH in, and create a new folder.
 
-If whatever you're installing is likely to be larger than 5 gigs or so, it's probably worth choosing an instance size larger than Micro, and using the ephemeral storance in `/mnt` to setup your server.
+If the server you're running is 32-bit, you'll probably need to `sudo apt-get install lib32gcc1` first.
+This also needs to go in your `ec2manager/setup` file, when you get around to creating this.
+
+If whatever you're installing is likely to be larger than 5 gigs or so, it's probably worth choosing an instance size larger than Micro, and using the ephemeral storage in `/mnt` to setup your server.
 
 Install whatever you need to install, and get it working, tweaking the firewall rules in EC2 Console - Security Group as appropriate.
 If you're creating a snapshot for a new game, please check below to make sure the ports it's using don't clash with any other server.
@@ -188,8 +191,9 @@ Use it to install any necessary packages, etc.
 2. `ec2manager/ports`: This text file contains the ports which needs to be opened.
 The format is one port or range per line, of the format `fromport-toport/protocol`, e.g. `1000-2000/tcp`.
 If you only want to open one port, that's allowed -- e.g. `1000/tcp` -- and if you want to open both TCP and UDP, skip that bit -- e.g. `2000` or `2000-2010`.
-3. `ec2manager/runcmd`: This text file has a single line, which is the suggested command used to start the server.
-This is run from the root of the mounted volume.
+3. `ec2manager/runcmd`: This text file has two possible formats. In both cases, the command is run from the root of the mounted volume.
+  1. A single line, which is the suggested command used to start the server.
+  2. Multiple lines, each with the format `name of variant<TAB>suggested command`.
 4. `ec2manager/user_instruction`: This is displayed to the user, verbatim. The string `<PUBLIC-IP>` is replaced with the actual public IP of the server.
 5. `ec2manager/scripts`: A directory containing optional scripts. See the section below.
 
@@ -235,7 +239,9 @@ Also let me know what ports you use, so I can update the list.
 
  - Left 4 dead 2: 27015
  - Hidden Source Beta 4b: 27016, 26901-26910/udp
+ - Half Life 2: Deathmatch: 27017, 26901-26910/udp
  - Teamspeak: 9987/udp, 10011/tcp, 30033/tcp
+ - Killing Floor (still in development): 7707/udp, 7708/udp, 7717/udp, 8075/tcp, 20560/udp, 28852
 
 Contributing
 ------------
