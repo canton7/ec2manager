@@ -9,6 +9,7 @@ using Ec2Manager.Classes;
 using System.Threading;
 using System.Windows;
 using Ec2Manager.Ec2Manager;
+using Ec2Manager.Utilities;
 
 namespace Ec2Manager.ViewModels
 {
@@ -20,7 +21,18 @@ namespace Ec2Manager.ViewModels
         private IWindowManager windowManager;
 
         public InstanceClient Client { get; private set; }
-        public Ec2Volume Volume { get; private set; }
+
+        private Ec2Volume volume;
+        public Ec2Volume Volume
+        {
+            get { return this.volume; }
+            private set
+            {
+                this.volume = value;
+                this.NotifyOfPropertyChange();
+            }
+        }
+
         private CancellationTokenSource gameCts;
         private CancellationTokenSource cancelCts;
         public CancellationTokenSource CancelCts
@@ -145,7 +157,7 @@ namespace Ec2Manager.ViewModels
             }
             finally
             {
-                this.cancelCts = null;
+                this.CancelCts = null;
             }
         }
 
@@ -257,6 +269,11 @@ namespace Ec2Manager.ViewModels
         public async void CreateSnapshot()
         {
             var detailsModel = IoC.Get<CreateSnapshotDetailsViewModel>();
+
+            var nameAndDescription = await this.Volume.GetSourceSnapshotNameDescriptionAsync();
+            detailsModel.Name = nameAndDescription.Item1;
+            detailsModel.Description = nameAndDescription.Item2;
+
             var result = this.windowManager.ShowDialog(detailsModel, settings: new Dictionary<string, object>()
             {
                 { "ResizeMode", ResizeMode.NoResize },
@@ -264,6 +281,13 @@ namespace Ec2Manager.ViewModels
 
             if (result.HasValue && result.Value)
             {
+                if (await this.Volume.AnySnapshotsExistWithName(detailsModel.Name))
+                {
+                    var confirmResult = MessageBox.Show(Application.Current.MainWindow, "Are you sure you want to create a snapshot called " + detailsModel.Name + "?\nYou already have a snapshot with this name", "Are you sure?", MessageBoxButton.YesNo, MessageBoxImage.Question, MessageBoxResult.No);
+                    if (confirmResult == MessageBoxResult.No)
+                        return;
+                }
+
                 try
                 {
                     this.VolumeState = "creating-snapshot";

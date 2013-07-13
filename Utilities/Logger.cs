@@ -8,7 +8,7 @@ using System.Text;
 using System.Threading.Tasks;
 using System.Threading;
 
-namespace Ec2Manager
+namespace Ec2Manager.Utilities
 {
     [Export]
     [PartCreationPolicy(CreationPolicy.NonShared)]

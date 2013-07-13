@@ -2,6 +2,7 @@
 using Amazon.EC2.Model;
 using Caliburn.Micro;
 using Ec2Manager.Classes;
+using Ec2Manager.Utilities;
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
@@ -345,6 +346,9 @@ namespace Ec2Manager.Ec2Manager
 
         public async Task DetachVolumeAsync(Ec2Volume volume)
         {
+            if (volume.VolumeId == null)
+                return;
+
             this.Logger.Log("Detaching volume {0}", volume.VolumeId);
             await this.Client.RequestAsync(s => s.DetachVolume(new DetachVolumeRequest()
             {

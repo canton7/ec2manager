@@ -1,5 +1,6 @@
 ﻿using Caliburn.Micro;
 using Ec2Manager.Ec2Manager;
+using Ec2Manager.Utilities;
 using System;
 using System.Collections.Generic;
 using System.ComponentModel.Composition;

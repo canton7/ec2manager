@@ -112,7 +112,7 @@
     <Compile Include="Ec2Manager\Ec2Volume.cs" />
     <Compile Include="Events\ReconnectInstanceEvent.cs" />
     <Compile Include="Events\TerminateInstanceEvent.cs" />
-    <Compile Include="ILogger.cs" />
+    <Compile Include="Utilities\ILogger.cs" />
     <Compile Include="Model\MainModel.cs" />
     <Compile Include="Support\HyperlinkUtilities.cs" />
     <Compile Include="Support\TextBoxUtilities.cs" />
@@ -122,6 +122,7 @@
     <Compile Include="Converters\LogEntriesToTextConverter.cs" />
     <Compile Include="Converters\VolumeTypeToIdVisibilityConverter.cs" />
     <Compile Include="Events\CreateInstanceEvent.cs" />
+    <Compile Include="Utilities\VersionManager.cs" />
     <Compile Include="ViewModels\AboutViewModel.cs" />
     <Compile Include="ViewModels\ConnectViewModel.cs" />
     <Compile Include="ViewModels\CreateNewVolumeDetailsViewModel.cs" />
@@ -134,6 +135,7 @@
     <Compile Include="ViewModels\SettingsViewModel.cs" />
     <Compile Include="ViewModels\ShellViewModel.cs" />
     <Compile Include="ViewModels\TerminateInstanceViewModel.cs" />
+    <Compile Include="ViewModels\VersionMananager.cs" />
     <Compile Include="ViewModels\VolumeViewModel.cs" />
     <Compile Include="Views\AboutView.xaml.cs">
       <DependentUpon>AboutView.xaml</DependentUpon>
@@ -181,7 +183,7 @@
     <Compile Include="AppBootstrapper.cs" />
     <Compile Include="IMachineInteractionProvider.cs" />
     <Compile Include="InstanceClient.cs" />
-    <Compile Include="Logger.cs" />
+    <Compile Include="Utilities\Logger.cs" />
     <Page Include="ResourceDictionary.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>

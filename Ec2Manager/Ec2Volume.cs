@@ -1,5 +1,7 @@
 ﻿using Amazon.EC2;
 using Amazon.EC2.Model;
+using Caliburn.Micro;
+using Ec2Manager.Utilities;
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -10,7 +12,7 @@ using System.Threading.Tasks;
 
 namespace Ec2Manager.Ec2Manager
 {
-    public class Ec2Volume
+    public class Ec2Volume : PropertyChangedBase
     {
         public Ec2Instance Instance { get; private set; }
         public AmazonEC2Client Client
@@ -25,7 +27,18 @@ namespace Ec2Manager.Ec2Manager
 
         public string VolumeId { get; private set; }
 
-        public string Device { get; private set; }
+        private string device;
+        public string Device
+        {
+            get { return this.device; }
+            private set
+            {
+                this.device = value;
+                this.NotifyOfPropertyChange();
+                this.NotifyOfPropertyChange(() => MountPoint);
+            }
+        }
+
         public string MountPoint
         {
             get { return Path.GetFileName(this.Device); }
@@ -174,21 +187,67 @@ namespace Ec2Manager.Ec2Manager
 
             this.Logger.Log("Tagging volume, so we know we can remove it later");
             var name = this.Name == null ? "Unnamed" : this.Instance.Name + " - " + this.Name;
-            await this.Client.RequestAsync(s => s.CreateTags(new CreateTagsRequest()
-            {
-                ResourceId = new List<string>() { volumeId },
-                Tag = new List<Tag>()
+
+            var tags = new List<Tag>()
                 {
                     new Tag() { Key = "CreatedByEc2Manager", Value = "true" },
                     new Tag() { Key = "Name", Value = name },
                     new Tag() { Key = "VolumeName", Value = this.Name },
-                },
+                };
+
+            await this.Client.RequestAsync(s => s.CreateTags(new CreateTagsRequest()
+            {
+                ResourceId = new List<string>() { volumeId },
+                Tag = tags,
             }));
 
             this.Logger.Log("Waiting for volume to reach the 'available' state");
             await this.UntilVolumeStateAsync(volumeId, "available", token);
 
             return volumeId;
+        }
+
+        public async Task<Tuple<string, string>> GetSourceSnapshotNameDescriptionAsync()
+        {
+            this.Logger.Log("Retrieving name and description of sourse snapshot");
+
+            var snapshotId = (await this.Client.RequestAsync(s => s.DescribeVolumes(new DescribeVolumesRequest()
+            {
+                VolumeId = new List<string>() { this.VolumeId },
+            }))).DescribeVolumesResult.Volume[0].SnapshotId;
+
+            if (string.IsNullOrWhiteSpace(snapshotId))
+            {
+                this.Logger.Log("No source snapshot found");
+                return new Tuple<string, string>(null, null);
+            }
+
+            var snapshot = (await this.Client.RequestAsync(s => s.DescribeSnapshots(new DescribeSnapshotsRequest()
+            {
+                SnapshotId = new List<string>() { snapshotId },
+            }))).DescribeSnapshotsResult.Snapshot.FirstOrDefault();
+
+            if (snapshot == null)
+            {
+                this.Logger.Log("Could not find source snapshot with ID " + snapshotId);
+                return new Tuple<string, string>(null, null);
+            }
+
+            var nameTag = snapshot.Tag.FirstOrDefault(x => x.Key == "Name");
+            var descriptionTag = snapshot.Description;
+
+            return Tuple.Create(nameTag == null ? null : nameTag.Value, descriptionTag);
+        }
+
+        public async Task<bool> AnySnapshotsExistWithName(string name)
+        {
+            var result = await this.Client.RequestAsync(s => s.DescribeSnapshots(new DescribeSnapshotsRequest()
+            {
+                Filter = new List<Filter>() { new Filter() { Name = "tag:Name", Value = new List<string>() { name } } },
+                Owner = "self",
+            }));
+
+            return result.DescribeSnapshotsResult.Snapshot.Any();
         }
 
         public async Task<string> CreateSnapshotAsync(string snapshotName, string snapshotDescription, bool isPublic, CancellationToken? cancellationToken = null)
