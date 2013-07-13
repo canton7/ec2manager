@@ -2,6 +2,7 @@
 using Amazon.EC2;
 using Amazon.EC2.Model;
 using Caliburn.Micro;
+using Ec2Manager.Utilities;
 using System;
 using System.Collections.Generic;
 using System.ComponentModel.Composition;

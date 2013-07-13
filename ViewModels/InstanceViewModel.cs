@@ -14,6 +14,7 @@ using System.Windows;
 using System.Threading;
 using Ec2Manager.Ec2Manager;
 using System.Diagnostics;
+using Ec2Manager.Utilities;
 
 namespace Ec2Manager.ViewModels
 {

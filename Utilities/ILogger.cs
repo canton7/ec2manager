@@ -7,7 +7,7 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 
-namespace Ec2Manager
+namespace Ec2Manager.Utilities
 {
     public interface ILogger
     {

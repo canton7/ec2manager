@@ -112,7 +112,7 @@
     <Compile Include="Ec2Manager\Ec2Volume.cs" />
     <Compile Include="Events\ReconnectInstanceEvent.cs" />
     <Compile Include="Events\TerminateInstanceEvent.cs" />
-    <Compile Include="ILogger.cs" />
+    <Compile Include="Utilities\ILogger.cs" />
     <Compile Include="Model\MainModel.cs" />
     <Compile Include="Support\HyperlinkUtilities.cs" />
     <Compile Include="Support\TextBoxUtilities.cs" />
@@ -181,7 +181,7 @@
     <Compile Include="AppBootstrapper.cs" />
     <Compile Include="IMachineInteractionProvider.cs" />
     <Compile Include="InstanceClient.cs" />
-    <Compile Include="Logger.cs" />
+    <Compile Include="Utilities\Logger.cs" />
     <Page Include="ResourceDictionary.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>

@@ -9,6 +9,7 @@ using Ec2Manager.Classes;
 using System.Threading;
 using System.Windows;
 using Ec2Manager.Ec2Manager;
+using Ec2Manager.Utilities;
 
 namespace Ec2Manager.ViewModels
 {

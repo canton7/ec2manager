@@ -1,5 +1,6 @@
 ﻿using Caliburn.Micro;
 using Ec2Manager.Classes;
+using Ec2Manager.Utilities;
 using Renci.SshNet;
 using Renci.SshNet.Common;
 using System;
