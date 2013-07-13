@@ -25,6 +25,7 @@
                 <MenuItem cal:Action.TargetWithoutContext="{Binding SubActiveItem}" cal:Message.Attach="CreateSnapshot" Header="Create Snapshot"/>
             </MenuItem>
             <MenuItem Header="_Help">
+                <MenuItem x:Name="CheckForUpdate" Header="_Check for Updates"/>
                 <MenuItem x:Name="ShowAbout" Header="_About"/>
             </MenuItem>
         </Menu>

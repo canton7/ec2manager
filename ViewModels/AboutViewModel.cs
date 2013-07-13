@@ -1,5 +1,6 @@
 ﻿using Caliburn.Micro;
 using Ec2Manager.Properties;
+using Ec2Manager.Utilities;
 using System;
 using System.Collections.Generic;
 using System.ComponentModel.Composition;
@@ -17,11 +18,12 @@ namespace Ec2Manager.ViewModels
         public string Version { get; private set; }
         public string HomepageUrl { get; set; }
 
-        public AboutViewModel ()
+        [ImportingConstructor]
+        public AboutViewModel (VersionManager versionManager)
 	    {
             this.DisplayName = "About";
 
-            this.Version = Assembly.GetExecutingAssembly().GetName().Version.ToString(3);
+            this.Version = versionManager.OurVersion.ToString(3);
             this.HomepageUrl = Settings.Default.HomePageUrl;
 	    }
 

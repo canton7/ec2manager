@@ -122,6 +122,7 @@
     <Compile Include="Converters\LogEntriesToTextConverter.cs" />
     <Compile Include="Converters\VolumeTypeToIdVisibilityConverter.cs" />
     <Compile Include="Events\CreateInstanceEvent.cs" />
+    <Compile Include="Utilities\VersionManager.cs" />
     <Compile Include="ViewModels\AboutViewModel.cs" />
     <Compile Include="ViewModels\ConnectViewModel.cs" />
     <Compile Include="ViewModels\CreateNewVolumeDetailsViewModel.cs" />
@@ -134,6 +135,7 @@
     <Compile Include="ViewModels\SettingsViewModel.cs" />
     <Compile Include="ViewModels\ShellViewModel.cs" />
     <Compile Include="ViewModels\TerminateInstanceViewModel.cs" />
+    <Compile Include="ViewModels\VersionMananager.cs" />
     <Compile Include="ViewModels\VolumeViewModel.cs" />
     <Compile Include="Views\AboutView.xaml.cs">
       <DependentUpon>AboutView.xaml</DependentUpon>

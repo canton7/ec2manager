@@ -23,5 +23,11 @@
     <Setting Name="Ec2PricingUrl" Type="System.String" Scope="User">
       <Value Profile="(Default)">http://aws.amazon.com/ec2/pricing/#on-demand</Value>
     </Setting>
+    <Setting Name="CurrentVersionUrl" Type="System.String" Scope="User">
+      <Value Profile="(Default)">http://canton7-ec2manager.s3.amazonaws.com/current-version.txt</Value>
+    </Setting>
+    <Setting Name="InstallerDownloadUrl" Type="System.String" Scope="User">
+      <Value Profile="(Default)">http://canton7-ec2manager.s3.amazonaws.com/Releases/Ec2Manager-latest.exe</Value>
+    </Setting>
   </Settings>
 </SettingsFile>

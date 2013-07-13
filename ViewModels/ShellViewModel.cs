@@ -12,6 +12,7 @@ using Ec2Manager.Configuration;
 using Ec2Manager.Properties;
 using System.Diagnostics;
 using System.Dynamic;
+using Ec2Manager.Utilities;
 
 namespace Ec2Manager.ViewModels
 {
@@ -22,6 +23,7 @@ namespace Ec2Manager.ViewModels
     {
         private IWindowManager windowManager;
         private Config config;
+        private VersionManager versionManager;
 
         // Caliburn micro's target implementation has some weird behaviour, in that if the target's binding changes
         // to null, the target isn't updated. This is the case if we bind to ActiveItem.ActiveItem directly.
@@ -39,11 +41,12 @@ namespace Ec2Manager.ViewModels
         }
 
         [ImportingConstructor]
-        public ShellViewModel(ConnectViewModel connectModel, IEventAggregator events, IWindowManager windowManager, Config config)
+        public ShellViewModel(ConnectViewModel connectModel, IEventAggregator events, IWindowManager windowManager, Config config, VersionManager versionManager)
         {
             this.DisplayName = "Ec2Manager";
             this.windowManager = windowManager;
             this.config = config;
+            this.versionManager = versionManager;
 
             this.Bind(s => s.ActiveItem, (o, e) => this.NotifyOfPropertyChange(() => SubActiveItem));
 
@@ -54,19 +57,40 @@ namespace Ec2Manager.ViewModels
 
         protected override void OnViewLoaded(object view)
         {
+            this.CheckForUpdate();
+
             if (this.config.NeedToUpdateMainConfig())
             {
                 // This horrible hack gives the UI thread enough time to render the page before displaying the dialog
                 // TODO: Find a better way of doing this
                 Task.Run(() =>
                     {
-                        this.Invoke(() =>
+                        Caliburn.Micro.Execute.OnUIThread(() =>
                             {
                                 var result = MessageBox.Show(Application.Current.MainWindow, "Do you want to set your AWS credentials? You will need to do this before you'll be able to do anything else.", "Set AWS credentials?", MessageBoxButton.YesNo, MessageBoxImage.Question);
                                 if (result == MessageBoxResult.Yes)
                                     this.ShowSettings();
                             });
                     });
+            }
+        }
+
+        public async void CheckForUpdate(bool dontAltertIfNoVersionAvailable = true)
+        {
+            if (!await this.versionManager.IsUpToDateAsync())
+            {
+                Caliburn.Micro.Execute.OnUIThread(() =>
+                {
+                    var result = MessageBox.Show(Application.Current.MainWindow, "A new version is available!\nWould you like to download version " + this.versionManager.CurrentVersion.ToString(3) + "?", "New version!", MessageBoxButton.YesNo, MessageBoxImage.Question);
+                    if (result == MessageBoxResult.Yes)
+                    {
+                        Process.Start(Settings.Default.InstallerDownloadUrl);
+                    }
+                });
+            }
+            else if (!dontAltertIfNoVersionAvailable)
+            {
+                MessageBox.Show(Application.Current.MainWindow, "The current version " + this.versionManager.OurVersion.ToString(3) + " is up to date.", "Up to date", MessageBoxButton.OK);
             }
         }
 
