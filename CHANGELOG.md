@@ -1,7 +1,15 @@
 Changelog
 =========
 
-v.1.2.1
+v1.2.2
+------
+
+ - Snapshot creation auto-populates name and description if possible
+ - Better handling of connection problems
+ - Add prompt to download latest version
+ - README updates
+
+v1.2.1
 --------
 
  - Bug fix: Successful commands were sometimes misinterpreted as having error'd
