@@ -109,7 +109,7 @@ namespace Ec2Manager.ViewModels
 
         public void ShowSettings()
         {
-            this.windowManager.ShowDialog(IoC.Get<SettingsViewModel>(), settings: new Dictionary<string, object>()
+            this.windowManager.ShowDialog<SettingsViewModel>(settings: new Dictionary<string, object>()
                 {
                     { "ResizeMode", ResizeMode.NoResize },
                 });
@@ -127,7 +127,7 @@ namespace Ec2Manager.ViewModels
 
         public void ShowAbout()
         {
-            this.windowManager.ShowDialog(IoC.Get<AboutViewModel>(), settings: new Dictionary<string, object>()
+            this.windowManager.ShowDialog<AboutViewModel>(settings: new Dictionary<string, object>()
                 {
                     { "WindowStyle", WindowStyle.None },
                     { "ShowInTaskbar", false},

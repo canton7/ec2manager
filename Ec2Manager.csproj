@@ -94,9 +94,9 @@
     <Compile Include="Classes\AsyncLazy.cs" />
     <Compile Include="Classes\AsyncSemaphore.cs" />
     <Compile Include="Classes\RSAConverter.cs" />
-    <Compile Include="Classes\ScreenExtensions.cs" />
     <Compile Include="Classes\ScriptArgument.cs" />
     <Compile Include="Classes\StringExtensions.cs" />
+    <Compile Include="Classes\WindowManagerExtensions.cs" />
     <Compile Include="Configuration\Config.cs" />
     <Compile Include="Configuration\MainConfig.cs" />
     <Compile Include="Configuration\VolumeType.cs" />

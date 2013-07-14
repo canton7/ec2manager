@@ -237,19 +237,14 @@ namespace Ec2Manager.ViewModels
                     }
                     catch (FileNotFoundException)
                     {
-                        var reconnectDetails = IoC.Get<ReconnectDetailsViewModel>();
-                        bool? result = false;
-                        this.Invoke(() =>
-                            {
-                                result = this.windowManager.ShowDialog(reconnectDetails, settings: new Dictionary<string, object>()
+                        var result = this.windowManager.ShowDialog<ReconnectDetailsViewModel>(settings: new Dictionary<string, object>()
                                 {
                                     { "ResizeMode", ResizeMode.NoResize },
                                 });
-                            });
 
-                        if (result.HasValue && result.Value)
+                        if (result.Result.GetValueOrDefault())
                         {
-                            keyAndUser = new Tuple<string, string>(reconnectDetails.PrivateKey, reconnectDetails.LoginAs);
+                            keyAndUser = new Tuple<string, string>(result.VM.PrivateKey, result.VM.LoginAs);
                             this.config.SaveKeyAndUser(this.Instance.InstanceId, keyAndUser.Item2, keyAndUser.Item1);
                         }
                         else
@@ -385,13 +380,12 @@ namespace Ec2Manager.ViewModels
 
         public async void CreateVolume()
         {
-            var detailsModel = IoC.Get<CreateNewVolumeDetailsViewModel>();
-            var result = this.windowManager.ShowDialog(detailsModel, settings: new Dictionary<string, object>()
+            var result = this.windowManager.ShowDialog<CreateNewVolumeDetailsViewModel>(settings: new Dictionary<string, object>()
             {
                 { "ResizeMode", ResizeMode.NoResize },
             });
 
-            if (result.HasValue && result.Value)
+            if (result.Success)
             {
                 var volumeViewModel = IoC.Get<VolumeViewModel>();
 
@@ -399,7 +393,7 @@ namespace Ec2Manager.ViewModels
 
                 try
                 {
-                    var volume = this.Instance.CreateVolume(detailsModel.Size, detailsModel.Name);
+                    var volume = this.Instance.CreateVolume(result.VM.Size, result.VM.Name);
                     await volumeViewModel.SetupAsync(volume, this.Client);
                 }
                 catch (OperationCanceledException)
