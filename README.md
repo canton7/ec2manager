@@ -186,16 +186,33 @@ Ec2Manager-specific configuration files
 Each volume has a number of configuration files used by Ec2Manager, including what firewall ports to open, what other packages need installing, the suggested way to start the server, and any instructions to the users.
 Let's detail them...
 
-1. `ec2manager/setup`: This is an executable file (don't forget the shebang!) which is executed once the volume has been mounted.
+### `ec2manager/setup`
+This is an executable file (don't forget the shebang!) which is executed once the volume has been mounted.
+Make sure you chmod +x it! It must be executable!
 Use it to install any necessary packages, etc.
-2. `ec2manager/ports`: This text file contains the ports which needs to be opened.
+It should probably look something like the following.
+Note the rather weird way in which apt-get needs to be called, and the test for a 64-bit architecture before installing lib32gcc1.
+```
+#!/bin/bash
+[ "`uname -m`" = "x86_64" ] && sudo DEBIAN_FRONTEND=noninteractive apt-get install -qq lib32gcc1
+```
+
+
+### `ec2manager/ports`
+This text file contains the ports which needs to be opened.
 The format is one port or range per line, of the format `fromport-toport/protocol`, e.g. `1000-2000/tcp`.
 If you only want to open one port, that's allowed -- e.g. `1000/tcp` -- and if you want to open both TCP and UDP, skip that bit -- e.g. `2000` or `2000-2010`.
-3. `ec2manager/runcmd`: This text file has two possible formats. In both cases, the command is run from the root of the mounted volume.
+
+### `ec2manager/runcmd`
+This text file has two possible formats. In both cases, the command is run from the root of the mounted volume.
   1. A single line, which is the suggested command used to start the server.
   2. Multiple lines, each with the format `name of variant<TAB>suggested command`.
-4. `ec2manager/user_instruction`: This is displayed to the user, verbatim. The string `<PUBLIC-IP>` is replaced with the actual public IP of the server.
-5. `ec2manager/scripts`: A directory containing optional scripts. See the section below.
+
+### `ec2manager/user_instruction`
+This is displayed to the user, verbatim. The string `<PUBLIC-IP>` is replaced with the actual public IP of the server.
+
+### `ec2manager/scripts`
+A directory containing optional scripts. See the section below.
 
 Scripts
 -------
