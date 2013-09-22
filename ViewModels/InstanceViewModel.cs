@@ -193,7 +193,21 @@ namespace Ec2Manager.ViewModels
                     
                     this.config.SaveKeyAndUser(this.Instance.InstanceId, loginAs, this.Instance.PrivateKey);
 
-                    await this.Client.ConnectAsync(this.Logger);
+                    Exception exception = null;
+                    try
+                    {
+                        await this.Client.ConnectAsync(this.Logger);
+                    }
+                    catch (Exception e)
+                    {
+                        exception = e;
+                    }
+                    if (exception != null)
+                    {
+                        this.Logger.Log("The instance will now be terminated");
+                        await this.Instance.DestroyAsync();
+                    }
+
                 }, this.CancelCts.Token);
 
             try

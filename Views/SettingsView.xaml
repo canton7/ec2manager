@@ -24,7 +24,7 @@
         <TextBlock DockPanel.Dock="Top" Margin="0,0,0,10"><Hyperlink supp:HyperlinkUtilities.Action="ShowCredentials">Find them here</Hyperlink></TextBlock>
         <TextBlock DockPanel.Dock="Top">Default AMI:</TextBlock>
         <TextBox x:Name="MainConfig_DefaultAmi" DockPanel.Dock="Top" Width="200" HorizontalAlignment="Left"/>
-        <TextBlock DockPanel.Dock="Top">Default Logon User:</TextBlock>
+        <TextBlock DockPanel.Dock="Top">Default SSH User:</TextBlock>
         <TextBox x:Name="MainConfig_DefaultLogonUser" DockPanel.Dock="Top" Width="200" HorizontalAlignment="Left"/>
         
         <Grid DockPanel.Dock="Bottom" VerticalAlignment="Bottom">

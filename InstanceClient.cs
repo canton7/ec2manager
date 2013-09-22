@@ -67,6 +67,12 @@ namespace Ec2Manager
                         {
                             this.client.Connect();
                         }
+                        catch (SshAuthenticationException e)
+                        {
+                            var msg = "Authentication error: " + e.Message + "\nMake sure you entered the right SSH user";
+                            logger.Log(msg);
+                            throw new Exception(msg, e);
+                        }
                         catch (System.Net.Sockets.SocketException) { }
                         catch (SshException) { }
 
