@@ -1,8 +1,11 @@
-#define AppName "Ec2Manager"
-#define AppVersion "1.2.2"
+#define AppExeName "Ec2Manager.exe"
+#define AppSrc "..\bin\Release"
+#define AppExe AppSrc + "\Ec2Manager.exe"
+#define AppName GetStringFileInfo(AppExe, "ProductName")
+#define AppVersion GetFileVersion(AppExe)
 #define AppPublisher "Ec2Manager"
 #define AppURL "https://github.com/canton7/ec2manager"
-#define AppExeName "Ec2Manager.exe"
+
 
 [Setup]
 AppId={{0512E32C-CF12-4633-B836-DA29E0BAB2F5}
@@ -16,9 +19,9 @@ AppUpdatesURL={#AppURL}
 DefaultDirName={pf}\{#AppName}
 DefaultGroupName={#AppName}
 AllowNoIcons=yes
-LicenseFile=..\bin\Release\LICENSE.txt
+LicenseFile={#AppSrc}\LICENSE.txt
 OutputBaseFilename={#AppName}Setup
-SetupIconFile=..\bin\Release\icon.ico
+SetupIconFile={#AppSrc}\icon.ico
 Compression=lzma
 SolidCompression=yes
 
@@ -29,13 +32,12 @@ Name: "english"; MessagesFile: "compiler:Default.isl"
 Name: "desktopicon"; Description: "{cm:CreateDesktopIcon}"; GroupDescription: "{cm:AdditionalIcons}"; Flags: unchecked
 
 [Files]
-Source: "..\bin\Release\Ec2Manager.exe"; DestDir: "{app}"; Flags: ignoreversion
-Source: "..\bin\Release\Ec2Manager.exe.config"; DestDir: "{app}"; Flags: ignoreversion
-Source: "..\bin\Release\*.dll"; DestDir: "{app}"; Flags: ignoreversion
-Source: "..\bin\Release\*.txt"; DestDir: "{app}"; Flags: ignoreversion
-Source: "..\bin\Release\*.md"; DestDir: "{app}"; Flags: ignoreversion
-Source: "..\bin\Release\*.ico"; DestDir: "{app}"; Flags: ignoreversion
-
+Source: "{#AppSrc}\Ec2Manager.exe"; DestDir: "{app}"; Flags: ignoreversion
+Source: "{#AppSrc}\Ec2Manager.exe.config"; DestDir: "{app}"; Flags: ignoreversion
+Source: "{#AppSrc}\*.dll"; DestDir: "{app}"; Flags: ignoreversion
+Source: "{#AppSrc}\*.txt"; DestDir: "{app}"; Flags: ignoreversion
+Source: "{#AppSrc}\*.md"; DestDir: "{app}"; Flags: ignoreversion
+Source: "{#AppSrc}\*.ico"; DestDir: "{app}"; Flags: ignoreversion
 Source: "dotNetFx45_Full_setup.exe"; DestDir: {tmp}; Flags: deleteafterinstall; Check: FrameworkIsNotInstalled
 
 [Icons]
