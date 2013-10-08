@@ -26,6 +26,7 @@ namespace Ec2Manager.ViewModels
 
         public Ec2Instance Instance { get; private set; }
         public InstanceClient Client { get; private set; }
+        private IVolumeViewModelFactory volumeViewModelFactory;
         private IWindowManager windowManager;
 
         public Logger Logger { get; private set; }
@@ -109,10 +110,11 @@ namespace Ec2Manager.ViewModels
             }
         }
 
-        public InstanceViewModel(InstanceDetailsViewModel instanceDetailsModel, Logger logger, Config config, IWindowManager windowManager)
+        public InstanceViewModel(InstanceDetailsViewModel instanceDetailsModel, Logger logger, Config config, IVolumeViewModelFactory volumeViewModelFactory, IWindowManager windowManager)
         {
             this.Logger = logger;
             this.config = config;
+            this.volumeViewModelFactory = volumeViewModelFactory;
             this.windowManager = windowManager;
             this.uptimeTimer = new System.Timers.Timer();
             this.uptimeTimer.Elapsed += async (o, e) => 
@@ -274,7 +276,7 @@ namespace Ec2Manager.ViewModels
 
                     await Task.WhenAll((await this.Instance.ListVolumesAsync()).Select(volume =>
                         {
-                            var volumeViewModel = IoC.Get<VolumeViewModel>();
+                            var volumeViewModel = this.volumeViewModelFactory.CreatetVolumeViewModel();
                             this.ActivateItem(volumeViewModel);
                             return volumeViewModel.ReconnectAsync(volume, this.Client);
                         }));
@@ -345,7 +347,7 @@ namespace Ec2Manager.ViewModels
 
         public async void MountVolume()
         {
-            var volumeViewModel = IoC.Get<VolumeViewModel>();
+            var volumeViewModel = this.volumeViewModelFactory.CreatetVolumeViewModel();
             string volumeId;
             string volumeName;
 
@@ -397,7 +399,7 @@ namespace Ec2Manager.ViewModels
 
             if (result.Success)
             {
-                var volumeViewModel = IoC.Get<VolumeViewModel>();
+                var volumeViewModel = this.volumeViewModelFactory.CreatetVolumeViewModel();
 
                 this.ActivateItem(volumeViewModel);
 
@@ -492,5 +494,10 @@ namespace Ec2Manager.ViewModels
                 File.WriteAllText(fileName, puttyKey);
             }
         }
+    }
+
+    public interface IVolumeViewModelFactory
+    {
+        VolumeViewModel CreatetVolumeViewModel();
     }
 }

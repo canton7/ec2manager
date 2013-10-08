@@ -10,6 +10,8 @@ namespace Ec2Manager.ViewModels
 {
     public class ScriptDetailsViewModel : Screen
     {
+        private IScriptArgumentViewModelFactory scriptArgumentViewModelFactory;
+
         private ScriptArgumentViewModel[] scriptArguments;
         public ScriptArgumentViewModel[] ScriptArguments
         {
@@ -21,16 +23,18 @@ namespace Ec2Manager.ViewModels
             }
         }
 
-        public ScriptDetailsViewModel()
+        public ScriptDetailsViewModel(IScriptArgumentViewModelFactory scriptArgumentViewModelFactory)
         {
             this.DisplayName = "Script Details";
+
+            this.scriptArgumentViewModelFactory = scriptArgumentViewModelFactory;
         }
 
         public void SetArguments(ScriptArgument[] arguments)
         {
             this.ScriptArguments = arguments.Select(arg =>
                 {
-                    var vm = IoC.Get<ScriptArgumentViewModel>();
+                    var vm = this.scriptArgumentViewModelFactory.CreateScriptArgumentViewModel();
 
                     vm.Description = arg.Description;
                     vm.Type = arg.Type;
@@ -45,5 +49,10 @@ namespace Ec2Manager.ViewModels
         {
             this.TryClose(true);
         }
+    }
+
+    public interface IScriptArgumentViewModelFactory
+    {
+        ScriptArgumentViewModel CreateScriptArgumentViewModel();
     }
 }
