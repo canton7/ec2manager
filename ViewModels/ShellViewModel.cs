@@ -45,7 +45,7 @@ namespace Ec2Manager.ViewModels
             this.config = config;
             this.versionManager = versionManager;
 
-            this.Bind(s => s.ActiveItem, (o, e) => this.NotifyOfPropertyChange(() => SubActiveItem));
+            this.Bind(s => s.ActiveItem, _ => this.NotifyOfPropertyChange(() => SubActiveItem));
 
             events.Subscribe(this);
 
@@ -135,7 +135,7 @@ namespace Ec2Manager.ViewModels
         {
             var instanceViewModel = IoC.Get<InstanceViewModel>();
 
-            instanceViewModel.Bind(s => s.ActiveItem, (o, e) => this.NotifyOfPropertyChange(() => SubActiveItem));
+            instanceViewModel.Bind(s => s.ActiveItem, _=> this.NotifyOfPropertyChange(() => SubActiveItem));
             this.ActivateItem(instanceViewModel);
 
             await instanceViewModel.SetupAsync(message.Instance, message.LoginAs);
@@ -153,7 +153,7 @@ namespace Ec2Manager.ViewModels
         {
             var instanceViewModel = IoC.Get<InstanceViewModel>();
 
-            instanceViewModel.Bind(s => s.ActiveItem, (o, e) => this.NotifyOfPropertyChange(() => SubActiveItem));
+            instanceViewModel.Bind(s => s.ActiveItem, _ => this.NotifyOfPropertyChange(() => SubActiveItem));
             this.ActivateItem(instanceViewModel);
 
             await instanceViewModel.ReconnectAsync(message.Instance);

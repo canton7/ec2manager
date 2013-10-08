@@ -172,12 +172,12 @@ namespace Ec2Manager.ViewModels
             this.connection = model.Connection;
             this.events = events;
 
-            this.config.Bind(s => s.MainConfig, (o, e) => 
+            this.config.Bind(s => s.MainConfig, _ => 
                 {
                     this.LoadFromConfig();
                 });
 
-            this.connection.Bind(s => s.IsConnected, (o, e) =>
+            this.connection.Bind(s => s.IsConnected, _ =>
                 {
                     this.RefreshRunningInstances();
                     this.NotifyOfPropertyChange(() => CanRefreshRunningInstances);
@@ -187,7 +187,7 @@ namespace Ec2Manager.ViewModels
                     var spotPriceTask = this.RefreshCurrentSpotPriceAsync();
                 });
 
-            this.Bind(s => s.ActiveInstanceType, (o, e) => Task.Run(() => this.RefreshCurrentSpotPriceAsync()));
+            this.Bind(s => s.ActiveInstanceType, _ => Task.Run(() => this.RefreshCurrentSpotPriceAsync()));
 
             this.DisplayName = "Create New Instance";
             this.LoadFromConfig();

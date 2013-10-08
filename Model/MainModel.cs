@@ -19,8 +19,8 @@ namespace Ec2Manager.Model
             this.Config = config;
             this.Connection = connection;
 
-            this.Config.MainConfig.Bind(s => s.AwsAccessKey, (o, e) => this.ReconnectConnection());
-            this.Config.MainConfig.Bind(s => s.AwsSecretKey, (o, e) => this.ReconnectConnection());
+            this.Config.MainConfig.Bind(s => s.AwsAccessKey, _ => this.ReconnectConnection());
+            this.Config.MainConfig.Bind(s => s.AwsSecretKey, _ => this.ReconnectConnection());
 
             this.ReconnectConnection();
         }
