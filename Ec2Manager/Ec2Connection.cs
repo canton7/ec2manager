@@ -3,9 +3,9 @@ using Amazon.EC2;
 using Amazon.EC2.Model;
 using Caliburn.Micro;
 using Ec2Manager.Utilities;
+using Ninject;
 using System;
 using System.Collections.Generic;
-using System.ComponentModel.Composition;
 using System.Linq;
 using System.Text;
 using System.Threading;
@@ -13,8 +13,6 @@ using System.Threading.Tasks;
 
 namespace Ec2Manager.Ec2Manager
 {
-    [Export]
-    [PartCreationPolicy(CreationPolicy.Shared)]
     public class Ec2Connection : PropertyChangedBase
     {
         private Credentials credentials;
@@ -48,7 +46,7 @@ namespace Ec2Manager.Ec2Manager
             }
         }
 
-        [ImportingConstructor]
+        [Inject]
         public Ec2Connection() : this(new StubLogger())
         {
         }

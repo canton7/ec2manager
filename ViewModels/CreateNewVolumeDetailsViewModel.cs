@@ -1,14 +1,12 @@
 ﻿using Caliburn.Micro;
 using System;
 using System.Collections.Generic;
-using System.ComponentModel.Composition;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
 namespace Ec2Manager.ViewModels
 {
-    [Export]
     public class CreateNewVolumeDetailsViewModel : Screen
     {
         private string name = "New Volume";
@@ -35,7 +33,6 @@ namespace Ec2Manager.ViewModels
             }
         }
 
-        [ImportingConstructor]
         public CreateNewVolumeDetailsViewModel()
         {
             this.DisplayName = "New Volume Details";

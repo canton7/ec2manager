@@ -1,7 +1,6 @@
 ﻿using Caliburn.Micro;
 using System;
 using System.Collections.Generic;
-using System.ComponentModel.Composition;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
@@ -18,8 +17,6 @@ using Ec2Manager.Utilities;
 
 namespace Ec2Manager.ViewModels
 {
-    [Export]
-    [PartCreationPolicy(CreationPolicy.NonShared)]
     public class InstanceViewModel : Conductor<IScreen>.Collection.OneActive
     {
         private static readonly List<VolumeType> defaultVolumeTypes = new List<VolumeType>
@@ -112,7 +109,6 @@ namespace Ec2Manager.ViewModels
             }
         }
 
-        [ImportingConstructor]
         public InstanceViewModel(InstanceDetailsViewModel instanceDetailsModel, Logger logger, Config config, IWindowManager windowManager)
         {
             this.Logger = logger;

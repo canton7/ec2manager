@@ -3,7 +3,6 @@ using Ec2Manager.Classes;
 using Ec2Manager.Properties;
 using System;
 using System.Collections.Generic;
-using System.ComponentModel.Composition;
 using System.IO;
 using System.Linq;
 using System.Net;
@@ -14,8 +13,6 @@ using System.Threading.Tasks;
 
 namespace Ec2Manager.Configuration
 {
-    [Export]
-    [PartCreationPolicy(CreationPolicy.Shared)]
     public class Config : PropertyChangedBase 
     {
         private readonly string appDataFolder = "Ec2Manager"; 
@@ -55,7 +52,6 @@ namespace Ec2Manager.Configuration
             get { return Path.Combine(this.ConfigDir, "keys"); }
         }
 
-        [ImportingConstructor]
         public Config()
         {
             Directory.CreateDirectory(this.ConfigDir);

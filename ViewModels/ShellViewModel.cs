@@ -2,7 +2,6 @@
 using Ec2Manager.Events;
 using System;
 using System.Collections.Generic;
-using System.ComponentModel.Composition;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
@@ -16,7 +15,6 @@ using Ec2Manager.Utilities;
 
 namespace Ec2Manager.ViewModels
 {
-    [Export]
     public class ShellViewModel
         : Conductor<IScreen>.Collection.OneActive,
         IHandle<CreateInstanceEvent>, IHandle<TerminateInstanceEvent>, IHandle<ReconnectInstanceEvent>
@@ -40,7 +38,6 @@ namespace Ec2Manager.ViewModels
             }
         }
 
-        [ImportingConstructor]
         public ShellViewModel(ConnectViewModel connectModel, IEventAggregator events, IWindowManager windowManager, Config config, VersionManager versionManager)
         {
             this.DisplayName = "Ec2Manager";

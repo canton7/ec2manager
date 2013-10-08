@@ -6,7 +6,6 @@ using Ec2Manager.Properties;
 using Ec2Manager.Ec2Manager;
 using System;
 using System.Collections.Generic;
-using System.ComponentModel.Composition;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
@@ -15,7 +14,6 @@ using Ec2Manager.Model;
 
 namespace Ec2Manager.ViewModels
 {
-    [Export]
     public class ConnectViewModel : Screen
     {
         private static readonly LabelledValue[] availabilityZones = new LabelledValue[]
@@ -168,7 +166,6 @@ namespace Ec2Manager.ViewModels
 
         private IEventAggregator events;
 
-        [ImportingConstructor]
         public ConnectViewModel(MainModel model, IEventAggregator events)
         {
             this.config = model.Config;

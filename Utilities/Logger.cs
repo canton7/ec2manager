@@ -1,7 +1,6 @@
 ﻿using Caliburn.Micro;
 using System;
 using System.Collections.Generic;
-using System.ComponentModel.Composition;
 using System.IO;
 using System.Linq;
 using System.Text;
@@ -10,8 +9,6 @@ using System.Threading;
 
 namespace Ec2Manager.Utilities
 {
-    [Export]
-    [PartCreationPolicy(CreationPolicy.NonShared)]
     public class Logger : PropertyChangedBase, ILogger
     {
         private const int maxLogEntries = 200;

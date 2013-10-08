@@ -2,15 +2,12 @@
 using Ec2Manager.Utilities;
 using System;
 using System.Collections.Generic;
-using System.ComponentModel.Composition;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
 namespace Ec2Manager.ViewModels
 {
-    [Export]
-    [PartCreationPolicy(CreationPolicy.NonShared)]
     public class InstanceDetailsViewModel : Screen
     {
         private Logger logger;
@@ -24,7 +21,6 @@ namespace Ec2Manager.ViewModels
             }
         }
 
-        [ImportingConstructor]
         public InstanceDetailsViewModel()
         {
             this.DisplayName = "Instance";

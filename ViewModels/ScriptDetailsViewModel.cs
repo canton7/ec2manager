@@ -2,14 +2,12 @@
 using Ec2Manager.Classes;
 using System;
 using System.Collections.Generic;
-using System.ComponentModel.Composition;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
 namespace Ec2Manager.ViewModels
 {
-    [Export]
     public class ScriptDetailsViewModel : Screen
     {
         private ScriptArgumentViewModel[] scriptArguments;
@@ -23,7 +21,6 @@ namespace Ec2Manager.ViewModels
             }
         }
 
-        [ImportingConstructor]
         public ScriptDetailsViewModel()
         {
             this.DisplayName = "Script Details";

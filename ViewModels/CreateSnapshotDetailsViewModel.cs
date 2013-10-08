@@ -1,14 +1,12 @@
 ﻿using Caliburn.Micro;
 using System;
 using System.Collections.Generic;
-using System.ComponentModel.Composition;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
 namespace Ec2Manager.ViewModels
 {
-    [Export]
     public class CreateSnapshotDetailsViewModel : Screen
     {
         private string name;
@@ -46,7 +44,6 @@ namespace Ec2Manager.ViewModels
             }
         }
 
-        [ImportingConstructor]
         public CreateSnapshotDetailsViewModel()
         {
             this.DisplayName = "Create Snapshot Settings";

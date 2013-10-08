@@ -4,7 +4,6 @@ using Ec2Manager.Properties;
 using Microsoft.Win32;
 using System;
 using System.Collections.Generic;
-using System.ComponentModel.Composition;
 using System.IO;
 using System.Linq;
 using System.Text;
@@ -12,7 +11,6 @@ using System.Threading.Tasks;
 
 namespace Ec2Manager.ViewModels
 {
-    [Export]
     public class ReconnectDetailsViewModel : Screen
     {
         private Config config;
@@ -46,7 +44,6 @@ namespace Ec2Manager.ViewModels
             get { return File.ReadAllText(this.PrivateKeyFile); }
         }
 
-        [ImportingConstructor]
         public ReconnectDetailsViewModel(Config config)
         {
             this.DisplayName = "Browse for key";

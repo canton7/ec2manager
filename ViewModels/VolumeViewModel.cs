@@ -1,7 +1,6 @@
 ﻿using Caliburn.Micro;
 using System;
 using System.Collections.Generic;
-using System.ComponentModel.Composition;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
@@ -13,8 +12,6 @@ using Ec2Manager.Utilities;
 
 namespace Ec2Manager.ViewModels
 {
-    [Export]
-    [PartCreationPolicy(CreationPolicy.NonShared)]
     public class VolumeViewModel : Screen
     {
         public Logger Logger { get; private set; }
@@ -128,7 +125,6 @@ namespace Ec2Manager.ViewModels
         }
 
 
-        [ImportingConstructor]
         public VolumeViewModel(Logger logger, IWindowManager windowManager)
         {
             this.Logger = logger;
