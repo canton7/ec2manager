@@ -3,7 +3,6 @@ using Ec2Manager.Properties;
 using Ec2Manager.Utilities;
 using System;
 using System.Collections.Generic;
-using System.ComponentModel.Composition;
 using System.Diagnostics;
 using System.Linq;
 using System.Reflection;
@@ -12,13 +11,11 @@ using System.Threading.Tasks;
 
 namespace Ec2Manager.ViewModels
 {
-    [Export]
     public class AboutViewModel : Screen
     {
         public string Version { get; private set; }
         public string HomepageUrl { get; set; }
 
-        [ImportingConstructor]
         public AboutViewModel (VersionManager versionManager)
 	    {
             this.DisplayName = "About";

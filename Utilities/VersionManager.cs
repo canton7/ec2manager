@@ -2,7 +2,6 @@
 using Ec2Manager.Properties;
 using System;
 using System.Collections.Generic;
-using System.ComponentModel.Composition;
 using System.Linq;
 using System.Net;
 using System.Reflection;
@@ -11,8 +10,6 @@ using System.Threading.Tasks;
 
 namespace Ec2Manager.Utilities
 {
-    [Export]
-    [PartCreationPolicy(CreationPolicy.Shared)]
     public class VersionManager
     {
         private AsyncLazy<Version> currentVersion;
@@ -30,7 +27,6 @@ namespace Ec2Manager.Utilities
             get { return Assembly.GetExecutingAssembly().GetName().Version; }
         }
 
-        [ImportingConstructor]
         public VersionManager()
         {
             this.currentVersion = new AsyncLazy<Version>(async () =>

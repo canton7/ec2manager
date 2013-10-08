@@ -4,30 +4,20 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using Caliburn.Micro;
-using System.ComponentModel.Composition;
-using System.ComponentModel.Composition.Hosting;
-using System.ComponentModel.Composition.Primitives;
 using Ec2Manager.ViewModels;
 using System.Diagnostics;
 using System.Windows;
+using Ninject;
 
-namespace Ec2Manager
+namespace Ec2Manager.Core
 {
     class AppBootstrapper : Bootstrapper<ShellViewModel>
     {
-        private CompositionContainer container;
+        private IKernel kernel;
 
         protected override void Configure()
         {
-            this.container = new CompositionContainer(new AggregateCatalog(AssemblySource.Instance.Select(x => new AssemblyCatalog(x)).OfType<ComposablePartCatalog>()));
-
-            var batch = new CompositionBatch();
-
-            batch.AddExportedValue<IWindowManager>(new WindowManager());
-            batch.AddExportedValue<IEventAggregator>(new EventAggregator());
-            batch.AddExportedValue(container);
-
-            container.Compose(batch);
+            this.kernel = new StandardKernel(new MainModule());
 
             ActionMessage.ApplyAvailabilityEffect = (context) =>
                 {
@@ -48,13 +38,12 @@ namespace Ec2Manager
 
         protected override object GetInstance(Type service, string key)
         {
-            string contract = string.IsNullOrEmpty(key) ? AttributedModelServices.GetContractName(service) : key;
-            var exports = this.container.GetExportedValues<object>(contract);
+            return string.IsNullOrEmpty(key) ? this.kernel.Get(service) : this.kernel.Get(service, key);
+        }
 
-            if (exports.Count() > 0)
-                return exports.First();
-
-            throw new Exception(string.Format("Could not locate any instances of contract {0}.", contract));
+        protected override IEnumerable<object> GetAllInstances(Type service)
+        {
+            return this.kernel.GetAll(service);
         }
 
         protected override void OnUnhandledException(object sender, System.Windows.Threading.DispatcherUnhandledExceptionEventArgs e)
@@ -66,14 +55,14 @@ namespace Ec2Manager
             e.Handled = true;
         }
 
-        protected override IEnumerable<object> GetAllInstances(Type service)
-        {
-            return this.container.GetExportedValues<object>(AttributedModelServices.GetContractName(service));
-        }
-
         protected override void BuildUp(object instance)
         {
-            this.container.SatisfyImportsOnce(instance);
+            this.kernel.Inject(instance);
+        }
+
+        protected override void OnExit(object sender, EventArgs e)
+        {
+            this.kernel.Dispose();
         }
     }
 }

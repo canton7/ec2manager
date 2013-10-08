@@ -1,7 +1,6 @@
 ﻿using Caliburn.Micro;
 using System;
 using System.Collections.Generic;
-using System.ComponentModel.Composition;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
@@ -13,10 +12,11 @@ using Ec2Manager.Utilities;
 
 namespace Ec2Manager.ViewModels
 {
-    [Export]
-    [PartCreationPolicy(CreationPolicy.NonShared)]
     public class VolumeViewModel : Screen
     {
+        private ICreateSnapshotDetailsViewModelFactory createSnapshotDetailsViewModelFactory;
+        private IScriptDetailsViewModelFactory scriptDetailsViewModelFactory;
+
         public Logger Logger { get; private set; }
         private IWindowManager windowManager;
 
@@ -128,11 +128,16 @@ namespace Ec2Manager.ViewModels
         }
 
 
-        [ImportingConstructor]
-        public VolumeViewModel(Logger logger, IWindowManager windowManager)
+        public VolumeViewModel(
+            Logger logger,
+            IWindowManager windowManager,
+            ICreateSnapshotDetailsViewModelFactory createSnapshotDetailsViewModelFactory,
+            IScriptDetailsViewModelFactory scriptDetailsViewModelFactory)
         {
             this.Logger = logger;
             this.windowManager = windowManager;
+            this.createSnapshotDetailsViewModelFactory = createSnapshotDetailsViewModelFactory;
+            this.scriptDetailsViewModelFactory = scriptDetailsViewModelFactory;
 
             this.SelectedScript = this.Scripts[0];
         }
@@ -268,7 +273,7 @@ namespace Ec2Manager.ViewModels
         }
         public async void CreateSnapshot()
         {
-            var detailsModel = IoC.Get<CreateSnapshotDetailsViewModel>();
+            var detailsModel = this.createSnapshotDetailsViewModelFactory.GetCreateSnapshotDetailsViewModel();
 
             var nameAndDescription = await this.Volume.GetSourceSnapshotNameDescriptionAsync();
             detailsModel.Name = nameAndDescription.Item1;
@@ -318,7 +323,7 @@ namespace Ec2Manager.ViewModels
 
             if (requiredArgs.Length > 0)
             {
-                var vm = IoC.Get<ScriptDetailsViewModel>();
+                var vm = this.scriptDetailsViewModelFactory.CreateScriptDetailsViewModel();
                 vm.SetArguments(requiredArgs);
 
                 var result = this.windowManager.ShowDialog(vm);
@@ -344,5 +349,15 @@ namespace Ec2Manager.ViewModels
                 this.VolumeState = "mounted";
             }
         }
+    }
+
+    public interface ICreateSnapshotDetailsViewModelFactory
+    {
+        CreateSnapshotDetailsViewModel GetCreateSnapshotDetailsViewModel();
+    }
+
+    public interface IScriptDetailsViewModelFactory
+    {
+        ScriptDetailsViewModel CreateScriptDetailsViewModel();
     }
 }

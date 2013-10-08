@@ -2,15 +2,12 @@
 using Ec2Manager.Classes;
 using System;
 using System.Collections.Generic;
-using System.ComponentModel.Composition;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
 namespace Ec2Manager.ViewModels
 {
-    [Export]
-    [PartCreationPolicy(CreationPolicy.NonShared)]
     public class ScriptArgumentViewModel : Screen
     {
         private string description;
@@ -69,7 +66,6 @@ namespace Ec2Manager.ViewModels
             get { return this.Type == ScriptArgumentType.Bool; }
         }
 
-        [ImportingConstructor]
         public ScriptArgumentViewModel()
         {
         }
