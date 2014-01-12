@@ -40,6 +40,9 @@ namespace Ec2Manager.Utilities
         {
             CancellationToken token = cancellationToken.HasValue ? cancellationToken.Value : new CancellationToken();
 
+            char[] outBuffer = new char[1];
+            char[] errBuffer = new char[1];
+
             using (var outsr = new StreamReader(stdout))
             using (var errsr = new StreamReader(stderr))
             {
@@ -47,10 +50,10 @@ namespace Ec2Manager.Utilities
                 {
                     token.ThrowIfCancellationRequested();
 
-                    var outText = outsr.ReadToEnd();
-                    var errText = errsr.ReadToEnd();
+                    var outBytesRead = outsr.Read(outBuffer, 0, 1);
+                    var errBytesRead = errsr.Read(errBuffer, 0, 1);
 
-                    if (string.IsNullOrEmpty(outText) && string.IsNullOrEmpty(errText))
+                    if (outBytesRead == 0 && errBytesRead == 0)
                     {
                         if (asynch.IsCompleted)
                             break;
@@ -59,10 +62,13 @@ namespace Ec2Manager.Utilities
                     }
                     else
                     {
-                        if (!string.IsNullOrEmpty(outText))
+                        var outText = new string(outBuffer);
+                        var errText = new string(errBuffer);
+
+                        if (!string.IsNullOrEmpty(outText) && outText != "\0")
                             this.newLogEntry(outText, true, true);
 
-                        if (!string.IsNullOrEmpty(errText))
+                        if (!string.IsNullOrEmpty(errText) && errText != "\0")
                             this.newLogEntry(errText, true, true);
                     }
                 }
