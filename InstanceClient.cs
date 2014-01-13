@@ -248,7 +248,7 @@ namespace Ec2Manager
             logger.Log("Script finished");
         }
 
-        private async Task<SshCommand> RunCommandAsync(string command, ILogger logger, System.Action<SshCommand, IAsyncResult> doWithResult = null, CancellationToken? cancellationToken = null)
+        private async Task<SshCommand> RunCommandAsync(string command, ILogger logger, System.Func<SshCommand, IAsyncResult, Task> doWithResult = null, CancellationToken? cancellationToken = null)
         {
             CancellationToken token = cancellationToken ?? new CancellationToken();
 
@@ -273,10 +273,19 @@ namespace Ec2Manager
                         tcs.TrySetResult(false);
                     }))
                     {
-                        if (doWithResult != null)
-                            doWithResult(cmd, result);
+                        var tasks = new List<Task>();
 
-                        await tcs.Task;
+                        if (doWithResult != null)
+                            tasks.Add(doWithResult(cmd, result));
+
+                        tasks.Add(tcs.Task);
+
+                        await Task.WhenAny(tasks);
+
+                        if (!tcs.Task.IsCompleted)
+                        {
+                            await tcs.Task;
+                        }
                     };
 
                     cmd.EndExecute(result);
@@ -334,11 +343,11 @@ namespace Ec2Manager
 
             return Task.Run(async () =>
             {
-                await this.RunCommandAsync(command, logger, (cmd, result) =>
+                await this.RunCommandAsync(command, logger, async (cmd, result) =>
                     {
                         try
                         {
-                            logger.LogFromStream(result, cmd.OutputStream, cmd.ExtendedOutputStream, token);
+                            await logger.LogFromStream(result, cmd.OutputStream, cmd.ExtendedOutputStream, token);
                         }
                         catch (OperationCanceledException)
                         {
