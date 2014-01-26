@@ -243,6 +243,7 @@ namespace Ec2Manager
         {
             var mountPoint = this.mountBase + mountPointDir;
 
+            logger.Log("Starting script '{0}'", script);
             await this.RunAndLogStreamAsync("\"" + mountPoint + "/ec2manager/scripts/" + script + "\" " + string.Join(" ", args.Select(x => "\"" + x + "\"")), logger, false, cancellationToken);
 
             logger.Log("Script finished");
