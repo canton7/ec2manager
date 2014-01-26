@@ -78,25 +78,25 @@ namespace Ec2Manager.Ec2Manager
 
         public async Task<double> GetCurrentSpotPriceAsync(InstanceSize instanceSize)
         {
-            var result = await this.client.RequestAsync(s => s.DescribeSpotPriceHistory(new DescribeSpotPriceHistoryRequest()
+            var result = await this.client.DescribeSpotPriceHistoryAsync(new DescribeSpotPriceHistoryRequest()
             {
-                InstanceType = new List<string>() { instanceSize.Key },
-                ProductDescription = new List<string>() { "Linux/UNIX" },
+                InstanceTypes = new List<string>() { instanceSize.Key },
+                ProductDescriptions = new List<string>() { "Linux/UNIX" },
                 MaxResults = 1,
-            }));
+            });
 
-            return double.Parse(result.DescribeSpotPriceHistoryResult.SpotPriceHistory[0].SpotPrice);
+            return double.Parse(result.SpotPriceHistory[0].Price);
         }
 
         public async Task<IEnumerable<Ec2Instance>> ListInstancesAsync()
         {
-            var instances = (await this.client.RequestAsync(s => s.DescribeInstances(new DescribeInstancesRequest()
+            var instances = (await this.client.DescribeInstancesAsync(new DescribeInstancesRequest()
             {
-                Filter = new List<Filter>()
+                Filters = new List<Filter>()
                 {
-                    new Filter() { Name = "tag:CreatedByEc2Manager", Value = new List<string>() { "*" } },
+                    new Filter() { Name = "tag:CreatedByEc2Manager", Values = new List<string>() { "*" } },
                 }
-            }))).DescribeInstancesResult.Reservation.SelectMany(reservation => reservation.RunningInstance.Where(instance => instance.InstanceState.Name == "running"));
+            })).Reservations.SelectMany(reservation => reservation.Instances.Where(instance => instance.State.Name == "running"));
 
             return instances.Select(x => new Ec2Instance(this.client, x));
         }

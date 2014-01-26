@@ -273,7 +273,7 @@ namespace Ec2Manager.ViewModels
         }
         public async void CreateSnapshot()
         {
-            var detailsModel = this.createSnapshotDetailsViewModelFactory.GetCreateSnapshotDetailsViewModel();
+            var detailsModel = this.createSnapshotDetailsViewModelFactory.CreateCreateSnapshotDetailsViewModel();
 
             var nameAndDescription = await this.Volume.GetSourceSnapshotNameDescriptionAsync();
             detailsModel.Name = nameAndDescription.Item1;
@@ -353,7 +353,7 @@ namespace Ec2Manager.ViewModels
 
     public interface ICreateSnapshotDetailsViewModelFactory
     {
-        CreateSnapshotDetailsViewModel GetCreateSnapshotDetailsViewModel();
+        CreateSnapshotDetailsViewModel CreateCreateSnapshotDetailsViewModel();
     }
 
     public interface IScriptDetailsViewModelFactory
