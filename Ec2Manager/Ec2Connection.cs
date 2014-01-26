@@ -69,6 +69,11 @@ namespace Ec2Manager.Ec2Manager
             return instance;
         }
 
+        public async Task<string> GetUserIdAsync()
+        {
+            return (await new Amazon.IdentityManagement.AmazonIdentityManagementServiceClient(credentials.AwsAccessKey, credentials.AwsSecretKey).GetUserAsync(new Amazon.IdentityManagement.Model.GetUserRequest())).User.UserId;
+        }
+
         //public Ec2Instance ReconnectInstance(string instanceId)
         //{
         //    var instance = new Ec2Instance(this.client, instanceId);
