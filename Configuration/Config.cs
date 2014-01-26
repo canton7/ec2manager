@@ -49,15 +49,22 @@ namespace Ec2Manager.Configuration
             this.LoadMainConfig();
         }
 
-        public IList<Friend> Friends
+        public IEnumerable<Friend> DefaultFriends
         {
-            get
-            {
-                var friends = new List<Friend>() { new Friend(Settings.Default.DefaultImagesUserId, "Official Images") };
-                return friends;
-            }
+            get { return new List<Friend>() { new Friend(Settings.Default.DefaultImagesUserId, "Official Images") }; }
         }
 
+        public IEnumerable<Friend> FriendsWithoutDefaults
+        {
+            get { return new List<Friend>();  }
+        }
+
+        public IEnumerable<Friend> Friends
+        {
+            get { return this.DefaultFriends.Concat(this.FriendsWithoutDefaults); }
+        }
+
+        
         private void LoadMainConfig()
         {
             if (File.Exists(this.MainConfigFile))

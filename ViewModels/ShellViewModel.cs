@@ -12,6 +12,7 @@ using Ec2Manager.Properties;
 using System.Diagnostics;
 using System.Dynamic;
 using Ec2Manager.Utilities;
+using Ec2Manager.Ec2Manager;
 
 namespace Ec2Manager.ViewModels
 {
@@ -21,6 +22,7 @@ namespace Ec2Manager.ViewModels
     {
         private IWindowManager windowManager;
         private Config config;
+        private Ec2Connection connection;
         private VersionManager versionManager;
         private IInstanceViewModelFactory instanceViewModelFactory;
         private ITerminateInstanceViewModelFactory terminateInstanceViewModelFactory;
@@ -44,6 +46,7 @@ namespace Ec2Manager.ViewModels
             IEventAggregator events,
             IWindowManager windowManager,
             Config config,
+            Ec2Connection connection,
             VersionManager versionManager,
             IInstanceViewModelFactory instanceViewModelFactory,
             ITerminateInstanceViewModelFactory terminateInstanceViewModelFactory)
@@ -51,11 +54,13 @@ namespace Ec2Manager.ViewModels
             this.DisplayName = "Ec2Manager";
             this.windowManager = windowManager;
             this.config = config;
+            this.connection = connection;
             this.versionManager = versionManager;
             this.instanceViewModelFactory = instanceViewModelFactory;
             this.terminateInstanceViewModelFactory = terminateInstanceViewModelFactory;
 
             this.Bind(s => s.ActiveItem, _ => this.NotifyOfPropertyChange(() => SubActiveItem));
+            this.connection.Bind(s => s.IsConnected, _ => this.NotifyOfPropertyChange(() => CanManageFriends));
 
             events.Subscribe(this);
 
@@ -112,6 +117,20 @@ namespace Ec2Manager.ViewModels
             {
                 callback(true);
             }
+        }
+
+        public bool CanManageFriends
+        {
+            get { return this.connection.IsConnected; }
+        }
+
+        public void ManageFriends()
+        {
+            this.windowManager.ShowDialog<ManageFriendsViewModel>(settings: new Dictionary<string, object>()
+                {
+                    { "Width", 300 },
+                    { "SizeToContent", SizeToContent.Height },
+                });
         }
 
         public void ShowSettings()

@@ -143,6 +143,7 @@
     <Compile Include="ViewModels\CreateSnapshotDetailsViewModel.cs" />
     <Compile Include="ViewModels\InstanceDetailsViewModel.cs" />
     <Compile Include="ViewModels\InstanceViewModel.cs" />
+    <Compile Include="ViewModels\ManageFriendsViewModel.cs" />
     <Compile Include="ViewModels\ReconnectDetailsViewModel.cs" />
     <Compile Include="ViewModels\ScriptArgumentViewModel.cs" />
     <Compile Include="ViewModels\ScriptDetailsViewModel.cs" />
@@ -168,6 +169,9 @@
     </Compile>
     <Compile Include="Views\InstanceView.xaml.cs">
       <DependentUpon>InstanceView.xaml</DependentUpon>
+    </Compile>
+    <Compile Include="Views\ManageFriendsView.xaml.cs">
+      <DependentUpon>ManageFriendsView.xaml</DependentUpon>
     </Compile>
     <Compile Include="Views\ReconnectDetailsView.xaml.cs">
       <DependentUpon>ReconnectDetailsView.xaml</DependentUpon>
@@ -223,6 +227,10 @@
       <Generator>MSBuild:Compile</Generator>
     </Page>
     <Page Include="Views\InstanceView.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Include="Views\ManageFriendsView.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>
