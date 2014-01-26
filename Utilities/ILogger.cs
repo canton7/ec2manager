@@ -13,7 +13,7 @@ namespace Ec2Manager.Utilities
     {
         void Log(string message);
         void Log(string format, params string[] parameters);
-        void LogFromStream(IAsyncResult asynch, Stream stdout, Stream stderr = null, CancellationToken? cancellationToken = null);
+        Task LogFromStream(IAsyncResult asynch, Stream stdout, Stream stderr = null, CancellationToken? cancellationToken = null);
     }
 
     public class LogEntry
@@ -22,20 +22,23 @@ namespace Ec2Manager.Utilities
         public DateTime Time { get; private set; }
         public int RepititionCount { get; private set; }
         public bool IsComplete { get; set; }
+        public string Category { get; set; }
 
-        public LogEntry(string message, bool isComplete = true)
+        public LogEntry(string message, bool isComplete = true, string category = null)
         {
             this.Message = message;
             this.Time = DateTime.Now;
             this.RepititionCount = 0;
             this.IsComplete = isComplete;
+            this.Category = category;
         }
 
-        public LogEntry(int repititionCount)
+        public LogEntry(int repititionCount, string category = null)
         {
             this.RepititionCount = repititionCount;
             this.Time = DateTime.Now;
             this.IsComplete = true;
+            this.Category = category;
 
             this.Message = string.Format("Last message repeated {0} times", this.RepititionCount);
         }

@@ -119,7 +119,9 @@ namespace Ec2Manager.ViewModels
             this.uptimeTimer = new System.Timers.Timer();
             this.uptimeTimer.Elapsed += async (o, e) => 
                 {
-                    if (this.Client.IsConnected)
+                    if (this.Client == null || !this.Client.IsConnected)
+                        this.uptimeTimer.Stop();
+                    else
                         this.Uptime = await this.Client.GetUptimeAsync(this.Logger);
                 };
             this.uptimeTimer.AutoReset = true;
