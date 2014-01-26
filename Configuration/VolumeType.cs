@@ -25,11 +25,12 @@ namespace Ec2Manager.Configuration
             this.IsCustom = false;
         }
 
-        public static VolumeType Custom(string name)
+        public static VolumeType Custom(string name, Friend owner)
         {
             return new VolumeType()
             {
                 Name = name,
+                Owner = owner,
                 IsCustom = true,
             };
         }

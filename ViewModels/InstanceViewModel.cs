@@ -14,6 +14,7 @@ using System.Threading;
 using Ec2Manager.Ec2Manager;
 using System.Diagnostics;
 using Ec2Manager.Utilities;
+using System.Windows.Data;
 
 namespace Ec2Manager.ViewModels
 {
@@ -21,7 +22,7 @@ namespace Ec2Manager.ViewModels
     {
         private static readonly List<VolumeType> defaultVolumeTypes = new List<VolumeType>
             {
-                VolumeType.Custom("Custom Snapshot or Volume"),
+                VolumeType.Custom("Custom Snapshot or Volume", new Friend(null, "Custom")),
             };
 
         public Ec2Instance Instance { get; private set; }
@@ -56,11 +57,9 @@ namespace Ec2Manager.ViewModels
             }
         }
 
-        private List<VolumeType> volumeTypes = new List<VolumeType>() { new VolumeType(null, "Loading...", null) };
-        public List<VolumeType> VolumeTypes
-        {
-            get { return volumeTypes.Concat(defaultVolumeTypes).ToList(); }
-        }
+        public ListCollectionView VolumeTypesView { get; private set; }
+        public BindableCollection<VolumeType> VolumeTypes { get; private set; }
+
         private VolumeType selectedVolumeType;
         public VolumeType SelectedVolumeType
         {
@@ -131,7 +130,11 @@ namespace Ec2Manager.ViewModels
 
             instanceDetailsModel.Logger = logger;
 
+            this.VolumeTypes = new BindableCollection<VolumeType>() { new VolumeType(null, "Loading...", null) };
             this.SelectedVolumeType = this.VolumeTypes[0];
+            this.VolumeTypesView = new ListCollectionView(this.VolumeTypes);
+            this.VolumeTypesView.GroupDescriptions.Add(new PropertyGroupDescription("Owner"));
+
             this.ActivateItem(instanceDetailsModel);
         }
 
@@ -157,11 +160,12 @@ namespace Ec2Manager.ViewModels
         private async Task RefreshVolumes()
         {
             var snapshots = await this.connection.CreateSnapshotBrowser().GetSnapshotsForFriendsAsync(this.config.Friends);
-            this.volumeTypes.Clear();
+            this.VolumeTypes.Clear();
             if (snapshots.Any())
             {
-                this.volumeTypes.AddRange(snapshots);
+                this.VolumeTypes.AddRange(snapshots);
             }
+            this.VolumeTypes.AddRange(defaultVolumeTypes);
             this.SelectedVolumeType = this.VolumeTypes[0];
             this.NotifyOfPropertyChange(() => VolumeTypes);
         }
@@ -346,6 +350,7 @@ namespace Ec2Manager.ViewModels
             {
                 return this.InstanceState == "running" && this.Instance != null &&
                     this.Instance.InstanceState == "running" && this.Client != null &&
+                    this.SelectedVolumeType != null &&
                     (this.SelectedVolumeType.IsCustom == true || this.SelectedVolumeType.SnapshotId != null) &&
                     (!this.selectedVolumeType.IsCustom || !string.IsNullOrWhiteSpace(this.CustomVolumeSnapshotId)) &&
                     this.Client.IsConnected;
