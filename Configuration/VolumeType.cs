@@ -8,6 +8,7 @@ namespace Ec2Manager.Configuration
 {
     public class VolumeType
     {
+        public Friend Owner { get; set; }
         public string SnapshotId { get; set; }
         public string Name { get; set; }
         public bool IsCustom { get; set; }
@@ -16,10 +17,11 @@ namespace Ec2Manager.Configuration
         {
         }
 
-        public VolumeType(string snapshotId, string name)
+        public VolumeType(string snapshotId, string name, Friend owner)
         {
             this.SnapshotId = snapshotId;
             this.Name = name;
+            this.Owner = owner;
             this.IsCustom = false;
         }
 

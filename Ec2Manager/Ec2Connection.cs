@@ -69,6 +69,11 @@ namespace Ec2Manager.Ec2Manager
             return instance;
         }
 
+        public Ec2SnapshotBrowser CreateSnapshotBrowser()
+        {
+            return new Ec2SnapshotBrowser(this.client);
+        }
+
         public async Task<string> GetUserIdAsync()
         {
             return (await new Amazon.IdentityManagement.AmazonIdentityManagementServiceClient(credentials.AwsAccessKey, credentials.AwsSecretKey).GetUserAsync(new Amazon.IdentityManagement.Model.GetUserRequest())).User.UserId;

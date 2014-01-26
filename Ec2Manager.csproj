@@ -109,6 +109,7 @@
     <Compile Include="Classes\StringExtensions.cs" />
     <Compile Include="Classes\WindowManagerExtensions.cs" />
     <Compile Include="Configuration\Config.cs" />
+    <Compile Include="Configuration\Friend.cs" />
     <Compile Include="Configuration\MainConfig.cs" />
     <Compile Include="Configuration\VolumeType.cs" />
     <Compile Include="Converters\IntToVisibilityConverter.cs" />
@@ -118,6 +119,7 @@
     <Compile Include="Ec2Manager\Credentials.cs" />
     <Compile Include="Ec2Manager\Ec2Instance.cs" />
     <Compile Include="Ec2Manager\Ec2Connection.cs" />
+    <Compile Include="Ec2Manager\Ec2SnapshotBrowser.cs" />
     <Compile Include="Ec2Manager\InstanceSize.cs" />
     <Compile Include="Ec2Manager\InstanceSpecification.cs" />
     <Compile Include="Ec2Manager\StubLogger.cs" />

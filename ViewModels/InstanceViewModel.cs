@@ -26,6 +26,7 @@ namespace Ec2Manager.ViewModels
 
         public Ec2Instance Instance { get; private set; }
         public InstanceClient Client { get; private set; }
+        private Ec2Connection connection;
         private IVolumeViewModelFactory volumeViewModelFactory;
         private IWindowManager windowManager;
 
@@ -55,7 +56,7 @@ namespace Ec2Manager.ViewModels
             }
         }
 
-        private List<VolumeType> volumeTypes = new List<VolumeType>() { new VolumeType(null, "Loading...") };
+        private List<VolumeType> volumeTypes = new List<VolumeType>() { new VolumeType(null, "Loading...", null) };
         public List<VolumeType> VolumeTypes
         {
             get { return volumeTypes.Concat(defaultVolumeTypes).ToList(); }
@@ -110,10 +111,11 @@ namespace Ec2Manager.ViewModels
             }
         }
 
-        public InstanceViewModel(InstanceDetailsViewModel instanceDetailsModel, Logger logger, Config config, IVolumeViewModelFactory volumeViewModelFactory, IWindowManager windowManager)
+        public InstanceViewModel(InstanceDetailsViewModel instanceDetailsModel, Logger logger, Config config, Ec2Connection connection, IVolumeViewModelFactory volumeViewModelFactory, IWindowManager windowManager)
         {
             this.Logger = logger;
             this.config = config;
+            this.connection = connection;
             this.volumeViewModelFactory = volumeViewModelFactory;
             this.windowManager = windowManager;
             this.uptimeTimer = new System.Timers.Timer();
@@ -154,10 +156,13 @@ namespace Ec2Manager.ViewModels
 
         private async Task RefreshVolumes()
         {
-            var snapshots = await this.config.GetSnapshotConfigAsync();
+            var snapshots = await this.connection.CreateSnapshotBrowser().GetSnapshotsForFriendsAsync(this.config.Friends);
             this.volumeTypes.Clear();
-            this.volumeTypes.AddRange(snapshots);
-            this.SelectedVolumeType = this.volumeTypes[0];
+            if (snapshots.Any())
+            {
+                this.volumeTypes.AddRange(snapshots);
+            }
+            this.SelectedVolumeType = this.VolumeTypes[0];
             this.NotifyOfPropertyChange(() => VolumeTypes);
         }
 
