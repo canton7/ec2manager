@@ -280,12 +280,7 @@ namespace Ec2Manager
 
                         tasks.Add(tcs.Task);
 
-                        await Task.WhenAny(tasks);
-
-                        if (!tcs.Task.IsCompleted)
-                        {
-                            await tcs.Task;
-                        }
+                        await Task.WhenAll(tasks);
                     };
 
                     cmd.EndExecute(result);
