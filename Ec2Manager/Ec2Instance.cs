@@ -266,45 +266,6 @@ namespace Ec2Manager.Ec2Manager
 
         #endregion
 
-        #region IP Addresses
-
-        private async Task<string> AllocateAddressAsync()
-        {
-            this.Logger.Log("Allocating an IP address");
-            var allocateResponse = await this.Client.RequestAsync(s => s.AllocateAddress(new AllocateAddressRequest()));
-            var publicIp = allocateResponse.AllocateAddressResult.PublicIp;
-            this.Logger.Log("Ip address {0} allocated", publicIp);
-
-            return publicIp;
-        }
-
-        private async Task AssignAddressAsync(string publicIp)
-        {
-            this.Logger.Log("Assigning public IP {0} to instance", this.PublicIp);
-            await this.Client.RequestAsync(s => s.AssociateAddress(new AssociateAddressRequest()
-            {
-                InstanceId = this.InstanceId,
-                PublicIp = publicIp,
-            }));
-            this.Logger.Log("Public IP assigned");
-        }
-
-        private async Task ReleaseIpAsync(string publicIp)
-        {
-            this.Logger.Log("Releasing IP address {0}", publicIp);
-            await this.Client.RequestAsync(s => s.DisassociateAddress(new DisassociateAddressRequest()
-            {
-                PublicIp = publicIp,
-            }));
-            await this.Client.RequestAsync(s => s.ReleaseAddress(new ReleaseAddressRequest()
-            {
-                PublicIp = publicIp,
-            }));
-            this.Logger.Log("Ip address released");
-        }
-
-        #endregion
-
         #region Volumes
 
         public Ec2Volume CreateVolume(string source, string name)
@@ -641,6 +602,8 @@ namespace Ec2Manager.Ec2Manager
                     await this.CreateInstanceAsync(token);
 
                 token.ThrowIfCancellationRequested();
+
+                this.PublicIp = (await this.DescribeInstanceAsync()).IpAddress;
             }
             catch (Exception e)
             {
@@ -651,27 +614,6 @@ namespace Ec2Manager.Ec2Manager
                 this.Logger.Log("Error creating instance: {0}. Performing rollback", exception.Message);
                 if (this.Specification.IsSpotInstance)
                     await this.CancelBidRequestAsync();
-                await this.TerminateAsync();
-                await this.DeleteKeyPairAsync();
-                await this.DeleteSecurityGroupAsync();
-                throw exception;
-            }
-
-            exception = null;
-            try
-            {
-                this.PublicIp = await this.AllocateAddressAsync();
-                await this.AssignAddressAsync(this.PublicIp);
-                token.ThrowIfCancellationRequested();
-            }
-            catch (Exception e)
-            {
-                exception = e;
-            }
-            if (exception != null)
-            {
-                this.Logger.Log("Error allocating public IP: {0}. Performing rollback", exception.Message);
-                await this.ReleaseIpAsync(this.PublicIp);
                 await this.TerminateAsync();
                 await this.DeleteKeyPairAsync();
                 await this.DeleteSecurityGroupAsync();
@@ -718,14 +660,6 @@ namespace Ec2Manager.Ec2Manager
                 .Where(x => x.Attachment.Count == 1)
                 .Where(x => x.Tag.Any(y => y.Key == "CreatedByEc2Manager"))
                 .Select(x => x.VolumeId);
-
-
-            // Public IPs are a limited resource and people are impatient. Make sure we release
-            // the IP before they get too bored
-            if (this.PublicIp != null)
-            {
-                await this.ReleaseIpAsync(this.PublicIp);
-            }
 
             // Detach the volumes in parallel, since it takes a nice long time
             this.Logger.Log("Found uniquely attached volumes: {0}", string.Join(", ", volumes));
