@@ -138,6 +138,8 @@
     <Compile Include="Converters\VolumeTypeToIdVisibilityConverter.cs" />
     <Compile Include="Events\CreateInstanceEvent.cs" />
     <Compile Include="Utilities\VersionManager.cs" />
+    <Compile Include="Validation\ValidationBindingExtension.cs" />
+    <Compile Include="Validation\Validator.cs" />
     <Compile Include="ViewModels\AboutViewModel.cs" />
     <Compile Include="ViewModels\ConnectViewModel.cs" />
     <Compile Include="ViewModels\CreateNewVolumeDetailsViewModel.cs" />
