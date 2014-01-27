@@ -21,7 +21,7 @@
                       CanUserDeleteRows="True">
                 <DataGrid.Columns>
                     <DataGridTextColumn Header="Name" Binding="{val:ValidationBinding Name}" Width="*"/>
-                    <DataGridTextColumn Header="User ID" Binding="{val:ValidationBinding UserId}" Width="*"/>
+                    <DataGridTextColumn Header="Amazon User ID" Binding="{val:ValidationBinding UserId}" Width="*"/>
                 </DataGrid.Columns>
             </DataGrid>
         </StackPanel>

@@ -45,6 +45,11 @@ namespace Ec2Manager.ViewModels
             this.UserId = friend.UserId;
         }
 
+        public Friend FriendValue
+        {
+            get { return new Friend(this.UserId, this.Name); }
+        }
+
         public IValidation ValidateWith<TProperty>(System.Linq.Expressions.Expression<Func<TProperty>> property, Func<TProperty, bool> validator, string message)
         {
             return this.validator.ValidateWith(property, validator, message);
