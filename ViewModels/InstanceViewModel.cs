@@ -57,7 +57,6 @@ namespace Ec2Manager.ViewModels
             }
         }
 
-        public ListCollectionView VolumeTypesView { get; private set; }
         public BindableCollection<VolumeType> VolumeTypes { get; private set; }
 
         private VolumeType selectedVolumeType;
@@ -132,8 +131,6 @@ namespace Ec2Manager.ViewModels
 
             this.VolumeTypes = new BindableCollection<VolumeType>() { new VolumeType(null, "Loading...", null) };
             this.SelectedVolumeType = this.VolumeTypes[0];
-            this.VolumeTypesView = new ListCollectionView(this.VolumeTypes);
-            this.VolumeTypesView.GroupDescriptions.Add(new PropertyGroupDescription("Owner"));
 
             this.ActivateItem(instanceDetailsModel);
         }

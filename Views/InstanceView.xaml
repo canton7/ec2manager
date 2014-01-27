@@ -9,6 +9,13 @@
     <DockPanel>
         <DockPanel.Resources>
             <BooleanToVisibilityConverter x:Key="booleanToVisibilityConverter"/>
+            <conv:ItemToPropertyNameConverter PropertyName="Name" x:Key="friendToFriendNameConverter"/>
+            
+            <CollectionViewSource Source="{Binding VolumeTypes}" x:Key="volumeTypesCvs">
+                <CollectionViewSource.GroupDescriptions>
+                    <PropertyGroupDescription PropertyName="Owner" Converter="{StaticResource friendToFriendNameConverter}"/>
+                </CollectionViewSource.GroupDescriptions>
+            </CollectionViewSource>
         </DockPanel.Resources>
         
         <GroupBox Header="Instance Properties" DockPanel.Dock="Top" Padding="10">
@@ -46,12 +53,12 @@
                     <ColumnDefinition Width="Auto"/>
                 </Grid.ColumnDefinitions>
 
-                <ComboBox Grid.Column="0" ItemsSource="{Binding VolumeTypesView}" DisplayMemberPath="Name" SelectedItem="{Binding SelectedVolumeType}">
+                <ComboBox Grid.Column="0" ItemsSource="{Binding Source={StaticResource volumeTypesCvs}}" DisplayMemberPath="Name" SelectedItem="{Binding SelectedVolumeType}">
                     <ComboBox.GroupStyle>
                         <GroupStyle>
                             <GroupStyle.HeaderTemplate>
                                 <DataTemplate>
-                                    <TextBlock Text="{Binding Name.Name}" FontWeight="Bold" FontStyle="Italic"/>   
+                                    <TextBlock Text="{Binding Name}" FontWeight="Bold" FontStyle="Italic"/>   
                                 </DataTemplate>
                             </GroupStyle.HeaderTemplate>
                         </GroupStyle>
