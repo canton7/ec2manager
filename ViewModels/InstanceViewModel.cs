@@ -22,7 +22,7 @@ namespace Ec2Manager.ViewModels
     {
         private static readonly List<VolumeType> defaultVolumeTypes = new List<VolumeType>
             {
-                VolumeType.Custom("Custom Snapshot or Volume", new Friend(null, "Custom")),
+                VolumeType.Custom("Custom Snapshot or Volume", new Friend(null, "Your Images")),
             };
 
         public Ec2Instance Instance { get; private set; }

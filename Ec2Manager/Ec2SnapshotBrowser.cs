@@ -32,10 +32,10 @@ namespace Ec2Manager.Ec2Manager
                 }
             });
 
-            return result.Snapshots
-                .OrderBy(x => friendsMap[x.OwnerId].Index)
-                .ThenBy(x => x.Description)
-                .Select(x => new Configuration.VolumeType(x.SnapshotId, x.Description, friendsMap[x.OwnerId].Item));
+            return from snapshot in result.Snapshots
+                    let mapItem = friendsMap.ContainsKey(snapshot.OwnerId) ? friendsMap[snapshot.OwnerId] : friendsMap["self"]
+                    orderby mapItem.Index, snapshot.Description
+                    select new Configuration.VolumeType(snapshot.SnapshotId, snapshot.Description, mapItem.Item);
         }
     }
 }
