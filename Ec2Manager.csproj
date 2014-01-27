@@ -112,8 +112,8 @@
     <Compile Include="Configuration\Friend.cs" />
     <Compile Include="Configuration\MainConfig.cs" />
     <Compile Include="Configuration\VolumeType.cs" />
-    <Compile Include="Converters\FriendToFriendNameConverter.cs" />
     <Compile Include="Converters\IntToVisibilityConverter.cs" />
+    <Compile Include="Converters\ItemToPropertyNameConverter.cs" />
     <Compile Include="Converters\StringToBooleanConverter.cs" />
     <Compile Include="Core\MainModule.cs" />
     <Compile Include="Ec2Manager\AmazonEC2ClientExtensions.cs" />
