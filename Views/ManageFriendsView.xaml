@@ -28,7 +28,7 @@
 
         <StackPanel Grid.Column="1" Margin="20,0,0,0">
             <TextBlock>Actions:</TextBlock>
-            <Button Name="Add">Add</Button>
+            <Button Name="AddFriend">Add</Button>
         </StackPanel>
     </Grid>
 </UserControl>

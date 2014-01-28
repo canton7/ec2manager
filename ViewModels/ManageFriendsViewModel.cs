@@ -6,22 +6,32 @@ using System.Collections.Generic;
 using System.ComponentModel;
 using System.Linq;
 using System.Text;
+using System.Text.RegularExpressions;
 using System.Threading.Tasks;
+using Ec2Manager.Classes;
 
 namespace Ec2Manager.ViewModels
 {
     public class ManageFriendsViewModel : Screen
     {
+        private IWindowManager windowManager;
         private Config config;
 
         public BindableCollection<FriendModel> Friends { get; private set; }
+        public string Errors { get { return String.Join(Environment.NewLine, this.Friends.Select(x => x.Error)); } }
 
-        public ManageFriendsViewModel(Config config)
+        public ManageFriendsViewModel(IWindowManager windowManager, Config config)
         {
             this.DisplayName = "Manage Friends";
 
+            this.windowManager = windowManager;
             this.config = config;
             this.Friends = new BindableCollection<FriendModel>(config.FriendsWithoutDefaults.Select(x => new FriendModel(x)));
+        }
+
+        public void AddFriend(FriendModel context)
+        {
+            this.windowManager.ShowDialog<EditFriendViewModel>();
         }
 
         
@@ -36,7 +46,8 @@ namespace Ec2Manager.ViewModels
 
         public FriendModel()
         {
-            this.ValidateWith(() => this.Name, x => false, "Bad something or other");
+            this.ValidateWith(() => this.Name, x => !String.IsNullOrWhiteSpace(x), "Name must not be empty");
+            this.ValidateWith(() => this.UserId, x => x != null && Regex.Match(x, @"^9\d{11}$").Success, "Bad Amazon User Id. Must be of the form 9xxxxxxxxxxx");
         }
 
         public FriendModel(Friend friend) : this()

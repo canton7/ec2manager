@@ -144,6 +144,7 @@
     <Compile Include="ViewModels\ConnectViewModel.cs" />
     <Compile Include="ViewModels\CreateNewVolumeDetailsViewModel.cs" />
     <Compile Include="ViewModels\CreateSnapshotDetailsViewModel.cs" />
+    <Compile Include="ViewModels\EditFriendViewModel.cs" />
     <Compile Include="ViewModels\InstanceDetailsViewModel.cs" />
     <Compile Include="ViewModels\InstanceViewModel.cs" />
     <Compile Include="ViewModels\ManageFriendsViewModel.cs" />
@@ -166,6 +167,9 @@
     </Compile>
     <Compile Include="Views\CreateSnapshotDetailsView.xaml.cs">
       <DependentUpon>CreateSnapshotDetailsView.xaml</DependentUpon>
+    </Compile>
+    <Compile Include="Views\EditFriendView.xaml.cs">
+      <DependentUpon>EditFriendView.xaml</DependentUpon>
     </Compile>
     <Compile Include="Views\InstanceDetailsView.xaml.cs">
       <DependentUpon>InstanceDetailsView.xaml</DependentUpon>
@@ -222,6 +226,10 @@
       <Generator>MSBuild:Compile</Generator>
     </Page>
     <Page Include="Views\CreateSnapshotDetailsView.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Include="Views\EditFriendView.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>

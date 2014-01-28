@@ -21,6 +21,7 @@ namespace Ec2Manager.Validation
         public IValueConverter Converter { get; set; }
         public string StringFormat { get; set; }
         public UpdateSourceTrigger UpdateSourceTrigger { get; set; }
+        public object TargetNullValue { get; set; }
 
         public ValidationBindingExtension(string path)
         {
@@ -29,7 +30,7 @@ namespace Ec2Manager.Validation
             this.ReplaceInvalidValues = true;
             this.ReplaceInvalidValuesWith = null;
 
-            this.UpdateSourceTrigger = UpdateSourceTrigger.PropertyChanged;
+            this.UpdateSourceTrigger = UpdateSourceTrigger.LostFocus;
         }
 
         public override object ProvideValue(IServiceProvider serviceProvider)
@@ -41,6 +42,7 @@ namespace Ec2Manager.Validation
 
             binding.UpdateSourceTrigger = this.UpdateSourceTrigger;
             binding.StringFormat = this.StringFormat;
+            binding.TargetNullValue = this.TargetNullValue;
 
             if (this.ReplaceInvalidValues)
             {
