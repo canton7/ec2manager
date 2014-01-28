@@ -14,6 +14,8 @@
                 <RowDefinition/>
                 <RowDefinition/>
             </Grid.RowDefinitions>
+
+	    <!-- http://blindmeis.wordpress.com/2012/04/16/wpf-mvvm-idataerrorinfo-validation-errortemplate/ -->
         
             <Label Grid.Row="0" Grid.Column="0">Name:</Label>
             <TextBox Grid.Row="0" Grid.Column="1" Text="{val:ValidationBinding Name}"/>
