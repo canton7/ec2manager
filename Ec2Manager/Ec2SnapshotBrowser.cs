@@ -37,5 +37,25 @@ namespace Ec2Manager.Ec2Manager
                     orderby mapItem.Index, snapshot.Description
                     select new Configuration.VolumeType(snapshot.SnapshotId, snapshot.Description, mapItem.Item);
         }
+
+        public async Task<int?> CountSnapshotsForUserId(string userId)
+        {
+            try
+            {
+                var results = await this.client.DescribeSnapshotsAsync(new DescribeSnapshotsRequest()
+                {
+                    OwnerIds = new List<string>() { userId },
+                    Filters = new List<Filter>()
+                    {
+                        new Filter() { Name = "tag-key", Values = new List<string>() { "CreatedByEc2Manager" } },
+                    }
+                });
+                return results.Snapshots.Count;
+            }
+            catch (AmazonEC2Exception)
+            {
+                return null;
+            }
+        }
     }
 }

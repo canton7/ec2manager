@@ -9,6 +9,7 @@ using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using Ec2Manager.Classes;
+using Ec2Manager.Ec2Manager;
 
 namespace Ec2Manager.ViewModels
 {
@@ -16,6 +17,7 @@ namespace Ec2Manager.ViewModels
     {
         private IWindowManager windowManager;
         private Config config;
+        private Ec2SnapshotBrowser snapshotBrowser;
 
         public BindableCollection<FriendModel> Friends { get; private set; }
 
@@ -56,13 +58,15 @@ namespace Ec2Manager.ViewModels
             }
         }
 
-        public ManageFriendsViewModel(IWindowManager windowManager, Config config)
+        public ManageFriendsViewModel(IWindowManager windowManager, Config config, Ec2Connection connection)
         {
             this.DisplayName = "Manage Friends";
 
             this.windowManager = windowManager;
             this.config = config;
-            this.Friends = new BindableCollection<FriendModel>(config.FriendsWithoutDefaults.Select(x => new FriendModel(x)));
+            this.snapshotBrowser = connection.CreateSnapshotBrowser();
+
+            this.Friends = new BindableCollection<FriendModel>(config.FriendsWithoutDefaults.Select(x => new FriendModel(x, snapshotBrowser)));
 
             this.Bind(x => x.SelectedFriend, _ => this.NotifyOfPropertyChange(() => this.CanEditFriend));
             this.Bind(x => x.SelectedFriend, _ => this.NotifyOfPropertyChange(() => this.CanDeleteFriend));
@@ -78,7 +82,7 @@ namespace Ec2Manager.ViewModels
         }
         public void AddFriend()
         {
-            var friend = new FriendModel();
+            var friend = new FriendModel(this.snapshotBrowser);
             this.Friends.Add(friend);
             this.FriendBeingEdited = friend;
             this.SelectedFriend = friend;
@@ -144,13 +148,33 @@ namespace Ec2Manager.ViewModels
             }
         }
 
-        public FriendModel()
+        private int? _numSnapshots;
+        public int? NumSnapshots
         {
+            get { return this._numSnapshots; }
+            set
+            {
+                this._numSnapshots = value;
+                this.NotifyOfPropertyChange();
+            }
+        }
+
+        public FriendModel(Ec2SnapshotBrowser snapshotBrowser)
+        {
+            // TODO: For some reason this isn't always fired
+            this.Bind(x => x.UserId, _ =>
+                {
+                    if (this.validator.CheckPropertyWithoutNotifications(() => this.UserId).Length == 0)
+                        snapshotBrowser.CountSnapshotsForUserId(this.UserId).ContinueWith(t => this.NumSnapshots = t.Result);
+                    else
+                        this.NumSnapshots = null;
+                });
+
             this.ValidateWith(() => this.Name, x => !String.IsNullOrWhiteSpace(x), "Name must not be empty");
             this.ValidateWith(() => this.UserId, x => x != null && Regex.Match(x, @"^9\d{11}$").Success, "Bad Amazon User Id. Must be of the form 9xxxxxxxxxxx");
         }
 
-        public FriendModel(Friend friend) : this()
+        public FriendModel(Friend friend, Ec2SnapshotBrowser snapshotBrowser) : this(snapshotBrowser)
         {
             this.Name = friend.Name;
             this.UserId = friend.UserId;
