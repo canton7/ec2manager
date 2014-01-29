@@ -18,7 +18,43 @@ namespace Ec2Manager.ViewModels
         private Config config;
 
         public BindableCollection<FriendModel> Friends { get; private set; }
-        public string Errors { get { return String.Join(Environment.NewLine, this.Friends.Select(x => x.Error)); } }
+
+        private FriendModel _selectedFriend;
+        public FriendModel SelectedFriend
+        {
+            get { return this._selectedFriend; }
+            set
+            {
+                this._selectedFriend = value;
+                this.NotifyOfPropertyChange();
+            }
+        }
+
+        private PropertyChangedEventHandler friendBeingEditedChangeHandler;
+        private FriendModel _friendBeingEdited;
+        public FriendModel FriendBeingEdited
+        {
+            get { return this._friendBeingEdited; }
+            set
+            {
+                if (this._friendBeingEdited != null)
+                    this._friendBeingEdited.Unbind(friendBeingEditedChangeHandler);
+                
+                this._friendBeingEdited = value;
+
+                if (this._friendBeingEdited != null)
+                {
+                    this.friendBeingEditedChangeHandler = this._friendBeingEdited.Bind(x => x.Error, _ =>
+                        {
+                            this.NotifyOfPropertyChange(() => this.CanAddFriend);
+                            this.NotifyOfPropertyChange(() => this.CanEditFriend);
+                            this.NotifyOfPropertyChange(() => this.CanSave);
+                        });
+                }
+
+                this.NotifyOfPropertyChange();
+            }
+        }
 
         public ManageFriendsViewModel(IWindowManager windowManager, Config config)
         {
@@ -27,11 +63,56 @@ namespace Ec2Manager.ViewModels
             this.windowManager = windowManager;
             this.config = config;
             this.Friends = new BindableCollection<FriendModel>(config.FriendsWithoutDefaults.Select(x => new FriendModel(x)));
+
+            this.Bind(x => x.SelectedFriend, _ => this.NotifyOfPropertyChange(() => this.CanEditFriend));
+            this.Bind(x => x.SelectedFriend, _ => this.NotifyOfPropertyChange(() => this.CanDeleteFriend));
+
+            this.Bind(x => x.FriendBeingEdited, _ => this.NotifyOfPropertyChange(() => this.CanAddFriend));
+            this.Bind(x => x.FriendBeingEdited, _ => this.NotifyOfPropertyChange(() => this.CanEditFriend));
+            this.Bind(x => x.FriendBeingEdited, _ => this.NotifyOfPropertyChange(() => this.CanSave));
         }
 
-        public void AddFriend(FriendModel context)
+        public bool CanAddFriend
         {
-            this.windowManager.ShowDialog<EditFriendViewModel>();
+            get { return this.FriendBeingEdited == null || this.FriendBeingEdited.Error == ""; }
+        }
+        public void AddFriend()
+        {
+            var friend = new FriendModel();
+            this.Friends.Add(friend);
+            this.FriendBeingEdited = friend;
+            this.SelectedFriend = friend;
+        }
+
+        public bool CanEditFriend
+        {
+            get { return this.SelectedFriend != null && (this.FriendBeingEdited == null || this.FriendBeingEdited.Error == "") && this.FriendBeingEdited != this.SelectedFriend; }
+        }
+        public void EditFriend()
+        {
+            this.FriendBeingEdited = this.SelectedFriend;
+        }
+        
+        public bool CanDeleteFriend
+        {
+            get { return this.SelectedFriend != null; }
+        }
+        public void DeleteFriend()
+        {
+            if (this.FriendBeingEdited == this.SelectedFriend)
+                this.FriendBeingEdited = null;
+            this.Friends.Remove(this.SelectedFriend);
+        }
+
+        public bool CanSave
+        {
+            get { return this.FriendBeingEdited == null || this.FriendBeingEdited.Error == ""; }
+        }
+        public void Save()
+        {
+            this.config.FriendsWithoutDefaults = this.Friends.Select(x => x.FriendValue);
+            this.config.SaveMainConfig();
+            this.TryClose(true);
         }
 
         
@@ -41,8 +122,27 @@ namespace Ec2Manager.ViewModels
     {
         private IValidator validator = new Validator();
 
-        public string Name { get; set; }
-        public string UserId { get; set; }
+        private string _name;
+        public string Name
+        {
+            get { return this._name; }
+            set
+            {
+                this._name = value;
+                this.NotifyOfPropertyChange();
+            }
+        }
+
+        private string _userId;
+        public string UserId
+        {
+            get { return this._userId; }
+            set
+            {
+                this._userId = value;
+                this.NotifyOfPropertyChange();
+            }
+        }
 
         public FriendModel()
         {

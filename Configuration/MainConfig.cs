@@ -17,6 +17,7 @@ namespace Ec2Manager.Configuration
         {
             this.DefaultAmi = Settings.Default.DefaultAMI;
             this.DefaultLogonUser = Settings.Default.DefaultLogonUser;
+            this.Friends = new List<Friend>();
         }
 
         public static MainConfig FromFile(string filename)
@@ -83,5 +84,7 @@ namespace Ec2Manager.Configuration
         }
 
         public string PuttyPath { get; set; }
+
+        public List<Friend> Friends { get; set; }
     }
 }

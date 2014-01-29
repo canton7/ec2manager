@@ -7,28 +7,65 @@
              mc:Ignorable="d" 
              d:DesignHeight="300" d:DesignWidth="300"
              Padding="10">
-    <Grid>
-        <Grid.ColumnDefinitions>
-            <ColumnDefinition/>
-            <ColumnDefinition Width="80"/>
-        </Grid.ColumnDefinitions>
+    <DockPanel>
+        <Grid DockPanel.Dock="Top">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition/>
+                <ColumnDefinition Width="80"/>
+            </Grid.ColumnDefinitions>
 
-        <StackPanel Grid.Column="0">
-            <TextBlock>Friends:</TextBlock>
-            <DataGrid ItemsSource="{Binding Friends}"
-                      AutoGenerateColumns="False"
-                      CanUserAddRows="True"
-                      CanUserDeleteRows="True">
-                <DataGrid.Columns>
-                    <DataGridTextColumn Header="Name" Binding="{val:ValidationBinding Name}" Width="*"/>
-                    <DataGridTextColumn Header="Amazon User ID" Binding="{val:ValidationBinding UserId}" Width="*"/>
-                </DataGrid.Columns>
-            </DataGrid>
-        </StackPanel>
+            <StackPanel Grid.Column="0">
+                <TextBlock>Friends:</TextBlock>
+                <DataGrid ItemsSource="{Binding Friends}"
+                          AutoGenerateColumns="False"
+                          IsReadOnly="True"
+                          SelectedItem="{Binding SelectedFriend}">
+                    <DataGrid.Columns>
+                        <DataGridTextColumn Header="Name" Binding="{Binding Name}" Width="*"/>
+                        <DataGridTextColumn Header="Amazon User ID" Binding="{Binding UserId}" Width="*"/>
+                    </DataGrid.Columns>
+                </DataGrid>
+            </StackPanel>
 
-        <StackPanel Grid.Column="1" Margin="20,0,0,0">
-            <TextBlock>Actions:</TextBlock>
-            <Button Name="AddFriend">Add</Button>
-        </StackPanel>
-    </Grid>
+            <StackPanel Grid.Column="1" Margin="20,0,0,0">
+                <TextBlock>Actions:</TextBlock>
+                <Button Name="AddFriend">Add</Button>
+                <Button Name="EditFriend">Edit</Button>
+                <Button Name="DeleteFriend">Delete</Button>
+            </StackPanel>
+        </Grid>
+
+        <Grid DockPanel.Dock="Top" Margin="0,50,0,0">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="Auto"/>
+                <ColumnDefinition/>
+            </Grid.ColumnDefinitions>
+
+            <Grid.RowDefinitions>
+                <RowDefinition/>
+                <RowDefinition/>
+            </Grid.RowDefinitions>
+
+            <!-- http://blindmeis.wordpress.com/2012/04/16/wpf-mvvm-idataerrorinfo-validation-errortemplate/ -->
+
+            <Label Grid.Row="0" Grid.Column="0">Name:</Label>
+            <TextBox Grid.Row="0" Grid.Column="1" Text="{val:ValidationBinding FriendBeingEdited.Name, UpdateSourceTrigger=PropertyChanged}"/>
+
+            <Label Grid.Row="1" Grid.Column="0">Amazon User ID:</Label>
+            <TextBox Grid.Row="1" Grid.Column="1" Text="{val:ValidationBinding FriendBeingEdited.UserId, UpdateSourceTrigger=PropertyChanged}"/>
+        </Grid>
+
+        <TextBlock DockPanel.Dock="Top" Text="{Binding FriendBeingEdited.Error}" Foreground="Red" Margin="0,20,0,10"/>
+
+        <Grid DockPanel.Dock="Bottom" VerticalAlignment="Bottom">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="75"/>
+                <ColumnDefinition/>
+                <ColumnDefinition Width="75"/>
+            </Grid.ColumnDefinitions>
+
+            <Button x:Name="Save" Grid.Column="0" IsDefault="True">Save</Button>
+            <Button x:Name="Cancel" Grid.Column="2" IsCancel="True">Cancel</Button>
+        </Grid>
+    </DockPanel>
 </UserControl>

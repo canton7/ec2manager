@@ -56,7 +56,8 @@ namespace Ec2Manager.Configuration
 
         public IEnumerable<Friend> FriendsWithoutDefaults
         {
-            get { return new List<Friend>();  }
+            get { return this.MainConfig.Friends; }
+            set { this.MainConfig.Friends = value.ToList(); }
         }
 
         public IEnumerable<Friend> Friends

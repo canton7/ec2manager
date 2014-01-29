@@ -59,7 +59,8 @@ namespace Ec2Manager.Classes
         /// <param name="handler"></param>
         public static void Unbind(this INotifyPropertyChanged cls, PropertyChangedEventHandler handler)
         {
-            cls.PropertyChanged -= handler;
+            if (handler != null)
+                cls.PropertyChanged -= handler;
         }
 
         public static Task UntilAsync<T>(this T cls, Expression<Func<T, bool>> condition) where T : INotifyPropertyChanged

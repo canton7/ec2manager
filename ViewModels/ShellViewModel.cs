@@ -128,7 +128,7 @@ namespace Ec2Manager.ViewModels
         {
             this.windowManager.ShowDialog<ManageFriendsViewModel>(settings: new Dictionary<string, object>()
                 {
-                    { "Width", 300 },
+                    { "Width", 400 },
                     { "SizeToContent", SizeToContent.Height },
                 });
         }

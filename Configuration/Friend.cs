@@ -8,8 +8,12 @@ namespace Ec2Manager.Configuration
 {
     public class Friend
     {
-        public string Name { get; private set; }
-        public string UserId { get; private set; }
+        public string Name { get; set; }
+        public string UserId { get; set; }
+
+        public Friend()
+        {
+        }
 
         public Friend(string userId, string name)
         {
