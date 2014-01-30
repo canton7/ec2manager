@@ -36,17 +36,6 @@ namespace Ec2Manager.Configuration
 
         public MainConfig MainConfig { get; private set; }
 
-        public string SnapshotConfigFile
-        {
-            get { return Path.Combine(this.ConfigDir, "snapshot-config.txt"); }
-        }
-
-        private AsyncLazy<IEnumerable<VolumeType>> snapshotConfig;
-        public Task<IEnumerable<VolumeType>> GetSnapshotConfigAsync()
-        {
-            return this.snapshotConfig.Value;
-        }
-
         public string SavedKeysDir
         {
             get { return Path.Combine(this.ConfigDir, "keys"); }
@@ -58,36 +47,25 @@ namespace Ec2Manager.Configuration
             Directory.CreateDirectory(this.SavedKeysDir);
 
             this.LoadMainConfig();
-
-            this.snapshotConfig = new AsyncLazy<IEnumerable<VolumeType>>(async () =>
-                {
-                    var config = new List<VolumeType>();
-                    if (File.Exists(this.SnapshotConfigFile))
-                    {
-                        config.AddRange(File.ReadAllLines(this.SnapshotConfigFile).Where(x => !x.StartsWith(";") && !string.IsNullOrWhiteSpace(x)).Select(x =>
-                        {
-                            var parts = x.Split(new[] { ' ' }, 2);
-                            return new VolumeType(parts[0].Trim(), parts[1].Trim());
-                        }));
-                    }
-
-                    try
-                    {
-                        WebClient client = new WebClient();
-                        config.AddRange((await client.DownloadStringTaskAsync(Settings.Default.SnapshotConfigUrl)).Split(new[] { "\n", "\r\n" }, StringSplitOptions.RemoveEmptyEntries).Where(x => !x.StartsWith(";")).Select(x =>
-                        {
-                            var parts = x.Split(new[] { ' ' }, 2);
-                            return new VolumeType(parts[0].Trim(), parts[1].Trim());
-                        }));
-                    }
-                    catch (WebException)
-                    {
-                    }
-
-                    return config;
-                });
         }
 
+        public IEnumerable<Friend> DefaultFriends
+        {
+            get { return new List<Friend>() { new Friend(Settings.Default.DefaultImagesUserId, "Official Images"), new Friend("self", "Your Images") }; }
+        }
+
+        public IEnumerable<Friend> FriendsWithoutDefaults
+        {
+            get { return this.MainConfig.Friends; }
+            set { this.MainConfig.Friends = value.ToList(); }
+        }
+
+        public IEnumerable<Friend> Friends
+        {
+            get { return this.DefaultFriends.Concat(this.FriendsWithoutDefaults); }
+        }
+
+        
         private void LoadMainConfig()
         {
             if (File.Exists(this.MainConfigFile))

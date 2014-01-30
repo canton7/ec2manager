@@ -14,6 +14,7 @@ using System.Threading;
 using Ec2Manager.Ec2Manager;
 using System.Diagnostics;
 using Ec2Manager.Utilities;
+using System.Windows.Data;
 
 namespace Ec2Manager.ViewModels
 {
@@ -21,11 +22,12 @@ namespace Ec2Manager.ViewModels
     {
         private static readonly List<VolumeType> defaultVolumeTypes = new List<VolumeType>
             {
-                VolumeType.Custom("Custom Snapshot or Volume"),
+                VolumeType.Custom("Custom Snapshot or Volume", new Friend(null, "Your Images")),
             };
 
         public Ec2Instance Instance { get; private set; }
         public InstanceClient Client { get; private set; }
+        private Ec2Connection connection;
         private IVolumeViewModelFactory volumeViewModelFactory;
         private IWindowManager windowManager;
 
@@ -55,11 +57,8 @@ namespace Ec2Manager.ViewModels
             }
         }
 
-        private List<VolumeType> volumeTypes = new List<VolumeType>() { new VolumeType(null, "Loading...") };
-        public List<VolumeType> VolumeTypes
-        {
-            get { return volumeTypes.Concat(defaultVolumeTypes).ToList(); }
-        }
+        public BindableCollection<VolumeType> VolumeTypes { get; private set; }
+
         private VolumeType selectedVolumeType;
         public VolumeType SelectedVolumeType
         {
@@ -110,10 +109,11 @@ namespace Ec2Manager.ViewModels
             }
         }
 
-        public InstanceViewModel(InstanceDetailsViewModel instanceDetailsModel, Logger logger, Config config, IVolumeViewModelFactory volumeViewModelFactory, IWindowManager windowManager)
+        public InstanceViewModel(InstanceDetailsViewModel instanceDetailsModel, Logger logger, Config config, Ec2Connection connection, IVolumeViewModelFactory volumeViewModelFactory, IWindowManager windowManager)
         {
             this.Logger = logger;
             this.config = config;
+            this.connection = connection;
             this.volumeViewModelFactory = volumeViewModelFactory;
             this.windowManager = windowManager;
             this.uptimeTimer = new System.Timers.Timer();
@@ -129,7 +129,9 @@ namespace Ec2Manager.ViewModels
 
             instanceDetailsModel.Logger = logger;
 
+            this.VolumeTypes = new BindableCollection<VolumeType>() { new VolumeType(null, "Loading...", null) };
             this.SelectedVolumeType = this.VolumeTypes[0];
+
             this.ActivateItem(instanceDetailsModel);
         }
 
@@ -148,16 +150,20 @@ namespace Ec2Manager.ViewModels
                     this.NotifyOfPropertyChange(() => CanLaunchPutty);
                 };
 
-            this.Instance.Bind(s => s.InstanceState, _ => update());
+            this.Instance.Bind(s => s.InstanceState, (o, e) => update());
             update();
         }
 
         private async Task RefreshVolumes()
         {
-            var snapshots = await this.config.GetSnapshotConfigAsync();
-            this.volumeTypes.Clear();
-            this.volumeTypes.AddRange(snapshots);
-            this.SelectedVolumeType = this.volumeTypes[0];
+            var snapshots = await this.connection.CreateSnapshotBrowser().GetSnapshotsForFriendsAsync(this.config.Friends);
+            this.VolumeTypes.Clear();
+            if (snapshots.Any())
+            {
+                this.VolumeTypes.AddRange(snapshots);
+            }
+            this.VolumeTypes.AddRange(defaultVolumeTypes);
+            this.SelectedVolumeType = this.VolumeTypes[0];
             this.NotifyOfPropertyChange(() => VolumeTypes);
         }
 
@@ -185,7 +191,7 @@ namespace Ec2Manager.ViewModels
                     this.InstanceState = "running";
 
                     this.Client = new InstanceClient(this.Instance.PublicIp, loginAs, this.Instance.PrivateKey);
-                    this.Client.Bind(s => s.IsConnected, _ =>
+                    this.Client.Bind(s => s.IsConnected, (o, e) =>
                         {
                             this.NotifyOfPropertyChange(() => CanMountVolume);
                             this.NotifyOfPropertyChange(() => CanCreateVolume);
@@ -268,7 +274,7 @@ namespace Ec2Manager.ViewModels
                     }
 
                     this.Client = new InstanceClient(this.Instance.PublicIp, keyAndUser.Item2, keyAndUser.Item1);
-                    this.Client.Bind(s => s.IsConnected, _ =>
+                    this.Client.Bind(s => s.IsConnected, (o, e) =>
                     {
                         this.NotifyOfPropertyChange(() => CanMountVolume);
                         this.NotifyOfPropertyChange(() => CanCreateVolume);
@@ -341,6 +347,7 @@ namespace Ec2Manager.ViewModels
             {
                 return this.InstanceState == "running" && this.Instance != null &&
                     this.Instance.InstanceState == "running" && this.Client != null &&
+                    this.SelectedVolumeType != null &&
                     (this.SelectedVolumeType.IsCustom == true || this.SelectedVolumeType.SnapshotId != null) &&
                     (!this.selectedVolumeType.IsCustom || !string.IsNullOrWhiteSpace(this.CustomVolumeSnapshotId)) &&
                     this.Client.IsConnected;

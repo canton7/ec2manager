@@ -277,6 +277,7 @@ namespace Ec2Manager.Ec2Manager
                 Tags = new List<Tag>()
                 {
                     new Tag() { Key = "Name", Value = snapshotName },
+                    new Tag() { Key = "CreatedByEc2Manager", Value = "true" },
                 },
             });
 

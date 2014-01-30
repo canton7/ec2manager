@@ -1,0 +1,63 @@
+﻿using Amazon.EC2;
+using Amazon.EC2.Model;
+using Ec2Manager.Configuration;
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Text;
+using System.Threading.Tasks;
+
+namespace Ec2Manager.Ec2Manager
+{
+    public class Ec2SnapshotBrowser
+    {
+        private AmazonEC2Client client;
+
+        public Ec2SnapshotBrowser(AmazonEC2Client client)
+        {
+            this.client = client;
+        }
+
+        // Returns sorted
+        public async Task<IEnumerable<Configuration.VolumeType>> GetSnapshotsForFriendsAsync(IEnumerable<Friend> friends)
+        {
+            // We might have friends with duplicate IDs (oops)
+            var friendsMap = friends.Select((x, i) => new { Item = x, Index = i }).GroupBy(x => x.Item.UserId).ToDictionary(x => x.Key, x => x.ToList());
+
+            var result = await this.client.DescribeSnapshotsAsync(new DescribeSnapshotsRequest()
+            {
+                OwnerIds = friends.Select(x => x.UserId).ToList(),
+                Filters = new List<Filter>()
+                {
+                    new Filter() { Name = "tag-key", Values = new List<string>() { "CreatedByEc2Manager" } },
+                }
+            });
+
+            return from snapshot in result.Snapshots
+                    let mapItem = friendsMap.ContainsKey(snapshot.OwnerId) ? friendsMap[snapshot.OwnerId] : friendsMap["self"]
+                    from friend in mapItem
+                    orderby friend.Index, snapshot.Description
+                    select new Configuration.VolumeType(snapshot.SnapshotId, snapshot.Description, friend.Item);
+        }
+
+        public async Task<int?> CountSnapshotsForUserId(string userId)
+        {
+            try
+            {
+                var results = await this.client.DescribeSnapshotsAsync(new DescribeSnapshotsRequest()
+                {
+                    OwnerIds = new List<string>() { userId },
+                    Filters = new List<Filter>()
+                    {
+                        new Filter() { Name = "tag-key", Values = new List<string>() { "CreatedByEc2Manager" } },
+                    }
+                });
+                return results.Snapshots.Count;
+            }
+            catch (AmazonEC2Exception)
+            {
+                return null;
+            }
+        }
+    }
+}

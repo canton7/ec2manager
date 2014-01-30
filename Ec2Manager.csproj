@@ -109,15 +109,18 @@
     <Compile Include="Classes\StringExtensions.cs" />
     <Compile Include="Classes\WindowManagerExtensions.cs" />
     <Compile Include="Configuration\Config.cs" />
+    <Compile Include="Configuration\Friend.cs" />
     <Compile Include="Configuration\MainConfig.cs" />
     <Compile Include="Configuration\VolumeType.cs" />
     <Compile Include="Converters\IntToVisibilityConverter.cs" />
+    <Compile Include="Converters\ItemToPropertyNameConverter.cs" />
     <Compile Include="Converters\StringToBooleanConverter.cs" />
     <Compile Include="Core\MainModule.cs" />
     <Compile Include="Ec2Manager\AmazonEC2ClientExtensions.cs" />
     <Compile Include="Ec2Manager\Credentials.cs" />
     <Compile Include="Ec2Manager\Ec2Instance.cs" />
     <Compile Include="Ec2Manager\Ec2Connection.cs" />
+    <Compile Include="Ec2Manager\Ec2SnapshotBrowser.cs" />
     <Compile Include="Ec2Manager\InstanceSize.cs" />
     <Compile Include="Ec2Manager\InstanceSpecification.cs" />
     <Compile Include="Ec2Manager\StubLogger.cs" />
@@ -135,12 +138,15 @@
     <Compile Include="Converters\VolumeTypeToIdVisibilityConverter.cs" />
     <Compile Include="Events\CreateInstanceEvent.cs" />
     <Compile Include="Utilities\VersionManager.cs" />
+    <Compile Include="Validation\ValidationBindingExtension.cs" />
+    <Compile Include="Validation\Validator.cs" />
     <Compile Include="ViewModels\AboutViewModel.cs" />
     <Compile Include="ViewModels\ConnectViewModel.cs" />
     <Compile Include="ViewModels\CreateNewVolumeDetailsViewModel.cs" />
     <Compile Include="ViewModels\CreateSnapshotDetailsViewModel.cs" />
     <Compile Include="ViewModels\InstanceDetailsViewModel.cs" />
     <Compile Include="ViewModels\InstanceViewModel.cs" />
+    <Compile Include="ViewModels\ManageFriendsViewModel.cs" />
     <Compile Include="ViewModels\ReconnectDetailsViewModel.cs" />
     <Compile Include="ViewModels\ScriptArgumentViewModel.cs" />
     <Compile Include="ViewModels\ScriptDetailsViewModel.cs" />
@@ -166,6 +172,9 @@
     </Compile>
     <Compile Include="Views\InstanceView.xaml.cs">
       <DependentUpon>InstanceView.xaml</DependentUpon>
+    </Compile>
+    <Compile Include="Views\ManageFriendsView.xaml.cs">
+      <DependentUpon>ManageFriendsView.xaml</DependentUpon>
     </Compile>
     <Compile Include="Views\ReconnectDetailsView.xaml.cs">
       <DependentUpon>ReconnectDetailsView.xaml</DependentUpon>
@@ -221,6 +230,10 @@
       <Generator>MSBuild:Compile</Generator>
     </Page>
     <Page Include="Views\InstanceView.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Include="Views\ManageFriendsView.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>

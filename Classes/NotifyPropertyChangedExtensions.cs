@@ -21,35 +21,20 @@ namespace Ec2Manager.Classes
         /// <param name="handler">Action called whenever the parameter changes</param>
         /// <example>myObject.Bind(obj => obj.MyParameter, newval => this.someMethod(newval));</example>
         /// <returns>The handler to pass to Unbind, if you need it</returns>
-        public static PropertyChangedEventHandler Bind<TBindTo, TBindType>(this TBindTo cls, Expression<Func<TBindTo, TBindType>> selector, Action<TBindType> handler) where TBindTo : INotifyPropertyChanged
+        public static PropertyChangedSubscription Bind<TBindTo, TBindType>(this TBindTo cls, Expression<Func<TBindTo, TBindType>> selector, EventHandler<PropertyChangedEventArgs> handler) where TBindTo : INotifyPropertyChanged
         {
+
             var body = selector.Body as MemberExpression;
 
             if (body == null)
                 throw new ArgumentException("Not MemberExpression", "property");
 
-            PropertyChangedEventHandler ourHandler = null;
-            var method = handler.Method;
-            var weakHandler = new WeakReference(handler.Target);
-            var compiledSelector = selector.Compile();
+            var propertyName = body.Member.Name;
 
-            ourHandler = (o, e) =>
-            {
-                object target = weakHandler.Target;
-                if (target != null)
-                {
-                    if (e.PropertyName == body.Member.Name)
-                        method.Invoke(target, new object[] { compiledSelector(cls) });
-                }
-                else
-                {
-                    cls.PropertyChanged -= ourHandler;
-                }
-            };
+            //EventHandler<PropertyChangedEventArgs> ourHandler = (o, e) => handler(compiledSelector(cls));
+            PropertyChangedEventManager.AddHandler(cls, handler, propertyName);
 
-            cls.PropertyChanged += ourHandler;
-
-            return ourHandler;
+            return new PropertyChangedSubscription(propertyName, handler);
         }
 
         /// <summary>
@@ -57,9 +42,12 @@ namespace Ec2Manager.Classes
         /// </summary>
         /// <param name="cls"></param>
         /// <param name="handler"></param>
-        public static void Unbind(this INotifyPropertyChanged cls, PropertyChangedEventHandler handler)
+        public static void Unbind(this INotifyPropertyChanged cls, PropertyChangedSubscription subscription)
         {
-            cls.PropertyChanged -= handler;
+            if (subscription != null)
+            {
+                PropertyChangedEventManager.RemoveHandler(cls, subscription.Handler, subscription.PropertyName);
+            }
         }
 
         public static Task UntilAsync<T>(this T cls, Expression<Func<T, bool>> condition) where T : INotifyPropertyChanged
@@ -105,6 +93,18 @@ namespace Ec2Manager.Classes
             cls.PropertyChanged += handler;
 
             return tcs.Task;
+        }
+    }
+
+    public class PropertyChangedSubscription
+    {
+        public string PropertyName { get; private set; }
+        public EventHandler<PropertyChangedEventArgs> Handler { get; private set; }
+
+        public PropertyChangedSubscription(string propertyName, EventHandler<PropertyChangedEventArgs> handler)
+        {
+            this.PropertyName = propertyName;
+            this.Handler = handler;
         }
     }
 }
