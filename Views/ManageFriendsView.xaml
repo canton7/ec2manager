@@ -5,30 +5,40 @@
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              xmlns:val="clr-namespace:Ec2Manager.Validation"
              mc:Ignorable="d" 
-             d:DesignHeight="300" d:DesignWidth="300"
+             d:DesignHeight="400" d:DesignWidth="300"
              Padding="10">
     <DockPanel>
+        <TextBlock DockPanel.Dock="Top" TextWrapping="Wrap">
+            Anyone can publish snapshots on Amazon AWS using Ec2Manager.
+            Friends are Amazon AWS users whose published snapshots you want to be use from within Ec2Manager.<LineBreak/><LineBreak/>
+            Ask the person for their Amazon AWS User Id, and enter it here.<LineBreak/>
+        </TextBlock>
+
+        <StackPanel DockPanel.Dock="Top" Orientation="Horizontal">
+            <TextBlock FontWeight="Bold">Your User ID:</TextBlock>
+            <TextBox Background="Transparent" BorderThickness="0" IsReadOnly="True" FontWeight="Bold" Text="{Binding OwnUserId}"/>
+        </StackPanel>
+        
+        
         <Grid DockPanel.Dock="Top">
             <Grid.ColumnDefinitions>
                 <ColumnDefinition/>
                 <ColumnDefinition Width="80"/>
             </Grid.ColumnDefinitions>
 
-            <StackPanel Grid.Column="0">
-                <TextBlock>Friends:</TextBlock>
-                <DataGrid ItemsSource="{Binding Friends}"
-                          AutoGenerateColumns="False"
-                          IsReadOnly="True"
-                          SelectedItem="{Binding SelectedFriend}">
-                    <DataGrid.Columns>
-                        <DataGridTextColumn Header="Name" Binding="{Binding Name}" Width="*"/>
-                        <DataGridTextColumn Header="Amazon User ID" Binding="{Binding UserId}" Width="*"/>
-                        <DataGridTextColumn Header="Snapshots" Binding="{Binding NumSnapshots}"/>
-                    </DataGrid.Columns>
-                </DataGrid>
-            </StackPanel>
+            <DataGrid Grid.Column="0" Margin="0,20,0,0"
+                      ItemsSource="{Binding Friends}"
+                      AutoGenerateColumns="False"
+                      IsReadOnly="True"
+                      SelectedItem="{Binding SelectedFriend}">
+                <DataGrid.Columns>
+                    <DataGridTextColumn Header="Name" Binding="{Binding Name}" Width="*"/>
+                    <DataGridTextColumn Header="Amazon User ID" Binding="{Binding UserId}" Width="*"/>
+                    <DataGridTextColumn Header="Snapshots" Binding="{Binding NumSnapshots}"/>
+                </DataGrid.Columns>
+            </DataGrid>
 
-            <StackPanel Grid.Column="1" Margin="20,0,0,0">
+            <StackPanel Grid.Column="1" Margin="20,20,0,0">
                 <TextBlock>Actions:</TextBlock>
                 <Button Name="AddFriend">Add</Button>
                 <Button Name="EditFriend">Edit</Button>

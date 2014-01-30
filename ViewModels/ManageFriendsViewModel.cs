@@ -19,6 +19,17 @@ namespace Ec2Manager.ViewModels
         private Config config;
         private Ec2SnapshotBrowser snapshotBrowser;
 
+        private string _ownUserId;
+        public string OwnUserId
+        {
+            get { return this._ownUserId; }
+            set
+            {
+                this._ownUserId = value;
+                this.NotifyOfPropertyChange();
+            }
+        }
+
         public BindableCollection<FriendModel> Friends { get; private set; }
 
         private FriendModel _selectedFriend;
@@ -65,6 +76,8 @@ namespace Ec2Manager.ViewModels
             this.windowManager = windowManager;
             this.config = config;
             this.snapshotBrowser = connection.CreateSnapshotBrowser();
+
+            connection.GetUserIdAsync().ContinueWith(t => this.OwnUserId = t.Result);
 
             this.Friends = new BindableCollection<FriendModel>(config.FriendsWithoutDefaults.Select(x => new FriendModel(x, snapshotBrowser)));
 
