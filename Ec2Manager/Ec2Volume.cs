@@ -62,6 +62,7 @@ namespace Ec2Manager.Ec2Manager
             this.VolumeId = volumeId;
 
             // TODO: Get name and mountPoint source from Ec2
+            // Currently only used for deleting volumes, so it's not an issue
 
             this.Logger = new StubLogger();
             this.IsSetup = true;
@@ -88,6 +89,16 @@ namespace Ec2Manager.Ec2Manager
             this.Logger = instance.Logger;
 
             this.IsSetup = false;
+        }
+
+        public async Task<string> GetSourceSnapshotAsync()
+        {
+            var result = await this.Client.DescribeVolumesAsync(new DescribeVolumesRequest()
+                {
+                    VolumeIds = new List<string>() { this.VolumeId },
+                });
+
+            return result.Volumes.First().SnapshotId;
         }
 
         #region "Until" methods
@@ -222,18 +233,29 @@ namespace Ec2Manager.Ec2Manager
             if (string.IsNullOrWhiteSpace(snapshotId))
             {
                 this.Logger.Log("No source snapshot found");
-                return new Tuple<string, string>(null, null);
+                return null;
             }
 
-            var snapshot = (await this.Client.DescribeSnapshotsAsync(new DescribeSnapshotsRequest()
+            Snapshot snapshot;
+            try
             {
-                SnapshotIds = new List<string>() { snapshotId },
-            })).Snapshots.FirstOrDefault();
+                snapshot = (await this.Client.DescribeSnapshotsAsync(new DescribeSnapshotsRequest()
+                {
+                    SnapshotIds = new List<string>() { snapshotId },
+                })).Snapshots.FirstOrDefault();
+            }
+            catch (AmazonEC2Exception e)
+            {
+                if (e.ErrorCode == "InvalidSnapshot.NotFound")
+                    return null;
+                else
+                    throw;
+            }
 
             if (snapshot == null)
             {
                 this.Logger.Log("Could not find source snapshot with ID " + snapshotId);
-                return new Tuple<string, string>(null, null);
+                return null;
             }
 
             var nameTag = snapshot.Tags.FirstOrDefault(x => x.Key == "Name");
@@ -296,6 +318,16 @@ namespace Ec2Manager.Ec2Manager
             this.Logger.Log("Done");
 
             return snapshotId;
+        }
+
+        public async Task DeleteSnapshotAsync(string snapshotId)
+        {
+            this.Logger.Log("Deleting snapshot {0}", snapshotId);
+            await this.Client.DeleteSnapshotAsync(new DeleteSnapshotRequest()
+                {
+                    SnapshotId = snapshotId,
+                });
+            this.Logger.Log("Done");
         }
 
         #endregion

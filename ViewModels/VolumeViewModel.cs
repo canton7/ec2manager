@@ -276,8 +276,16 @@ namespace Ec2Manager.ViewModels
             var detailsModel = this.createSnapshotDetailsViewModelFactory.CreateCreateSnapshotDetailsViewModel();
 
             var nameAndDescription = await this.Volume.GetSourceSnapshotNameDescriptionAsync();
-            detailsModel.Name = nameAndDescription.Item1;
-            detailsModel.Description = nameAndDescription.Item2;
+            if (nameAndDescription == null)
+            {
+                detailsModel.HasSourceSnapshot = false;
+            }
+            else
+            {
+                detailsModel.HasSourceSnapshot = true;
+                detailsModel.Name = nameAndDescription.Item1;
+                detailsModel.Description = nameAndDescription.Item2;
+            }
 
             var result = this.windowManager.ShowDialog(detailsModel, settings: new Dictionary<string, object>()
             {
@@ -286,7 +294,7 @@ namespace Ec2Manager.ViewModels
 
             if (result.HasValue && result.Value)
             {
-                if (await this.Volume.AnySnapshotsExistWithName(detailsModel.Name))
+                if (!detailsModel.DeleteSourceSnapshot && await this.Volume.AnySnapshotsExistWithName(detailsModel.Name))
                 {
                     var confirmResult = MessageBox.Show(Application.Current.MainWindow, "Are you sure you want to create a snapshot called " + detailsModel.Name + "?\nYou already have a snapshot with this name", "Are you sure?", MessageBoxButton.YesNo, MessageBoxImage.Question, MessageBoxResult.No);
                     if (confirmResult == MessageBoxResult.No)
@@ -299,6 +307,7 @@ namespace Ec2Manager.ViewModels
 
                     this.CancelCts = new CancellationTokenSource();
                     await this.Volume.CreateSnapshotAsync(detailsModel.Name, detailsModel.Description, detailsModel.IsPublic, this.CancelCts.Token);
+                    await this.Volume.DeleteSnapshotAsync(await this.Volume.GetSourceSnapshotAsync());
                 }
                 catch (OperationCanceledException)
                 {

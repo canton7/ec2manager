@@ -112,6 +112,7 @@
     <Compile Include="Configuration\Friend.cs" />
     <Compile Include="Configuration\MainConfig.cs" />
     <Compile Include="Configuration\VolumeType.cs" />
+    <Compile Include="Converters\BoolToVisibilityConverter.cs" />
     <Compile Include="Converters\IntToVisibilityConverter.cs" />
     <Compile Include="Converters\ItemToPropertyNameConverter.cs" />
     <Compile Include="Converters\StringToBooleanConverter.cs" />

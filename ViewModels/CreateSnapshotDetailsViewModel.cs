@@ -44,6 +44,28 @@ namespace Ec2Manager.ViewModels
             }
         }
 
+        private bool hasSourceSnapshot;
+        public bool HasSourceSnapshot
+        {
+            get { return this.hasSourceSnapshot; }
+            set
+            {
+                this.hasSourceSnapshot = value;
+                this.NotifyOfPropertyChange();
+            }
+        }
+
+        private bool deleteSourceSnapshot;
+        public bool DeleteSourceSnapshot
+        {
+            get { return this.deleteSourceSnapshot; }
+            set
+            {
+                this.deleteSourceSnapshot = value;
+                this.NotifyOfPropertyChange();
+            }
+        }
+
         public CreateSnapshotDetailsViewModel()
         {
             this.DisplayName = "Create Snapshot Settings";
