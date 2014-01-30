@@ -21,7 +21,8 @@ namespace Ec2Manager.Ec2Manager
         // Returns sorted
         public async Task<IEnumerable<Configuration.VolumeType>> GetSnapshotsForFriendsAsync(IEnumerable<Friend> friends)
         {
-            var friendsMap = friends.Select((x, i) => new { Item = x, Index = i }).ToDictionary(x => x.Item.UserId, x => x);
+            // We might have friends with duplicate IDs (oops)
+            var friendsMap = friends.Select((x, i) => new { Item = x, Index = i }).GroupBy(x => x.Item.UserId).ToDictionary(x => x.Key, x => x.ToList());
 
             var result = await this.client.DescribeSnapshotsAsync(new DescribeSnapshotsRequest()
             {
@@ -34,8 +35,9 @@ namespace Ec2Manager.Ec2Manager
 
             return from snapshot in result.Snapshots
                     let mapItem = friendsMap.ContainsKey(snapshot.OwnerId) ? friendsMap[snapshot.OwnerId] : friendsMap["self"]
-                    orderby mapItem.Index, snapshot.Description
-                    select new Configuration.VolumeType(snapshot.SnapshotId, snapshot.Description, mapItem.Item);
+                    from friend in mapItem
+                    orderby friend.Index, snapshot.Description
+                    select new Configuration.VolumeType(snapshot.SnapshotId, snapshot.Description, friend.Item);
         }
 
         public async Task<int?> CountSnapshotsForUserId(string userId)

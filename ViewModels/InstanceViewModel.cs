@@ -150,7 +150,7 @@ namespace Ec2Manager.ViewModels
                     this.NotifyOfPropertyChange(() => CanLaunchPutty);
                 };
 
-            this.Instance.Bind(s => s.InstanceState, _ => update());
+            this.Instance.Bind(s => s.InstanceState, (o, e) => update());
             update();
         }
 
@@ -191,7 +191,7 @@ namespace Ec2Manager.ViewModels
                     this.InstanceState = "running";
 
                     this.Client = new InstanceClient(this.Instance.PublicIp, loginAs, this.Instance.PrivateKey);
-                    this.Client.Bind(s => s.IsConnected, _ =>
+                    this.Client.Bind(s => s.IsConnected, (o, e) =>
                         {
                             this.NotifyOfPropertyChange(() => CanMountVolume);
                             this.NotifyOfPropertyChange(() => CanCreateVolume);
@@ -274,7 +274,7 @@ namespace Ec2Manager.ViewModels
                     }
 
                     this.Client = new InstanceClient(this.Instance.PublicIp, keyAndUser.Item2, keyAndUser.Item1);
-                    this.Client.Bind(s => s.IsConnected, _ =>
+                    this.Client.Bind(s => s.IsConnected, (o, e) =>
                     {
                         this.NotifyOfPropertyChange(() => CanMountVolume);
                         this.NotifyOfPropertyChange(() => CanCreateVolume);

@@ -32,7 +32,7 @@ namespace Ec2Manager.ViewModels
             }
         }
 
-        private PropertyChangedEventHandler friendBeingEditedChangeHandler;
+        private PropertyChangedSubscription friendBeingEditedChangeHandler;
         private FriendModel _friendBeingEdited;
         public FriendModel FriendBeingEdited
         {
@@ -46,7 +46,7 @@ namespace Ec2Manager.ViewModels
 
                 if (this._friendBeingEdited != null)
                 {
-                    this.friendBeingEditedChangeHandler = this._friendBeingEdited.Bind(x => x.Error, _ =>
+                    this.friendBeingEditedChangeHandler = this._friendBeingEdited.Bind(x => x.Error, (o, e) =>
                         {
                             this.NotifyOfPropertyChange(() => this.CanAddFriend);
                             this.NotifyOfPropertyChange(() => this.CanEditFriend);
@@ -68,12 +68,12 @@ namespace Ec2Manager.ViewModels
 
             this.Friends = new BindableCollection<FriendModel>(config.FriendsWithoutDefaults.Select(x => new FriendModel(x, snapshotBrowser)));
 
-            this.Bind(x => x.SelectedFriend, _ => this.NotifyOfPropertyChange(() => this.CanEditFriend));
-            this.Bind(x => x.SelectedFriend, _ => this.NotifyOfPropertyChange(() => this.CanDeleteFriend));
+            this.Bind(x => x.SelectedFriend, (o, e) => this.NotifyOfPropertyChange(() => this.CanEditFriend));
+            this.Bind(x => x.SelectedFriend, (o, e) => this.NotifyOfPropertyChange(() => this.CanDeleteFriend));
 
-            this.Bind(x => x.FriendBeingEdited, _ => this.NotifyOfPropertyChange(() => this.CanAddFriend));
-            this.Bind(x => x.FriendBeingEdited, _ => this.NotifyOfPropertyChange(() => this.CanEditFriend));
-            this.Bind(x => x.FriendBeingEdited, _ => this.NotifyOfPropertyChange(() => this.CanSave));
+            this.Bind(x => x.FriendBeingEdited, (o, e) => this.NotifyOfPropertyChange(() => this.CanAddFriend));
+            this.Bind(x => x.FriendBeingEdited, (o, e) => this.NotifyOfPropertyChange(() => this.CanEditFriend));
+            this.Bind(x => x.FriendBeingEdited, (o, e) => this.NotifyOfPropertyChange(() => this.CanSave));
         }
 
         public bool CanAddFriend
@@ -125,6 +125,7 @@ namespace Ec2Manager.ViewModels
     public class FriendModel : PropertyChangedBase, IDataErrorInfo, IValidationProvider
     {
         private IValidator validator = new Validator();
+        private Ec2SnapshotBrowser snapshotBrowser;
 
         private string _name;
         public string Name
@@ -161,11 +162,12 @@ namespace Ec2Manager.ViewModels
 
         public FriendModel(Ec2SnapshotBrowser snapshotBrowser)
         {
+            this.snapshotBrowser = snapshotBrowser;
             // TODO: For some reason this isn't always fired
-            this.Bind(x => x.UserId, _ =>
+            this.Bind(x => x.UserId, (o, e) =>
                 {
                     if (this.validator.CheckPropertyWithoutNotifications(() => this.UserId).Length == 0)
-                        snapshotBrowser.CountSnapshotsForUserId(this.UserId).ContinueWith(t => this.NumSnapshots = t.Result);
+                        this.snapshotBrowser.CountSnapshotsForUserId(this.UserId).ContinueWith(t => this.NumSnapshots = t.Result);
                     else
                         this.NumSnapshots = null;
                 });

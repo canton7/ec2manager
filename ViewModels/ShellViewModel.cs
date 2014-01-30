@@ -59,8 +59,8 @@ namespace Ec2Manager.ViewModels
             this.instanceViewModelFactory = instanceViewModelFactory;
             this.terminateInstanceViewModelFactory = terminateInstanceViewModelFactory;
 
-            this.Bind(s => s.ActiveItem, _ => this.NotifyOfPropertyChange(() => SubActiveItem));
-            this.connection.Bind(s => s.IsConnected, _ => this.NotifyOfPropertyChange(() => CanManageFriends));
+            this.Bind(s => s.ActiveItem, (o, e) => this.NotifyOfPropertyChange(() => SubActiveItem));
+            this.connection.Bind(s => s.IsConnected, (o, e) => this.NotifyOfPropertyChange(() => CanManageFriends));
 
             events.Subscribe(this);
 
@@ -164,7 +164,7 @@ namespace Ec2Manager.ViewModels
         {
             var instanceViewModel = this.instanceViewModelFactory.CreateInstanceViewModel();
 
-            instanceViewModel.Bind(s => s.ActiveItem, _=> this.NotifyOfPropertyChange(() => SubActiveItem));
+            instanceViewModel.Bind(s => s.ActiveItem, (o, e) => this.NotifyOfPropertyChange(() => SubActiveItem));
             this.ActivateItem(instanceViewModel);
 
             await instanceViewModel.SetupAsync(message.Instance, message.LoginAs);
@@ -182,7 +182,7 @@ namespace Ec2Manager.ViewModels
         {
             var instanceViewModel = this.instanceViewModelFactory.CreateInstanceViewModel();
 
-            instanceViewModel.Bind(s => s.ActiveItem, _ => this.NotifyOfPropertyChange(() => SubActiveItem));
+            instanceViewModel.Bind(s => s.ActiveItem, (o, e) => this.NotifyOfPropertyChange(() => SubActiveItem));
             this.ActivateItem(instanceViewModel);
 
             await instanceViewModel.ReconnectAsync(message.Instance);
