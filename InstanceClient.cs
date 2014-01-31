@@ -47,6 +47,8 @@ namespace Ec2Manager
             get { return "/home/" + this.User + "/"; }
         }
 
+        private const int Retries = 10;
+
         public InstanceClient(string host, string user, string key)
         {
             this.Host = host;
@@ -54,35 +56,61 @@ namespace Ec2Manager
             this.Key = key;
         }
 
-        public Task ConnectAsync(ILogger logger)
+        /// <summary>
+        /// Largely synchronous, unfortunately
+        /// </summary>
+        public async Task ConnectAsync(ILogger logger)
         {
-            return Task.Run(() =>
-                {
-                    if (logger != null)
-                        logger.Log("Establishing connection with {0}@{1}", User, Host);
-                    this.client = new SshClient(Host, User, new PrivateKeyFile(new MemoryStream(Encoding.ASCII.GetBytes(Key))));
-                    while (!this.client.IsConnected)
-                    {
-                        try
-                        {
-                            this.client.Connect();
-                        }
-                        catch (SshAuthenticationException e)
-                        {
-                            var msg = "Authentication error: " + e.Message + "\nMake sure you entered the right SSH user";
-                            logger.Log(msg);
-                            throw new Exception(msg, e);
-                        }
-                        catch (System.Net.Sockets.SocketException) { }
-                        catch (SshException) { }
+            logger = logger ?? new StubLogger();
 
-                        if (!this.client.IsConnected && logger != null)
-                            logger.Log("Connection attempt failed. Retrying...");
-                    }
-                    this.IsConnected = true;
-                    if (logger != null)
-                        logger.Log("Connected");
-                });
+            logger.Log("Establishing connection with {0}@{1}", this.User, this.Host);
+
+            // It always takes a little while for the instance to get going
+            await Task.Delay(5000);
+
+            if (this.client == null)
+                this.client = new SshClient(this.Host, this.User, new PrivateKeyFile(new MemoryStream(Encoding.ASCII.GetBytes(this.Key))));
+
+            Exception lastException = null;
+
+            for (int i = 0; i < Retries && !this.client.IsConnected; i++)
+            {
+                try
+                {
+                    await Task.Run(() => this.client.Connect());
+                }
+                catch (SshAuthenticationException e)
+                {
+                    var msg = "SSH Authentication error: " + e.Message + "\nMake sure you entered the right SSH user";
+                    logger.Log(msg);
+                    throw new Exception(msg, e);
+                }
+                catch (System.Net.Sockets.SocketException e)
+                {
+                    lastException = e;
+                }
+                catch (SshException e)
+                {
+                    lastException = e;
+                }
+
+                if (!this.client.IsConnected)
+                    logger.Log("Connection attempt failed. Retrying...");
+
+                await Task.Delay(5000);
+            }
+
+            if (this.client.IsConnected)
+            {
+                this.IsConnected = true;
+                logger.Log("Connected");
+            }
+            else
+            {
+                var msg = "SSH connection failure: " + lastException.Message;
+                logger.Log(msg);
+                throw new Exception(msg, lastException);
+            }
         }
 
         public async Task SetupFilesystemAsync(string device, ILogger logger)

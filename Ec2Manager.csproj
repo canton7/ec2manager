@@ -124,7 +124,6 @@
     <Compile Include="Ec2Manager\Ec2SnapshotBrowser.cs" />
     <Compile Include="Ec2Manager\InstanceSize.cs" />
     <Compile Include="Ec2Manager\InstanceSpecification.cs" />
-    <Compile Include="Ec2Manager\StubLogger.cs" />
     <Compile Include="Ec2Manager\Ec2Volume.cs" />
     <Compile Include="Events\ReconnectInstanceEvent.cs" />
     <Compile Include="Events\TerminateInstanceEvent.cs" />
@@ -138,6 +137,7 @@
     <Compile Include="Converters\LogEntriesToTextConverter.cs" />
     <Compile Include="Converters\VolumeTypeToIdVisibilityConverter.cs" />
     <Compile Include="Events\CreateInstanceEvent.cs" />
+    <Compile Include="Utilities\StubLogger.cs" />
     <Compile Include="Utilities\VersionManager.cs" />
     <Compile Include="Validation\ValidationBindingExtension.cs" />
     <Compile Include="Validation\Validator.cs" />
