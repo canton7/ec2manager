@@ -12,19 +12,12 @@
             <DockPanel>
                 <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Margin="0,0,0,20">
                     <TextBlock>Name:</TextBlock>
-                    <TextBox Name="InstanceName" Width="200" Margin="15,0"/>
-                    <TextBlock>SSH user:</TextBlock>
-                    <TextBox Name="LoginAs" Width="150" Margin="15,0"/>
-                </StackPanel>
-
-                <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Margin="0,0,0,20">
-                    <TextBlock>Instance type:</TextBlock>
-                    <ComboBox x:Name="InstanceTypes" DisplayMemberPath="Name" Margin="15,0" HorizontalAlignment="Stretch" Width="200"/>
-                    <TextBlock>AMI:</TextBlock>
-                    <TextBox Name="AMI" Width="150" Margin="15,0"></TextBox>
+                    <TextBox Name="InstanceName" Width="150" Margin="15,0"/>
                 </StackPanel>
 
                 <StackPanel DockPanel.Dock="Top" Orientation="Horizontal"  Margin="0,0,0,20">
+                    <TextBlock>Instance type:</TextBlock>
+                    <ComboBox x:Name="InstanceTypes" DisplayMemberPath="Name" Margin="15,0" HorizontalAlignment="Stretch" Width="180"/>
                     <TextBlock>Availability Zone:</TextBlock>
                     <ComboBox x:Name="AvailabilityZones" Width="100" Margin="15,0" DisplayMemberPath="Label" />
                 </StackPanel>

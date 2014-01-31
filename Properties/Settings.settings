@@ -2,10 +2,10 @@
 <SettingsFile xmlns="http://schemas.microsoft.com/VisualStudio/2004/01/settings" CurrentProfile="(Default)" GeneratedClassNamespace="Ec2Manager.Properties" GeneratedClassName="Settings">
   <Profiles />
   <Settings>
-    <Setting Name="DefaultAMI" Type="System.String" Scope="User">
+    <Setting Name="AMI" Type="System.String" Scope="User">
       <Value Profile="(Default)">ami-3d160149</Value>
     </Setting>
-    <Setting Name="DefaultLogonUser" Type="System.String" Scope="User">
+    <Setting Name="LogonUser" Type="System.String" Scope="User">
       <Value Profile="(Default)">ubuntu</Value>
     </Setting>
     <Setting Name="SnapshotConfigUrl" Type="System.String" Scope="User">

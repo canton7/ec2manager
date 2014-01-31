@@ -26,24 +26,24 @@ namespace Ec2Manager.Properties {
         [global::System.Configuration.UserScopedSettingAttribute()]
         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
         [global::System.Configuration.DefaultSettingValueAttribute("ami-3d160149")]
-        public string DefaultAMI {
+        public string AMI {
             get {
-                return ((string)(this["DefaultAMI"]));
+                return ((string)(this["AMI"]));
             }
             set {
-                this["DefaultAMI"] = value;
+                this["AMI"] = value;
             }
         }
         
         [global::System.Configuration.UserScopedSettingAttribute()]
         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
         [global::System.Configuration.DefaultSettingValueAttribute("ubuntu")]
-        public string DefaultLogonUser {
+        public string LogonUser {
             get {
-                return ((string)(this["DefaultLogonUser"]));
+                return ((string)(this["LogonUser"]));
             }
             set {
-                this["DefaultLogonUser"] = value;
+                this["LogonUser"] = value;
             }
         }
         

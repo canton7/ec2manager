@@ -39,18 +39,6 @@ namespace Ec2Manager.ViewModels
             }
         }
 
-        private string loginAs;
-        public string LoginAs
-        {
-            get { return this.loginAs; }
-            set
-            {
-                this.loginAs = value;
-                this.NotifyOfPropertyChange();
-                this.NotifyOfPropertyChange(() => CanCreate);
-            }
-        }
-
         public InstanceSize[] InstanceTypes
         {
             get { return Ec2Connection.InstanceSizes; }
@@ -64,18 +52,6 @@ namespace Ec2Manager.ViewModels
             {
                 this.activeInstanceType = value;
                 this.NotifyOfPropertyChange();
-            }
-        }
-
-        private string ami;
-        public string AMI
-        {
-            get { return this.ami; }
-            set
-            {
-                this.ami = value;
-                this.NotifyOfPropertyChange();
-                this.NotifyOfPropertyChange(() => CanCreate);
             }
         }
 
@@ -208,8 +184,6 @@ namespace Ec2Manager.ViewModels
 
         private void LoadFromConfig()
         {
-            this.AMI = this.config.MainConfig.DefaultAmi;
-            this.LoginAs = this.config.MainConfig.DefaultLogonUser;
         }
 
         private async Task RefreshCurrentSpotPriceAsync()
@@ -235,9 +209,7 @@ namespace Ec2Manager.ViewModels
             get
             {
                 return this.connection.IsConnected &&
-                    !string.IsNullOrWhiteSpace(this.InstanceName) &&
-                    !string.IsNullOrWhiteSpace(this.LoginAs) &&
-                    !string.IsNullOrWhiteSpace(this.AMI);
+                    !string.IsNullOrWhiteSpace(this.InstanceName);
             }
         }
         public void Create()
@@ -257,8 +229,8 @@ namespace Ec2Manager.ViewModels
 
             this.events.Publish(new CreateInstanceEvent()
             {
-                Instance = this.connection.CreateInstance(this.InstanceName, this.AMI, this.ActiveInstanceType, this.SelectedAvailabilityZone.Value, this.UseSpotMarket ? (double?)this.SpotBidAmount : null),
-                LoginAs = this.LoginAs,
+                Instance = this.connection.CreateInstance(this.InstanceName, Settings.Default.AMI, this.ActiveInstanceType, this.SelectedAvailabilityZone.Value, this.UseSpotMarket ? (double?)this.SpotBidAmount : null),
+                LoginAs = Settings.Default.LogonUser,
             });
         }
 

@@ -15,7 +15,7 @@ namespace Ec2Manager.ViewModels
     {
         private Config config;
 
-        private string loginAs = Settings.Default.DefaultLogonUser;
+        private string loginAs = Settings.Default.LogonUser;
         public string LoginAs
         {
             get { return this.loginAs; }
