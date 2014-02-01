@@ -221,7 +221,7 @@ namespace Ec2Manager.Ec2Manager
             return volumeId;
         }
 
-        public async Task<Tuple<string, string>> GetSourceSnapshotNameDescriptionAsync()
+        public async Task<Ec2SnapshotDescription> GetSourceSnapshotDescriptionAsync()
         {
             this.Logger.Log("Retrieving name and description of sourse snapshot");
 
@@ -259,9 +259,13 @@ namespace Ec2Manager.Ec2Manager
             }
 
             var nameTag = snapshot.Tags.FirstOrDefault(x => x.Key == "Name");
-            var descriptionTag = snapshot.Description;
+            return new Ec2SnapshotDescription()
+            {
+                Name = nameTag == null ? null : nameTag.Value,
+                Description = snapshot.Description,
+                OwnerId = snapshot.OwnerId,
 
-            return Tuple.Create(nameTag == null ? null : nameTag.Value, descriptionTag);
+            };
         }
 
         public async Task<bool> AnySnapshotsExistWithName(string name)
@@ -482,5 +486,12 @@ namespace Ec2Manager.Ec2Manager
 
             this.Logger.Log("Volume {0} deleted", this.VolumeId);
         }
+    }
+
+    public class Ec2SnapshotDescription
+    {
+        public string Name { get; set; }
+        public string Description { get; set; }
+        public string OwnerId { get; set; }
     }
 }

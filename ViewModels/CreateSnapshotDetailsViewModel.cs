@@ -55,7 +55,7 @@ namespace Ec2Manager.ViewModels
             }
         }
 
-        private bool deleteSourceSnapshot;
+        private bool deleteSourceSnapshot = true;
         public bool DeleteSourceSnapshot
         {
             get { return this.deleteSourceSnapshot; }

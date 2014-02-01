@@ -18,6 +18,7 @@ namespace Ec2Manager.Ec2Manager
         private Credentials credentials;
         private RegionEndpoint endpoint = RegionEndpoint.EUWest1;
         private AmazonEC2Client client;
+        private string cachedUserId;
         public ILogger Logger;
 
         public static readonly InstanceSize[] InstanceSizes = new[]
@@ -76,7 +77,10 @@ namespace Ec2Manager.Ec2Manager
 
         public async Task<string> GetUserIdAsync()
         {
-            return (await new Amazon.IdentityManagement.AmazonIdentityManagementServiceClient(credentials.AwsAccessKey, credentials.AwsSecretKey).GetUserAsync(new Amazon.IdentityManagement.Model.GetUserRequest())).User.UserId;
+            if (this.cachedUserId == null)
+                this.cachedUserId = (await new Amazon.IdentityManagement.AmazonIdentityManagementServiceClient(credentials.AwsAccessKey, credentials.AwsSecretKey).GetUserAsync(new Amazon.IdentityManagement.Model.GetUserRequest())).User.UserId;
+
+            return this.cachedUserId;
         }
 
         //public Ec2Instance ReconnectInstance(string instanceId)

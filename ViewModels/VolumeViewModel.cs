@@ -14,6 +14,7 @@ namespace Ec2Manager.ViewModels
 {
     public class VolumeViewModel : Screen
     {
+        private Ec2Connection connection;
         private ICreateSnapshotDetailsViewModelFactory createSnapshotDetailsViewModelFactory;
         private IScriptDetailsViewModelFactory scriptDetailsViewModelFactory;
 
@@ -131,11 +132,13 @@ namespace Ec2Manager.ViewModels
         public VolumeViewModel(
             Logger logger,
             IWindowManager windowManager,
+            Ec2Connection connection,
             ICreateSnapshotDetailsViewModelFactory createSnapshotDetailsViewModelFactory,
             IScriptDetailsViewModelFactory scriptDetailsViewModelFactory)
         {
             this.Logger = logger;
             this.windowManager = windowManager;
+            this.connection = connection;
             this.createSnapshotDetailsViewModelFactory = createSnapshotDetailsViewModelFactory;
             this.scriptDetailsViewModelFactory = scriptDetailsViewModelFactory;
 
@@ -275,16 +278,17 @@ namespace Ec2Manager.ViewModels
         {
             var detailsModel = this.createSnapshotDetailsViewModelFactory.CreateCreateSnapshotDetailsViewModel();
 
-            var nameAndDescription = await this.Volume.GetSourceSnapshotNameDescriptionAsync();
-            if (nameAndDescription == null)
+            var description = await this.Volume.GetSourceSnapshotDescriptionAsync();
+            if (description == null)
             {
                 detailsModel.HasSourceSnapshot = false;
             }
             else
             {
-                detailsModel.HasSourceSnapshot = true;
-                detailsModel.Name = nameAndDescription.Item1;
-                detailsModel.Description = nameAndDescription.Item2;
+                // Only allow them to delete if they actually own it
+                detailsModel.HasSourceSnapshot = description.OwnerId == await this.connection.GetUserIdAsync();
+                detailsModel.Name = description.Name;
+                detailsModel.Description = description.Description;
             }
 
             var result = this.windowManager.ShowDialog(detailsModel, settings: new Dictionary<string, object>()
