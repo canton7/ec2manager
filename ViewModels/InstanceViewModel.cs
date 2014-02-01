@@ -120,7 +120,8 @@ namespace Ec2Manager.ViewModels
             this.uptimeTimer = new System.Timers.Timer();
             this.uptimeTimer.Elapsed += async (o, e) => 
                 {
-                    if (this.Client == null || !this.Client.IsConnected)
+                    // This also acts as our attempt to reconnect if the connection drops....
+                    if (this.Client == null)
                         this.uptimeTimer.Stop();
                     else
                         this.Uptime = await this.Client.GetUptimeAsync(this.Logger);
@@ -202,8 +203,8 @@ namespace Ec2Manager.ViewModels
                     try
                     {
                         // It takes them a little while to get going...
-                        this.Logger.Log("Waiting for 10 seconds for instance to boot");
-                        await Task.Delay(10000);
+                        this.Logger.Log("Waiting for 30 seconds for instance to boot");
+                        await Task.Delay(30000);
                         await this.Client.ConnectAsync(this.Logger);
                     }
                     catch (Exception e)
@@ -330,6 +331,8 @@ namespace Ec2Manager.ViewModels
             this.uptimeTimer.Stop();
 
             this.InstanceState = "terminating";
+
+            await this.Client.DisconnectAsync();
 
             this.Logger.Log("Umounting all volumes");
             await Task.WhenAll(this.Items.Where(x => x is VolumeViewModel).Select(x => ((VolumeViewModel)x).UnmountVolumeAsync()));

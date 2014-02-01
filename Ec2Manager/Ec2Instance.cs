@@ -690,11 +690,14 @@ namespace Ec2Manager.Ec2Manager
             var volumes = (await this.GetAttachedVolumesAsync())
                 .Where(x => x.Attachments.Count == 1)
                 .Where(x => x.Tags.Any(y => y.Key == "CreatedByEc2Manager"))
-                .Select(x => x.VolumeId);
+                .Select(x => x.VolumeId).ToList();
 
-            // Detach the volumes in parallel, since it takes a nice long time
-            this.Logger.Log("Found uniquely attached volumes: {0}", string.Join(", ", volumes));
-            await Task.WhenAll(volumes.Select(volume => new Ec2Volume(this, volume).DeleteAsync()));
+            if (volumes.Count > 0)
+            {
+                // Detach the volumes in parallel, since it takes a nice long time
+                this.Logger.Log("Found uniquely attached volumes: {0}", string.Join(", ", volumes));
+                await Task.WhenAll(volumes.Select(volume => new Ec2Volume(this, volume).DeleteAsync()));
+            }
 
             await this.TerminateAsync();
 
