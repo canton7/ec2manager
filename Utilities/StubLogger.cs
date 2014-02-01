@@ -1,5 +1,4 @@
-﻿using Ec2Manager.Utilities;
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -7,7 +6,7 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 
-namespace Ec2Manager.Ec2Manager
+namespace Ec2Manager.Utilities
 {
     public class StubLogger : ILogger
     {
@@ -19,8 +18,9 @@ namespace Ec2Manager.Ec2Manager
         {
         }
 
-        public void LogFromStream(IAsyncResult asynch, Stream stdout, Stream stderr = null, CancellationToken? cancellationToken = null)
+        public Task LogFromStream(IAsyncResult asynch, Stream stdout, Stream stderr = null, CancellationToken? cancellationToken = null)
         {
+            return Task.FromResult(0);
         }
     }
 }

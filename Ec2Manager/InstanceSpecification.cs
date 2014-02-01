@@ -1,4 +1,5 @@
-﻿using Amazon.EC2;
+﻿using Amazon;
+using Amazon.EC2;
 using System;
 using System.Collections.Generic;
 using System.Linq;

@@ -30,10 +30,10 @@ Installing
 ----------
 
 You're welcome to build the project from source.
-You'll need Visual Studio 2012 to build the project, and [NSIS](http://nsis.sourceforge.net) if you want to build the installer.
+You'll need Visual Studio 2013 to build the project, and [InnoSetup](http://www.jrsoftware.org/isinfo.php) if you want to build the installer.
 
 Alternatively, you can grab the [latest installer](http://canton7-ec2manager.s3.amazonaws.com/Releases/Ec2Manager-latest.exe) or a [standalone .zip](http://canton7-ec2manager.s3.amazonaws.com/Releases/Ec2Manager-latest.zip).
-You'll also need .NET 4.5.
+You'll also need .NET 4.5.1.
 
 How does it work?
 -----------------
@@ -131,8 +131,8 @@ When you reconnect, Ec2Manager will prompt you for this key.
 
 If you are trying to reconnect from a different computer and didn't save the private key, you'll only be able to terminate the instance.
 
-Creating new Snapshots, and incorporating into Ec2Manager
----------------------------------------------------------
+Creating new Snapshots
+----------------------
 
 New snapshots can be created either from scratch (say you want to create a new game server), or from an existing snapshot (say you want to customise someone else's snapshot).
 I've found two slightly different approaches fit these two scenarios best, so I'll approach them separately.
@@ -170,15 +170,14 @@ When that's done, SSH in and tweak the volune to your needs.
 Before terminating the instance, create a new snaphshot using EC2 Console.
 When you're done, terminate the instance as normal.
 
-### Incorporating new volumes and instances into Ec2Manager
+Listing snapshots, and the friends mechanism
+--------------------------------------------
 
-Ec2Manager's drop-down list of volumes is built from two places: the official list (hosted by me) and your personal list.
-The location of your personal list depends on how you installed Ec2Manager.
+When Ec2Manager builds its list of snapshots which you can mount, it looks in a few places: the official images published by me, any snapshots you've created with Ec2Manager, and any snapshots published by your friends.
 
-If you grabbed a standalone zip, there should be a 'config' folder in the same directory as Ec2Manager, once you've run it once.
-In there, create a file called `snapshot-config.txt`, and copy the format from [the official list](http://canton7-ec2manager.s3.amazonaws.com/snapshot-config.txt) (that is, `snapshot-or-volume-id[space]Description`).
-
-Alternatively, host a snapshot-config.txt somewhere, and point the appropriate key in Ec2Manager.exe.config to it.
+What are friends?
+They are simply Amazon AWS users whose snapshots you want Ec2Manager to list. Go to File -> Manage Friends to add, edit, and delete them.
+To add a friend, you'll have to ask them for their Amazon AWS User ID: they can see this by going to File -> Manage Friends.
 
 Ec2Manager-specific configuration files
 ---------------------------------------
@@ -186,16 +185,33 @@ Ec2Manager-specific configuration files
 Each volume has a number of configuration files used by Ec2Manager, including what firewall ports to open, what other packages need installing, the suggested way to start the server, and any instructions to the users.
 Let's detail them...
 
-1. `ec2manager/setup`: This is an executable file (don't forget the shebang!) which is executed once the volume has been mounted.
+### `ec2manager/setup`
+This is an executable file (don't forget the shebang!) which is executed once the volume has been mounted.
+Make sure you chmod +x it! It must be executable!
 Use it to install any necessary packages, etc.
-2. `ec2manager/ports`: This text file contains the ports which needs to be opened.
+It should probably look something like the following.
+Note the rather weird way in which apt-get needs to be called, and the test for a 64-bit architecture before installing lib32gcc1.
+```
+#!/bin/bash
+[ "`uname -m`" = "x86_64" ] && sudo DEBIAN_FRONTEND=noninteractive apt-get install -qq lib32gcc1
+```
+
+
+### `ec2manager/ports`
+This text file contains the ports which needs to be opened.
 The format is one port or range per line, of the format `fromport-toport/protocol`, e.g. `1000-2000/tcp`.
 If you only want to open one port, that's allowed -- e.g. `1000/tcp` -- and if you want to open both TCP and UDP, skip that bit -- e.g. `2000` or `2000-2010`.
-3. `ec2manager/runcmd`: This text file has two possible formats. In both cases, the command is run from the root of the mounted volume.
+
+### `ec2manager/runcmd`
+This text file has two possible formats. In both cases, the command is run from the root of the mounted volume.
   1. A single line, which is the suggested command used to start the server.
   2. Multiple lines, each with the format `name of variant<TAB>suggested command`.
-4. `ec2manager/user_instruction`: This is displayed to the user, verbatim. The string `<PUBLIC-IP>` is replaced with the actual public IP of the server.
-5. `ec2manager/scripts`: A directory containing optional scripts. See the section below.
+
+### `ec2manager/user_instruction`
+This is displayed to the user, verbatim. The string `<PUBLIC-IP>` is replaced with the actual public IP of the server.
+
+### `ec2manager/scripts`
+A directory containing optional scripts. See the section below.
 
 Scripts
 -------
@@ -218,6 +234,8 @@ Not that boolean types have the values 'True' for true, and anything else (norma
 
 When the user actually runs your script, the arguments given are passed in in the order given by the `--args` output, each one quoted.
 For example `ec2manager/scripts/YourScript "String Argument" "True"`.
+
+Scripts are called with the working directory set to the root of the mounted volume on which they reside.
 
 Choosing another AMI
 --------------------

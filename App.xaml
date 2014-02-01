@@ -1,12 +1,12 @@
 ﻿<Application x:Class="App"
             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
-            xmlns:local="clr-namespace:Ec2Manager"
+            xmlns:core="clr-namespace:Ec2Manager.Core"
             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
     <Application.Resources>
         <ResourceDictionary>
             <ResourceDictionary.MergedDictionaries>
                 <ResourceDictionary>
-                    <local:AppBootstrapper x:Key="bootstrapper"/>
+                    <core:AppBootstrapper x:Key="bootstrapper"/>
                 </ResourceDictionary>
                 <ResourceDictionary Source="ResourceDictionary.xaml"/>
             </ResourceDictionary.MergedDictionaries>

@@ -2,7 +2,6 @@
 using Ec2Manager.Events;
 using System;
 using System.Collections.Generic;
-using System.ComponentModel.Composition;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
@@ -13,17 +12,20 @@ using Ec2Manager.Properties;
 using System.Diagnostics;
 using System.Dynamic;
 using Ec2Manager.Utilities;
+using Ec2Manager.Ec2Manager;
 
 namespace Ec2Manager.ViewModels
 {
-    [Export]
     public class ShellViewModel
         : Conductor<IScreen>.Collection.OneActive,
         IHandle<CreateInstanceEvent>, IHandle<TerminateInstanceEvent>, IHandle<ReconnectInstanceEvent>
     {
         private IWindowManager windowManager;
         private Config config;
+        private Ec2Connection connection;
         private VersionManager versionManager;
+        private IInstanceViewModelFactory instanceViewModelFactory;
+        private ITerminateInstanceViewModelFactory terminateInstanceViewModelFactory;
 
         // Caliburn micro's target implementation has some weird behaviour, in that if the target's binding changes
         // to null, the target isn't updated. This is the case if we bind to ActiveItem.ActiveItem directly.
@@ -40,15 +42,25 @@ namespace Ec2Manager.ViewModels
             }
         }
 
-        [ImportingConstructor]
-        public ShellViewModel(ConnectViewModel connectModel, IEventAggregator events, IWindowManager windowManager, Config config, VersionManager versionManager)
+        public ShellViewModel(ConnectViewModel connectModel,
+            IEventAggregator events,
+            IWindowManager windowManager,
+            Config config,
+            Ec2Connection connection,
+            VersionManager versionManager,
+            IInstanceViewModelFactory instanceViewModelFactory,
+            ITerminateInstanceViewModelFactory terminateInstanceViewModelFactory)
         {
             this.DisplayName = "Ec2Manager";
             this.windowManager = windowManager;
             this.config = config;
+            this.connection = connection;
             this.versionManager = versionManager;
+            this.instanceViewModelFactory = instanceViewModelFactory;
+            this.terminateInstanceViewModelFactory = terminateInstanceViewModelFactory;
 
             this.Bind(s => s.ActiveItem, (o, e) => this.NotifyOfPropertyChange(() => SubActiveItem));
+            this.connection.Bind(s => s.IsConnected, (o, e) => this.NotifyOfPropertyChange(() => CanManageFriends));
 
             events.Subscribe(this);
 
@@ -107,9 +119,23 @@ namespace Ec2Manager.ViewModels
             }
         }
 
+        public bool CanManageFriends
+        {
+            get { return this.connection.IsConnected; }
+        }
+
+        public void ManageFriends()
+        {
+            this.windowManager.ShowDialog<ManageFriendsViewModel>(settings: new Dictionary<string, object>()
+                {
+                    { "Width", 400 },
+                    { "SizeToContent", SizeToContent.Height },
+                });
+        }
+
         public void ShowSettings()
         {
-            this.windowManager.ShowDialog(IoC.Get<SettingsViewModel>(), settings: new Dictionary<string, object>()
+            this.windowManager.ShowDialog<SettingsViewModel>(settings: new Dictionary<string, object>()
                 {
                     { "ResizeMode", ResizeMode.NoResize },
                 });
@@ -127,7 +153,7 @@ namespace Ec2Manager.ViewModels
 
         public void ShowAbout()
         {
-            this.windowManager.ShowDialog(IoC.Get<AboutViewModel>(), settings: new Dictionary<string, object>()
+            this.windowManager.ShowDialog<AboutViewModel>(settings: new Dictionary<string, object>()
                 {
                     { "WindowStyle", WindowStyle.None },
                     { "ShowInTaskbar", false},
@@ -136,7 +162,7 @@ namespace Ec2Manager.ViewModels
 
         public async void Handle(CreateInstanceEvent message)
         {
-            var instanceViewModel = IoC.Get<InstanceViewModel>();
+            var instanceViewModel = this.instanceViewModelFactory.CreateInstanceViewModel();
 
             instanceViewModel.Bind(s => s.ActiveItem, (o, e) => this.NotifyOfPropertyChange(() => SubActiveItem));
             this.ActivateItem(instanceViewModel);
@@ -146,7 +172,7 @@ namespace Ec2Manager.ViewModels
 
         public async void Handle(TerminateInstanceEvent message)
         {
-            var terminateViewModel = IoC.Get<TerminateInstanceViewModel>();
+            var terminateViewModel = this.terminateInstanceViewModelFactory.CreateTerminateInstanceViewModel();
             this.ActivateItem(terminateViewModel);
 
             await terminateViewModel.SetupAsync(message.Instance);
@@ -154,12 +180,22 @@ namespace Ec2Manager.ViewModels
 
         public async void Handle(ReconnectInstanceEvent message)
         {
-            var instanceViewModel = IoC.Get<InstanceViewModel>();
+            var instanceViewModel = this.instanceViewModelFactory.CreateInstanceViewModel();
 
             instanceViewModel.Bind(s => s.ActiveItem, (o, e) => this.NotifyOfPropertyChange(() => SubActiveItem));
             this.ActivateItem(instanceViewModel);
 
             await instanceViewModel.ReconnectAsync(message.Instance);
         }
+    }
+
+    public interface IInstanceViewModelFactory
+    {
+        InstanceViewModel CreateInstanceViewModel();
+    }
+
+    public interface ITerminateInstanceViewModelFactory
+    {
+        TerminateInstanceViewModel CreateTerminateInstanceViewModel();
     }
 }

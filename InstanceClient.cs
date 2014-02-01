@@ -22,7 +22,8 @@ namespace Ec2Manager
         public string Host { get; private set; }
         public string User { get; private set; }
         public string Key { get; private set; }
-        private AsyncSemaphore setupCmdLock = new AsyncSemaphore(1, 1);
+        private SemaphoreSlim setupCmdLock = new SemaphoreSlim(1, 1);
+        private SemaphoreSlim connectLock = new SemaphoreSlim(1, 1);
 
         public static readonly Dictionary<string, ScriptArgumentType> scriptArgumentTypeMapping = new Dictionary<string, ScriptArgumentType>()
         {
@@ -47,6 +48,8 @@ namespace Ec2Manager
             get { return "/home/" + this.User + "/"; }
         }
 
+        private const int Retries = 10;
+
         public InstanceClient(string host, string user, string key)
         {
             this.Host = host;
@@ -54,29 +57,74 @@ namespace Ec2Manager
             this.Key = key;
         }
 
-        public Task ConnectAsync(ILogger logger)
+        /// <summary>
+        /// Largely synchronous, unfortunately
+        /// </summary>
+        public async Task ConnectAsync(ILogger logger)
         {
-            return Task.Run(() =>
-                {
-                    if (logger != null)
-                        logger.Log("Establishing connection with {0}@{1}", User, Host);
-                    this.client = new SshClient(Host, User, new PrivateKeyFile(new MemoryStream(Encoding.ASCII.GetBytes(Key))));
-                    while (!this.client.IsConnected)
-                    {
-                        try
-                        {
-                            this.client.Connect();
-                        }
-                        catch (System.Net.Sockets.SocketException) { }
-                        catch (SshException) { }
+            logger = logger ?? new StubLogger();
 
-                        if (!this.client.IsConnected && logger != null)
-                            logger.Log("Connection attempt failed. Retrying...");
+            await this.connectLock.WaitAsync();
+            {
+                logger.Log("Establishing connection with {0}@{1}", this.User, this.Host);
+
+                if (this.client == null)
+                    this.client = new SshClient(this.Host, this.User, new PrivateKeyFile(new MemoryStream(Encoding.ASCII.GetBytes(this.Key))));
+
+                Exception lastException = null;
+
+                for (int i = 0; i < Retries && !this.client.IsConnected; i++)
+                {
+                    try
+                    {
+                        await Task.Run(() => this.client.Connect());
                     }
+                    catch (SshAuthenticationException e)
+                    {
+                        var msg = "SSH Authentication error: " + e.Message + "\nMake sure you entered the right SSH user";
+                        logger.Log(msg);
+                        throw new Exception(msg, e);
+                    }
+                    catch (System.Net.Sockets.SocketException e)
+                    {
+                        lastException = e;
+                    }
+                    catch (SshException e)
+                    {
+                        lastException = e;
+                    }
+
+                    if (!this.client.IsConnected)
+                        logger.Log("Connection attempt failed. Retrying...");
+
+                    await Task.Delay(5000);
+                }
+
+                if (this.client.IsConnected)
+                {
                     this.IsConnected = true;
-                    if (logger != null)
-                        logger.Log("Connected");
-                });
+                    logger.Log("Connected");
+                }
+                else
+                {
+                    var msg = "SSH connection failure: " + lastException.Message;
+                    logger.Log(msg);
+                    throw new Exception(msg, lastException);
+                }
+            }
+            this.connectLock.Release();
+        }
+
+        public async Task DisconnectAsync()
+        {
+            await this.connectLock.WaitAsync();
+            {
+                if (this.client != null)
+                    this.client.Disconnect();
+
+                this.IsConnected = false;
+            }
+            this.connectLock.Release();
         }
 
         public async Task SetupFilesystemAsync(string device, ILogger logger)
@@ -237,18 +285,20 @@ namespace Ec2Manager
         {
             var mountPoint = this.mountBase + mountPointDir;
 
-            await this.RunAndLogStreamAsync("\"" + mountPoint + "/ec2manager/scripts/" + script + "\" " + string.Join(" ", args.Select(x => "\"" + x + "\"")), logger, false, cancellationToken);
+            logger.Log("Starting script '{0}'", script);
+            await this.RunAndLogStreamAsync(String.Format("cd \"{0}\" && \"ec2manager/scripts/{1}\" {2}", mountPoint, script, String.Join(" ", args.Select(x => "\"" + x + "\""))), logger, false, cancellationToken);
 
             logger.Log("Script finished");
         }
 
-        private async Task<SshCommand> RunCommandAsync(string command, ILogger logger, System.Action<SshCommand, IAsyncResult> doWithResult = null, CancellationToken? cancellationToken = null)
+        private async Task<SshCommand> RunCommandAsync(string command, ILogger logger, System.Func<SshCommand, IAsyncResult, Task> doWithResult = null, CancellationToken? cancellationToken = null)
         {
             CancellationToken token = cancellationToken ?? new CancellationToken();
 
-            SshCommand cmd;
+            SshCommand cmd = null;
+            Exception lastException = null;
 
-            while (true)
+            for (int i = 0; i < Retries; i++)
             {
                 try
                 {
@@ -267,13 +317,18 @@ namespace Ec2Manager
                         tcs.TrySetResult(false);
                     }))
                     {
-                        if (doWithResult != null)
-                            doWithResult(cmd, result);
+                        var tasks = new List<Task>();
 
-                        await tcs.Task;
+                        if (doWithResult != null)
+                            tasks.Add(doWithResult(cmd, result));
+
+                        tasks.Add(tcs.Task);
+
+                        await Task.WhenAll(tasks);
                     };
 
                     cmd.EndExecute(result);
+                    lastException = null;
 
                     break;
                 }
@@ -281,11 +336,13 @@ namespace Ec2Manager
                 {
                     if (logger != null)
                         logger.Log("SocketException: " + e.Message);
+                    lastException = e;
                 }
                 catch (SshException e)
                 {
                     if (logger != null)
                         logger.Log("SshException: " + e.Message);
+                    lastException = e;
                 }
 
                 this.IsConnected = false;
@@ -295,6 +352,9 @@ namespace Ec2Manager
 
                 await this.ConnectAsync(logger);
             }
+
+            if (lastException != null)
+                throw lastException;
 
             return cmd;
         }
@@ -328,11 +388,11 @@ namespace Ec2Manager
 
             return Task.Run(async () =>
             {
-                await this.RunCommandAsync(command, logger, (cmd, result) =>
+                await this.RunCommandAsync(command, logger, async (cmd, result) =>
                     {
                         try
                         {
-                            logger.LogFromStream(result, cmd.OutputStream, cmd.ExtendedOutputStream, token);
+                            await logger.LogFromStream(result, cmd.OutputStream, cmd.ExtendedOutputStream, token);
                         }
                         catch (OperationCanceledException)
                         {
@@ -401,8 +461,7 @@ namespace Ec2Manager
 
         public void Dispose()
         {
-            if (this.client != null)
-                this.client.Disconnect();
+            this.DisconnectAsync().Wait();
         }
     }
 }

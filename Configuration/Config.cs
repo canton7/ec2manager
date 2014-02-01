@@ -3,7 +3,6 @@ using Ec2Manager.Classes;
 using Ec2Manager.Properties;
 using System;
 using System.Collections.Generic;
-using System.ComponentModel.Composition;
 using System.IO;
 using System.Linq;
 using System.Net;
@@ -14,8 +13,6 @@ using System.Threading.Tasks;
 
 namespace Ec2Manager.Configuration
 {
-    [Export]
-    [PartCreationPolicy(CreationPolicy.Shared)]
     public class Config : PropertyChangedBase 
     {
         private readonly string appDataFolder = "Ec2Manager"; 
@@ -32,6 +29,12 @@ namespace Ec2Manager.Configuration
             }
         }
 
+        public string KeyPath
+        {
+            get { return Path.Combine(this.ConfigDir, "ec2key", "eu-west-1"); }
+        }
+
+
         public string MainConfigFile
         {
             get { return Path.Combine(this.ConfigDir, "config.xml"); }
@@ -39,59 +42,36 @@ namespace Ec2Manager.Configuration
 
         public MainConfig MainConfig { get; private set; }
 
-        public string SnapshotConfigFile
-        {
-            get { return Path.Combine(this.ConfigDir, "snapshot-config.txt"); }
-        }
-
-        private AsyncLazy<IEnumerable<VolumeType>> snapshotConfig;
-        public Task<IEnumerable<VolumeType>> GetSnapshotConfigAsync()
-        {
-            return this.snapshotConfig.Value;
-        }
-
-        public string SavedKeysDir
-        {
-            get { return Path.Combine(this.ConfigDir, "keys"); }
-        }
-
-        [ImportingConstructor]
         public Config()
         {
             Directory.CreateDirectory(this.ConfigDir);
-            Directory.CreateDirectory(this.SavedKeysDir);
 
             this.LoadMainConfig();
-
-            this.snapshotConfig = new AsyncLazy<IEnumerable<VolumeType>>(async () =>
-                {
-                    var config = new List<VolumeType>();
-                    if (File.Exists(this.SnapshotConfigFile))
-                    {
-                        config.AddRange(File.ReadAllLines(this.SnapshotConfigFile).Where(x => !x.StartsWith(";") && !string.IsNullOrWhiteSpace(x)).Select(x =>
-                        {
-                            var parts = x.Split(new[] { ' ' }, 2);
-                            return new VolumeType(parts[0].Trim(), parts[1].Trim());
-                        }));
-                    }
-
-                    try
-                    {
-                        WebClient client = new WebClient();
-                        config.AddRange((await client.DownloadStringTaskAsync(Settings.Default.SnapshotConfigUrl)).Split(new[] { "\n", "\r\n" }, StringSplitOptions.RemoveEmptyEntries).Where(x => !x.StartsWith(";")).Select(x =>
-                        {
-                            var parts = x.Split(new[] { ' ' }, 2);
-                            return new VolumeType(parts[0].Trim(), parts[1].Trim());
-                        }));
-                    }
-                    catch (WebException)
-                    {
-                    }
-
-                    return config;
-                });
         }
 
+        public IEnumerable<Friend> DefaultFriends
+        {
+            get
+            {
+                var defaults = new List<Friend>() { new Friend("self", "Your Images") };
+                if (this.MainConfig.ShowOfficialImages)
+                    defaults.Add(new Friend(Settings.Default.DefaultImagesUserId, "Official Images"));
+                return defaults;
+            }
+        }
+
+        public IEnumerable<Friend> FriendsWithoutDefaults
+        {
+            get { return this.MainConfig.Friends; }
+            set { this.MainConfig.Friends = value.ToList(); }
+        }
+
+        public IEnumerable<Friend> Friends
+        {
+            get { return this.DefaultFriends.Concat(this.FriendsWithoutDefaults); }
+        }
+
+        
         private void LoadMainConfig()
         {
             if (File.Exists(this.MainConfigFile))
@@ -120,26 +100,34 @@ namespace Ec2Manager.Configuration
             this.LoadMainConfig();
         }
 
-        public void SaveKeyAndUser(string name, string user, string privateKey)
+        public void SaveKey(KeyDescription key)
         {
-            var commentedKey = Regex.Replace(privateKey, @"(?=-----END)", "Ec2ManagerUser:" + user + "\n");
-            File.WriteAllText(Path.Combine(this.SavedKeysDir, name), commentedKey);
+            var keyPath = this.KeyPath;
+
+            var commentedKey = Regex.Replace(key.Key, @"(?=-----END)", String.Format("Ec2ManagerFingerprint:{0}\n", key.Fingerprint));
+
+            Directory.CreateDirectory(Path.GetDirectoryName(keyPath));
+            File.WriteAllText(keyPath, commentedKey);
         }
 
-        public Tuple<string, string> RetrieveKeyAndUser(string name)
+        public KeyDescription? LoadKey()
         {
-            var path = Path.Combine(this.SavedKeysDir, name);
-            var key = File.ReadAllText(path);
-            var user = this.ParseUserFromKey(key);
+            var keyPath = this.KeyPath;
+
+            if (!File.Exists(keyPath))
+                return null;
+            
+            return this.ParseKeyAtPath(keyPath);
+        }
+
+        public KeyDescription ParseKeyAtPath(string keyPath)
+        {
+            var keyMaterial = File.ReadAllText(keyPath);
+            var fingerprint = Regex.Match(keyMaterial, @"Ec2ManagerFingerprint:(\S*)").Groups[1].Value;
             // Strip comment from key, as SshNet doesn't like them
-            key = Regex.Replace(key, @"^Ec2Manager.*\r?\n", "", RegexOptions.Multiline);
-            return new Tuple<string, string>(key, user);
-        }
+            keyMaterial = Regex.Replace(keyMaterial, @"^Ec2Manager.*\r?\n", "", RegexOptions.Multiline);
 
-        public string ParseUserFromKey(string key)
-        {
-            var user = Regex.Match(key, @"Ec2ManagerUser:(\w*)").Groups[1].Value;
-            return string.IsNullOrWhiteSpace(user) ? null : user;
+            return new KeyDescription(keyMaterial, fingerprint);
         }
     }
 }

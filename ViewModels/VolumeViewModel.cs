@@ -1,7 +1,6 @@
 ﻿using Caliburn.Micro;
 using System;
 using System.Collections.Generic;
-using System.ComponentModel.Composition;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
@@ -13,10 +12,12 @@ using Ec2Manager.Utilities;
 
 namespace Ec2Manager.ViewModels
 {
-    [Export]
-    [PartCreationPolicy(CreationPolicy.NonShared)]
     public class VolumeViewModel : Screen
     {
+        private Ec2Connection connection;
+        private ICreateSnapshotDetailsViewModelFactory createSnapshotDetailsViewModelFactory;
+        private IScriptDetailsViewModelFactory scriptDetailsViewModelFactory;
+
         public Logger Logger { get; private set; }
         private IWindowManager windowManager;
 
@@ -128,11 +129,18 @@ namespace Ec2Manager.ViewModels
         }
 
 
-        [ImportingConstructor]
-        public VolumeViewModel(Logger logger, IWindowManager windowManager)
+        public VolumeViewModel(
+            Logger logger,
+            IWindowManager windowManager,
+            Ec2Connection connection,
+            ICreateSnapshotDetailsViewModelFactory createSnapshotDetailsViewModelFactory,
+            IScriptDetailsViewModelFactory scriptDetailsViewModelFactory)
         {
             this.Logger = logger;
             this.windowManager = windowManager;
+            this.connection = connection;
+            this.createSnapshotDetailsViewModelFactory = createSnapshotDetailsViewModelFactory;
+            this.scriptDetailsViewModelFactory = scriptDetailsViewModelFactory;
 
             this.SelectedScript = this.Scripts[0];
         }
@@ -268,11 +276,20 @@ namespace Ec2Manager.ViewModels
         }
         public async void CreateSnapshot()
         {
-            var detailsModel = IoC.Get<CreateSnapshotDetailsViewModel>();
+            var detailsModel = this.createSnapshotDetailsViewModelFactory.CreateCreateSnapshotDetailsViewModel();
 
-            var nameAndDescription = await this.Volume.GetSourceSnapshotNameDescriptionAsync();
-            detailsModel.Name = nameAndDescription.Item1;
-            detailsModel.Description = nameAndDescription.Item2;
+            var description = await this.Volume.GetSourceSnapshotDescriptionAsync();
+            if (description == null)
+            {
+                detailsModel.HasSourceSnapshot = false;
+            }
+            else
+            {
+                // Only allow them to delete if they actually own it
+                detailsModel.HasSourceSnapshot = description.OwnerId == await this.connection.GetUserIdAsync();
+                detailsModel.Name = description.Name;
+                detailsModel.Description = description.Description;
+            }
 
             var result = this.windowManager.ShowDialog(detailsModel, settings: new Dictionary<string, object>()
             {
@@ -281,7 +298,7 @@ namespace Ec2Manager.ViewModels
 
             if (result.HasValue && result.Value)
             {
-                if (await this.Volume.AnySnapshotsExistWithName(detailsModel.Name))
+                if (!detailsModel.DeleteSourceSnapshot && await this.Volume.AnySnapshotsExistWithName(detailsModel.Name))
                 {
                     var confirmResult = MessageBox.Show(Application.Current.MainWindow, "Are you sure you want to create a snapshot called " + detailsModel.Name + "?\nYou already have a snapshot with this name", "Are you sure?", MessageBoxButton.YesNo, MessageBoxImage.Question, MessageBoxResult.No);
                     if (confirmResult == MessageBoxResult.No)
@@ -294,6 +311,7 @@ namespace Ec2Manager.ViewModels
 
                     this.CancelCts = new CancellationTokenSource();
                     await this.Volume.CreateSnapshotAsync(detailsModel.Name, detailsModel.Description, detailsModel.IsPublic, this.CancelCts.Token);
+                    await this.Volume.DeleteSnapshotAsync(await this.Volume.GetSourceSnapshotAsync());
                 }
                 catch (OperationCanceledException)
                 {
@@ -318,7 +336,7 @@ namespace Ec2Manager.ViewModels
 
             if (requiredArgs.Length > 0)
             {
-                var vm = IoC.Get<ScriptDetailsViewModel>();
+                var vm = this.scriptDetailsViewModelFactory.CreateScriptDetailsViewModel();
                 vm.SetArguments(requiredArgs);
 
                 var result = this.windowManager.ShowDialog(vm);
@@ -344,5 +362,15 @@ namespace Ec2Manager.ViewModels
                 this.VolumeState = "mounted";
             }
         }
+    }
+
+    public interface ICreateSnapshotDetailsViewModelFactory
+    {
+        CreateSnapshotDetailsViewModel CreateCreateSnapshotDetailsViewModel();
+    }
+
+    public interface IScriptDetailsViewModelFactory
+    {
+        ScriptDetailsViewModel CreateScriptDetailsViewModel();
     }
 }

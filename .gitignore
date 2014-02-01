@@ -33,5 +33,5 @@ obj/
 packages/
 
 #Installer
-installer/*.exe
+installer/Output
 

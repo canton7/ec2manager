@@ -5,7 +5,8 @@
              xmlns:supp="clr-namespace:Ec2Manager.Support"
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
              mc:Ignorable="d" 
-             d:DesignHeight="300" Padding="10" Width="224">
+             Padding="10"
+             d:DesignHeight="300" Width="224">
     <DockPanel>
         <DockPanel.Resources>
             <Style TargetType="TextBlock">
@@ -22,10 +23,6 @@
         <TextBox x:Name="MainConfig_AwsSecretKey" DockPanel.Dock="Top" Width="200" HorizontalAlignment="Left"/>
         <TextBlock DockPanel.Dock="Top" Margin="0">Forgotten your credentials?</TextBlock>
         <TextBlock DockPanel.Dock="Top" Margin="0,0,0,10"><Hyperlink supp:HyperlinkUtilities.Action="ShowCredentials">Find them here</Hyperlink></TextBlock>
-        <TextBlock DockPanel.Dock="Top">Default AMI:</TextBlock>
-        <TextBox x:Name="MainConfig_DefaultAmi" DockPanel.Dock="Top" Width="200" HorizontalAlignment="Left"/>
-        <TextBlock DockPanel.Dock="Top">Default Logon User:</TextBlock>
-        <TextBox x:Name="MainConfig_DefaultLogonUser" DockPanel.Dock="Top" Width="200" HorizontalAlignment="Left"/>
         
         <Grid DockPanel.Dock="Bottom" VerticalAlignment="Bottom">
             <Grid.ColumnDefinitions>

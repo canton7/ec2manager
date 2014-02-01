@@ -15,8 +15,8 @@ namespace Ec2Manager.Configuration
     {
         public MainConfig()
         {
-            this.DefaultAmi = Settings.Default.DefaultAMI;
-            this.DefaultLogonUser = Settings.Default.DefaultLogonUser;
+            this.Friends = new List<Friend>();
+            this.ShowOfficialImages = true;
         }
 
         public static MainConfig FromFile(string filename)
@@ -59,29 +59,10 @@ namespace Ec2Manager.Configuration
             }
         }
 
-        private string defaultAmi;
-        public string DefaultAmi
-        {
-            get { return this.defaultAmi; }
-            set
-            {
-                this.defaultAmi = value;
-                this.NotifyOfPropertyChange();
-            }
-        }
-        // If they don't change it, use the one from App.config. This allows us to change the default easily
-        public bool ShouldSerializeDefaultAmi()
-        {
-            return this.DefaultAmi != Settings.Default.DefaultAMI;
-        }
-
-        public string DefaultLogonUser { get; set; }
-        // Likewise
-        public bool ShouldSerializeDefaultLogonUser()
-        {
-            return this.DefaultLogonUser != Settings.Default.DefaultLogonUser;
-        }
-
         public string PuttyPath { get; set; }
+
+        public List<Friend> Friends { get; set; }
+
+        public bool ShowOfficialImages { get; set; }
     }
 }

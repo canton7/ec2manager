@@ -1,7 +1,6 @@
 ﻿using Caliburn.Micro;
 using System;
 using System.Collections.Generic;
-using System.ComponentModel.Composition;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
@@ -15,20 +14,22 @@ using System.Threading;
 using Ec2Manager.Ec2Manager;
 using System.Diagnostics;
 using Ec2Manager.Utilities;
+using System.Windows.Data;
+using Ec2Manager.Properties;
 
 namespace Ec2Manager.ViewModels
 {
-    [Export]
-    [PartCreationPolicy(CreationPolicy.NonShared)]
     public class InstanceViewModel : Conductor<IScreen>.Collection.OneActive
     {
         private static readonly List<VolumeType> defaultVolumeTypes = new List<VolumeType>
             {
-                VolumeType.Custom("Custom Snapshot or Volume"),
+                VolumeType.Custom("Custom Snapshot or Volume", new Friend(null, "Your Images")),
             };
 
         public Ec2Instance Instance { get; private set; }
         public InstanceClient Client { get; private set; }
+        private Ec2Connection connection;
+        private IVolumeViewModelFactory volumeViewModelFactory;
         private IWindowManager windowManager;
 
         public Logger Logger { get; private set; }
@@ -57,11 +58,8 @@ namespace Ec2Manager.ViewModels
             }
         }
 
-        private List<VolumeType> volumeTypes = new List<VolumeType>() { new VolumeType(null, "Loading...") };
-        public List<VolumeType> VolumeTypes
-        {
-            get { return volumeTypes.Concat(defaultVolumeTypes).ToList(); }
-        }
+        public BindableCollection<VolumeType> VolumeTypes { get; private set; }
+
         private VolumeType selectedVolumeType;
         public VolumeType SelectedVolumeType
         {
@@ -112,16 +110,20 @@ namespace Ec2Manager.ViewModels
             }
         }
 
-        [ImportingConstructor]
-        public InstanceViewModel(InstanceDetailsViewModel instanceDetailsModel, Logger logger, Config config, IWindowManager windowManager)
+        public InstanceViewModel(InstanceDetailsViewModel instanceDetailsModel, Logger logger, Config config, Ec2Connection connection, IVolumeViewModelFactory volumeViewModelFactory, IWindowManager windowManager)
         {
             this.Logger = logger;
             this.config = config;
+            this.connection = connection;
+            this.volumeViewModelFactory = volumeViewModelFactory;
             this.windowManager = windowManager;
             this.uptimeTimer = new System.Timers.Timer();
             this.uptimeTimer.Elapsed += async (o, e) => 
                 {
-                    if (this.Client.IsConnected)
+                    // This also acts as our attempt to reconnect if the connection drops....
+                    if (this.Client == null)
+                        this.uptimeTimer.Stop();
+                    else
                         this.Uptime = await this.Client.GetUptimeAsync(this.Logger);
                 };
             this.uptimeTimer.AutoReset = true;
@@ -129,7 +131,9 @@ namespace Ec2Manager.ViewModels
 
             instanceDetailsModel.Logger = logger;
 
+            this.VolumeTypes = new BindableCollection<VolumeType>() { new VolumeType(null, "Loading...", null) };
             this.SelectedVolumeType = this.VolumeTypes[0];
+
             this.ActivateItem(instanceDetailsModel);
         }
 
@@ -152,12 +156,16 @@ namespace Ec2Manager.ViewModels
             update();
         }
 
-        private async Task RefreshVolumes()
+        public async Task RefreshSnapshots()
         {
-            var snapshots = await this.config.GetSnapshotConfigAsync();
-            this.volumeTypes.Clear();
-            this.volumeTypes.AddRange(snapshots);
-            this.SelectedVolumeType = this.volumeTypes[0];
+            var snapshots = await this.connection.CreateSnapshotBrowser().GetSnapshotsForFriendsAsync(this.config.Friends);
+            this.VolumeTypes.Clear();
+            if (snapshots.Any())
+            {
+                this.VolumeTypes.AddRange(snapshots);
+            }
+            this.VolumeTypes.AddRange(defaultVolumeTypes);
+            this.SelectedVolumeType = this.VolumeTypes[0];
             this.NotifyOfPropertyChange(() => VolumeTypes);
         }
 
@@ -190,15 +198,30 @@ namespace Ec2Manager.ViewModels
                             this.NotifyOfPropertyChange(() => CanMountVolume);
                             this.NotifyOfPropertyChange(() => CanCreateVolume);
                         });
-                    
-                    this.config.SaveKeyAndUser(this.Instance.InstanceId, loginAs, this.Instance.PrivateKey);
 
-                    await this.Client.ConnectAsync(this.Logger);
+                    Exception exception = null;
+                    try
+                    {
+                        // It takes them a little while to get going...
+                        this.Logger.Log("Waiting for 30 seconds for instance to boot");
+                        await Task.Delay(30000);
+                        await this.Client.ConnectAsync(this.Logger);
+                    }
+                    catch (Exception e)
+                    {
+                        exception = e;
+                    }
+                    if (exception != null)
+                    {
+                        this.Logger.Log("The instance will now be terminated");
+                        await this.Instance.DestroyAsync();
+                    }
+
                 }, this.CancelCts.Token);
 
             try
             {
-                await Task.WhenAll(createTask, this.RefreshVolumes());
+                await Task.WhenAll(createTask, this.RefreshSnapshots());
                 this.uptimeTimer.Start();
             }
             catch (OperationCanceledException)
@@ -230,27 +253,17 @@ namespace Ec2Manager.ViewModels
                     await this.Instance.SetupAsync();
                     this.InstanceState = "running";
 
-                    Tuple<string, string> keyAndUser = null;
-                    try
+                    KeyDescription? key = this.config.LoadKey();
+                    if (key == null)
                     {
-                        keyAndUser = this.config.RetrieveKeyAndUser(this.Instance.InstanceId);
-                    }
-                    catch (FileNotFoundException)
-                    {
-                        var reconnectDetails = IoC.Get<ReconnectDetailsViewModel>();
-                        bool? result = false;
-                        this.Invoke(() =>
-                            {
-                                result = this.windowManager.ShowDialog(reconnectDetails, settings: new Dictionary<string, object>()
+                        var result = this.windowManager.ShowDialog<ReconnectDetailsViewModel>(settings: new Dictionary<string, object>()
                                 {
                                     { "ResizeMode", ResizeMode.NoResize },
                                 });
-                            });
 
-                        if (result.HasValue && result.Value)
+                        if (result.Result.GetValueOrDefault())
                         {
-                            keyAndUser = new Tuple<string, string>(reconnectDetails.PrivateKey, reconnectDetails.LoginAs);
-                            this.config.SaveKeyAndUser(this.Instance.InstanceId, keyAndUser.Item2, keyAndUser.Item1);
+                            key = this.config.ParseKeyAtPath(result.VM.PrivateKeyFile);
                         }
                         else
                         {
@@ -258,7 +271,7 @@ namespace Ec2Manager.ViewModels
                         }
                     }
 
-                    this.Client = new InstanceClient(this.Instance.PublicIp, keyAndUser.Item2, keyAndUser.Item1);
+                    this.Client = new InstanceClient(this.Instance.PublicIp, Settings.Default.LogonUser, key.Value.Key);
                     this.Client.Bind(s => s.IsConnected, (o, e) =>
                     {
                         this.NotifyOfPropertyChange(() => CanMountVolume);
@@ -269,7 +282,7 @@ namespace Ec2Manager.ViewModels
 
                     await Task.WhenAll((await this.Instance.ListVolumesAsync()).Select(volume =>
                         {
-                            var volumeViewModel = IoC.Get<VolumeViewModel>();
+                            var volumeViewModel = this.volumeViewModelFactory.CreatetVolumeViewModel();
                             this.ActivateItem(volumeViewModel);
                             return volumeViewModel.ReconnectAsync(volume, this.Client);
                         }));
@@ -277,7 +290,7 @@ namespace Ec2Manager.ViewModels
 
             try
             {
-                await Task.WhenAll(reconnectTask, this.RefreshVolumes());
+                await Task.WhenAll(reconnectTask, this.RefreshSnapshots());
             }
             catch (Exception e)
             {
@@ -319,6 +332,8 @@ namespace Ec2Manager.ViewModels
 
             this.InstanceState = "terminating";
 
+            await this.Client.DisconnectAsync();
+
             this.Logger.Log("Umounting all volumes");
             await Task.WhenAll(this.Items.Where(x => x is VolumeViewModel).Select(x => ((VolumeViewModel)x).UnmountVolumeAsync()));
 
@@ -332,6 +347,7 @@ namespace Ec2Manager.ViewModels
             {
                 return this.InstanceState == "running" && this.Instance != null &&
                     this.Instance.InstanceState == "running" && this.Client != null &&
+                    this.SelectedVolumeType != null &&
                     (this.SelectedVolumeType.IsCustom == true || this.SelectedVolumeType.SnapshotId != null) &&
                     (!this.selectedVolumeType.IsCustom || !string.IsNullOrWhiteSpace(this.CustomVolumeSnapshotId)) &&
                     this.Client.IsConnected;
@@ -340,7 +356,7 @@ namespace Ec2Manager.ViewModels
 
         public async void MountVolume()
         {
-            var volumeViewModel = IoC.Get<VolumeViewModel>();
+            var volumeViewModel = this.volumeViewModelFactory.CreatetVolumeViewModel();
             string volumeId;
             string volumeName;
 
@@ -385,21 +401,20 @@ namespace Ec2Manager.ViewModels
 
         public async void CreateVolume()
         {
-            var detailsModel = IoC.Get<CreateNewVolumeDetailsViewModel>();
-            var result = this.windowManager.ShowDialog(detailsModel, settings: new Dictionary<string, object>()
+            var result = this.windowManager.ShowDialog<CreateNewVolumeDetailsViewModel>(settings: new Dictionary<string, object>()
             {
                 { "ResizeMode", ResizeMode.NoResize },
             });
 
-            if (result.HasValue && result.Value)
+            if (result.Success)
             {
-                var volumeViewModel = IoC.Get<VolumeViewModel>();
+                var volumeViewModel = this.volumeViewModelFactory.CreatetVolumeViewModel();
 
                 this.ActivateItem(volumeViewModel);
 
                 try
                 {
-                    var volume = this.Instance.CreateVolume(detailsModel.Size, detailsModel.Name);
+                    var volume = this.Instance.CreateVolume(result.VM.Size, result.VM.Name);
                     await volumeViewModel.SetupAsync(volume, this.Client);
                 }
                 catch (OperationCanceledException)
@@ -488,5 +503,10 @@ namespace Ec2Manager.ViewModels
                 File.WriteAllText(fileName, puttyKey);
             }
         }
+    }
+
+    public interface IVolumeViewModelFactory
+    {
+        VolumeViewModel CreatetVolumeViewModel();
     }
 }
