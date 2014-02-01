@@ -15,6 +15,7 @@ using Ec2Manager.Ec2Manager;
 using System.Diagnostics;
 using Ec2Manager.Utilities;
 using System.Windows.Data;
+using Ec2Manager.Properties;
 
 namespace Ec2Manager.ViewModels
 {
@@ -196,8 +197,6 @@ namespace Ec2Manager.ViewModels
                             this.NotifyOfPropertyChange(() => CanMountVolume);
                             this.NotifyOfPropertyChange(() => CanCreateVolume);
                         });
-                    
-                    this.config.SaveKeyAndUser(this.Instance.InstanceId, loginAs, this.Instance.PrivateKey);
 
                     Exception exception = null;
                     try
@@ -253,12 +252,8 @@ namespace Ec2Manager.ViewModels
                     await this.Instance.SetupAsync();
                     this.InstanceState = "running";
 
-                    Tuple<string, string> keyAndUser = null;
-                    try
-                    {
-                        keyAndUser = this.config.RetrieveKeyAndUser(this.Instance.InstanceId);
-                    }
-                    catch (FileNotFoundException)
+                    KeyDescription? key = this.config.LoadKey();
+                    if (key == null)
                     {
                         var result = this.windowManager.ShowDialog<ReconnectDetailsViewModel>(settings: new Dictionary<string, object>()
                                 {
@@ -267,8 +262,7 @@ namespace Ec2Manager.ViewModels
 
                         if (result.Result.GetValueOrDefault())
                         {
-                            keyAndUser = new Tuple<string, string>(result.VM.PrivateKey, result.VM.LoginAs);
-                            this.config.SaveKeyAndUser(this.Instance.InstanceId, keyAndUser.Item2, keyAndUser.Item1);
+                            key = this.config.ParseKeyAtPath(result.VM.PrivateKeyFile);
                         }
                         else
                         {
@@ -276,7 +270,7 @@ namespace Ec2Manager.ViewModels
                         }
                     }
 
-                    this.Client = new InstanceClient(this.Instance.PublicIp, keyAndUser.Item2, keyAndUser.Item1);
+                    this.Client = new InstanceClient(this.Instance.PublicIp, Settings.Default.LogonUser, key.Value.Key);
                     this.Client.Bind(s => s.IsConnected, (o, e) =>
                     {
                         this.NotifyOfPropertyChange(() => CanMountVolume);

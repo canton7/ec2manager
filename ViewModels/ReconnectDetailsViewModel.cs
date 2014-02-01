@@ -15,18 +15,6 @@ namespace Ec2Manager.ViewModels
     {
         private Config config;
 
-        private string loginAs = Settings.Default.LogonUser;
-        public string LoginAs
-        {
-            get { return this.loginAs; }
-            set
-            {
-                this.loginAs = value;
-                this.NotifyOfPropertyChange();
-                this.NotifyOfPropertyChange(() => CanContinue);
-            }
-        }
-
         private string privateKeyFile;
         public string PrivateKeyFile
         {
@@ -37,11 +25,6 @@ namespace Ec2Manager.ViewModels
                 this.NotifyOfPropertyChange();
                 this.NotifyOfPropertyChange(() => CanContinue);
             }
-        }
-
-        public string PrivateKey
-        {
-            get { return File.ReadAllText(this.PrivateKeyFile); }
         }
 
         public ReconnectDetailsViewModel(Config config)
@@ -58,9 +41,6 @@ namespace Ec2Manager.ViewModels
             if (result.HasValue && result.Value && File.Exists(dialog.FileName))
             {
                 this.PrivateKeyFile = dialog.FileName;
-                var user = this.config.ParseUserFromKey(this.PrivateKey);
-                if (user != null)
-                    this.LoginAs = user;
             }
         }
 
@@ -68,8 +48,7 @@ namespace Ec2Manager.ViewModels
         {
             get
             {
-                return !string.IsNullOrWhiteSpace(this.LoginAs)
-                    && !string.IsNullOrWhiteSpace(this.PrivateKeyFile)
+                return !string.IsNullOrWhiteSpace(this.PrivateKeyFile)
                     && File.Exists(this.PrivateKeyFile);
             }
         }

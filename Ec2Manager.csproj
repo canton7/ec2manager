@@ -110,6 +110,7 @@
     <Compile Include="Classes\WindowManagerExtensions.cs" />
     <Compile Include="Configuration\Config.cs" />
     <Compile Include="Configuration\Friend.cs" />
+    <Compile Include="Configuration\KeyDescription.cs" />
     <Compile Include="Configuration\MainConfig.cs" />
     <Compile Include="Configuration\VolumeType.cs" />
     <Compile Include="Converters\BoolToVisibilityConverter.cs" />

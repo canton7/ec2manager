@@ -19,11 +19,7 @@
 
             <Grid.RowDefinitions>
                 <RowDefinition/>
-                <RowDefinition/>
             </Grid.RowDefinitions>
-
-            <TextBlock Grid.Row="0" Grid.Column="0" Margin="0,0,10,0">Log in as:</TextBlock>
-            <TextBox Grid.Row="0" Grid.Column="1" Name="LoginAs"/>
 
             <TextBlock Grid.Row="1" Grid.Column="0" Margin="0,0,10,0">Private key file:</TextBlock>
             <TextBox Grid.Row="1" Grid.Column="1" Name="PrivateKeyFile"/>

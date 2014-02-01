@@ -2,6 +2,7 @@
 using Amazon.EC2.Model;
 using Caliburn.Micro;
 using Ec2Manager.Classes;
+using Ec2Manager.Configuration;
 using Ec2Manager.Utilities;
 using System;
 using System.Collections.Generic;
@@ -19,7 +20,14 @@ namespace Ec2Manager.Ec2Manager
         public string InstanceId { get; private set; }
         public string Name { get; private set; }
         public InstanceSpecification Specification { get; private set; }
-        public string PrivateKey { get; private set; }
+
+        private KeyPair privateKeyPair;
+        public string PrivateKey
+        {
+            get { return this.privateKeyPair == null ? null : this.privateKeyPair.KeyMaterial; }
+        }
+
+        private Config config;
 
         public AmazonEC2Client Client { get; private set; }
         public ILogger Logger;
@@ -37,10 +45,6 @@ namespace Ec2Manager.Ec2Manager
         private string securityGroupName
         {
             get { return "Ec2SecurityGroup-" + this.uniqueKey; }
-        }
-        private string keyPairName
-        {
-            get { return "Ec2KeyPair-" + this.uniqueKey; }
         }
 
         private string bidRequestId;
@@ -76,9 +80,10 @@ namespace Ec2Manager.Ec2Manager
             }
         }
 
-        public Ec2Instance(AmazonEC2Client client, string name, InstanceSpecification specification)
+        public Ec2Instance(AmazonEC2Client client, Config config, string name, InstanceSpecification specification)
         {
             this.Client = client;
+            this.config = config;
             this.Name = name;
             this.Specification = specification;
             this.uniqueKey = Guid.NewGuid().ToString();
@@ -100,9 +105,10 @@ namespace Ec2Manager.Ec2Manager
         //    this.Logger = new StubLogger();
         //}
 
-        public Ec2Instance(AmazonEC2Client client, Instance runningInstance)
+        public Ec2Instance(AmazonEC2Client client, Config config, Instance runningInstance)
         {
             this.Client = client;
+            this.config = config;
             this.InstanceId = runningInstance.InstanceId;
 
             this.Reconnect(runningInstance);
@@ -242,26 +248,54 @@ namespace Ec2Manager.Ec2Manager
 
         #region Key Pairs
 
-        private async Task<string> CreateKeyPairAsync()
+        private async Task<KeyPair> EnsureKeyPairCreatedAsync()
         {
-            this.Logger.Log("Creating a new key pair: {0}", this.keyPairName);
-            var newKeyResponse = await this.Client.CreateKeyPairAsync(new CreateKeyPairRequest()
-            {
-                KeyName = this.keyPairName,
-            });
-            var keyPair = newKeyResponse.KeyPair;
-            this.Logger.Log("Key pair created. Fingerprint {0}", keyPair.KeyFingerprint);
+            KeyPair keyPair = null;
+            var existingKey = this.config.LoadKey();
 
-            return keyPair.KeyMaterial;
-        }
-
-        private async Task DeleteKeyPairAsync()
-        {
-            this.Logger.Log("Deleting key pair: {0}", this.keyPairName);
-            await this.Client.DeleteKeyPairAsync(new DeleteKeyPairRequest()
+            // If we've got a key, check that it still exists on amazon
+            if (existingKey != null)
             {
-                KeyName = this.keyPairName,
-            });
+                this.Logger.Log("Saved key pair found. Fingerprint: {0}", existingKey.Value.Fingerprint);
+
+                var response = await this.Client.DescribeKeyPairsAsync(new DescribeKeyPairsRequest()
+                {
+                    Filters = new List<Filter>()
+                    {
+                        new Filter() { Name = "fingerprint", Values = new List<string>() { existingKey.Value.Fingerprint } },
+                    },
+                });
+
+                var keyPairInfo = response.KeyPairs.FirstOrDefault();
+                if (keyPairInfo != null)
+                {
+                    keyPair = new KeyPair()
+                    {
+                        KeyFingerprint = keyPairInfo.KeyFingerprint,
+                        KeyName = keyPairInfo.KeyName,
+                        KeyMaterial = existingKey.Value.Key,
+                    };
+                }
+            }
+
+            // If we don't have a keypair locally, or we do but it isn't on amazon
+            if (keyPair == null)
+            {
+                this.Logger.Log("Creating key pair");
+
+                var response = await this.Client.CreateKeyPairAsync(new CreateKeyPairRequest()
+                {
+                    KeyName = String.Format("Ec2Manager-{0}-{1}", Environment.MachineName, Guid.NewGuid().ToString()),
+                });
+
+                keyPair = response.KeyPair;
+
+                this.Logger.Log("Key pair created. Fingerprint: {0}", keyPair.KeyFingerprint);
+                    
+                this.config.SaveKey(new KeyDescription(keyPair.KeyMaterial, keyPair.KeyFingerprint));
+            }
+
+            return keyPair;
         }
 
         #endregion
@@ -400,7 +434,7 @@ namespace Ec2Manager.Ec2Manager
             {
                 ImageId = this.Specification.Ami,
                 InstanceType = this.Specification.Size.Key,
-                KeyName = keyPairName,
+                KeyName = this.privateKeyPair.KeyName,
                 SecurityGroups = new List<string>() { this.securityGroupName },
             };
             if (!string.IsNullOrWhiteSpace(this.Specification.AvailabilityZone))
@@ -450,7 +484,7 @@ namespace Ec2Manager.Ec2Manager
                 InstanceType = this.Specification.Size.Key,
                 MinCount = 1,
                 MaxCount = 1,
-                KeyName = keyPairName,
+                KeyName = this.privateKeyPair.KeyName,
                 SecurityGroups = new List<string>() { this.securityGroupName },
             };
             if (!string.IsNullOrWhiteSpace(this.Specification.AvailabilityZone))
@@ -578,7 +612,7 @@ namespace Ec2Manager.Ec2Manager
             exception = null;
             try
             {
-                this.PrivateKey = await this.CreateKeyPairAsync();
+                this.privateKeyPair = await this.EnsureKeyPairCreatedAsync();
                 token.ThrowIfCancellationRequested();
             }
             catch (Exception e)
@@ -587,8 +621,7 @@ namespace Ec2Manager.Ec2Manager
             }
             if (exception != null)
             {
-                this.Logger.Log("Error creating key pair: {0}. Performing rollback", exception.Message);
-                await this.DeleteKeyPairAsync();
+                this.Logger.Log("Error ensuring key pair created: {0}. Performing rollback", exception.Message);
                 await this.DeleteSecurityGroupAsync();
                 throw exception;
             }
@@ -615,7 +648,6 @@ namespace Ec2Manager.Ec2Manager
                 if (this.Specification.IsSpotInstance)
                     await this.CancelBidRequestAsync();
                 await this.TerminateAsync();
-                await this.DeleteKeyPairAsync();
                 await this.DeleteSecurityGroupAsync();
                 throw exception;
             }
@@ -654,7 +686,6 @@ namespace Ec2Manager.Ec2Manager
 
             var instanceStatus = await this.DescribeInstanceAsync();
             var groupIds = instanceStatus.SecurityGroups;
-            var keyName = instanceStatus.KeyName;
             // This excludes volumes attached to other machines as well
             var volumes = (await this.GetAttachedVolumesAsync())
                 .Where(x => x.Attachments.Count == 1)
@@ -677,12 +708,6 @@ namespace Ec2Manager.Ec2Manager
             foreach (var groupId in groupIds.Except(usedGroupIds))
             {
                 await this.DeleteSecurityGroupAsync();
-            }
-
-            var usedKeyNames = allInstances.SelectMany(x => x.Instances.Select(y => y.KeyName)).Distinct();
-            if (!usedKeyNames.Contains(keyName))
-            {
-                await this.DeleteKeyPairAsync();
             }
 
             this.Logger.Log("Instance successfully terminated");

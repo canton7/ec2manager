@@ -2,6 +2,7 @@
 using Amazon.EC2;
 using Amazon.EC2.Model;
 using Caliburn.Micro;
+using Ec2Manager.Configuration;
 using Ec2Manager.Utilities;
 using Ninject;
 using System;
@@ -19,6 +20,7 @@ namespace Ec2Manager.Ec2Manager
         private RegionEndpoint endpoint = RegionEndpoint.EUWest1;
         private AmazonEC2Client client;
         private string cachedUserId;
+        private Config config;
         public ILogger Logger;
 
         public static readonly InstanceSize[] InstanceSizes = new[]
@@ -48,13 +50,14 @@ namespace Ec2Manager.Ec2Manager
         }
 
         [Inject]
-        public Ec2Connection() : this(new StubLogger())
+        public Ec2Connection(Config config) : this(new StubLogger(), config)
         {
         }
 
-        public Ec2Connection(ILogger logger)
+        public Ec2Connection(ILogger logger, Config config)
         {
             this.Logger = logger;
+            this.config = config;
         }
 
         public void SetCredentials(Credentials credentials)
@@ -65,7 +68,7 @@ namespace Ec2Manager.Ec2Manager
 
         public Ec2Instance CreateInstance(string name, string instanceAmi, InstanceSize instanceSize, string availabilityZone = null, double? spotBidPrice = null)
         {
-            var instance = new Ec2Instance(this.client, name, new InstanceSpecification(instanceAmi, instanceSize, availabilityZone, spotBidPrice));
+            var instance = new Ec2Instance(this.client, this.config, name, new InstanceSpecification(instanceAmi, instanceSize, availabilityZone, spotBidPrice));
             instance.Logger = this.Logger;
             return instance;
         }
@@ -112,7 +115,7 @@ namespace Ec2Manager.Ec2Manager
                 }
             })).Reservations.SelectMany(reservation => reservation.Instances.Where(instance => instance.State.Name == "running"));
 
-            return instances.Select(x => new Ec2Instance(this.client, x));
+            return instances.Select(x => new Ec2Instance(this.client, this.config, x));
         }
 
         private void Connect()

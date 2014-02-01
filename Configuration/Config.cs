@@ -29,6 +29,12 @@ namespace Ec2Manager.Configuration
             }
         }
 
+        public string KeyPath
+        {
+            get { return Path.Combine(this.ConfigDir, "ec2key", "eu-west-1"); }
+        }
+
+
         public string MainConfigFile
         {
             get { return Path.Combine(this.ConfigDir, "config.xml"); }
@@ -36,15 +42,9 @@ namespace Ec2Manager.Configuration
 
         public MainConfig MainConfig { get; private set; }
 
-        public string SavedKeysDir
-        {
-            get { return Path.Combine(this.ConfigDir, "keys"); }
-        }
-
         public Config()
         {
             Directory.CreateDirectory(this.ConfigDir);
-            Directory.CreateDirectory(this.SavedKeysDir);
 
             this.LoadMainConfig();
         }
@@ -94,26 +94,34 @@ namespace Ec2Manager.Configuration
             this.LoadMainConfig();
         }
 
-        public void SaveKeyAndUser(string name, string user, string privateKey)
+        public void SaveKey(KeyDescription key)
         {
-            var commentedKey = Regex.Replace(privateKey, @"(?=-----END)", "Ec2ManagerUser:" + user + "\n");
-            File.WriteAllText(Path.Combine(this.SavedKeysDir, name), commentedKey);
+            var keyPath = this.KeyPath;
+
+            var commentedKey = Regex.Replace(key.Key, @"(?=-----END)", String.Format("Ec2ManagerFingerprint:{0}\n", key.Fingerprint));
+
+            Directory.CreateDirectory(Path.GetDirectoryName(keyPath));
+            File.WriteAllText(keyPath, commentedKey);
         }
 
-        public Tuple<string, string> RetrieveKeyAndUser(string name)
+        public KeyDescription? LoadKey()
         {
-            var path = Path.Combine(this.SavedKeysDir, name);
-            var key = File.ReadAllText(path);
-            var user = this.ParseUserFromKey(key);
+            var keyPath = this.KeyPath;
+
+            if (!File.Exists(keyPath))
+                return null;
+            
+            return this.ParseKeyAtPath(keyPath);
+        }
+
+        public KeyDescription ParseKeyAtPath(string keyPath)
+        {
+            var keyMaterial = File.ReadAllText(keyPath);
+            var fingerprint = Regex.Match(keyMaterial, @"Ec2ManagerFingerprint:(\S*)").Groups[1].Value;
             // Strip comment from key, as SshNet doesn't like them
-            key = Regex.Replace(key, @"^Ec2Manager.*\r?\n", "", RegexOptions.Multiline);
-            return new Tuple<string, string>(key, user);
-        }
+            keyMaterial = Regex.Replace(keyMaterial, @"^Ec2Manager.*\r?\n", "", RegexOptions.Multiline);
 
-        public string ParseUserFromKey(string key)
-        {
-            var user = Regex.Match(key, @"Ec2ManagerUser:(\w*)").Groups[1].Value;
-            return string.IsNullOrWhiteSpace(user) ? null : user;
+            return new KeyDescription(keyMaterial, fingerprint);
         }
     }
 }
