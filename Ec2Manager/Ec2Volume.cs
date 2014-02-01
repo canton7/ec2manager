@@ -224,7 +224,7 @@ namespace Ec2Manager.Ec2Manager
 
         public async Task<Ec2SnapshotDescription> GetSourceSnapshotDescriptionAsync()
         {
-            this.Logger.Log("Retrieving name and description of sourse snapshot");
+            this.Logger.Log("Retrieving name and description of source snapshot");
 
             var snapshotId = (await this.Client.DescribeVolumesAsync(new DescribeVolumesRequest()
             {
@@ -294,6 +294,7 @@ namespace Ec2Manager.Ec2Manager
             var snapshotId = response.Snapshot.SnapshotId;
 
             this.Logger.Log("Waiting for snapshot to reach the 'completed' state");
+            this.Logger.Log("This can take up to 5 minutes");
             await this.UntilSnapshotStateAsync(snapshotId, "completed", cancellationToken);
             this.Logger.Log("Snapshot {0} created", snapshotId);
 
