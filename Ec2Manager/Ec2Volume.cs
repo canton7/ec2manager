@@ -1,6 +1,7 @@
 ﻿using Amazon.EC2;
 using Amazon.EC2.Model;
 using Caliburn.Micro;
+using Ec2Manager.Properties;
 using Ec2Manager.Utilities;
 using System;
 using System.Collections.Generic;
@@ -223,7 +224,7 @@ namespace Ec2Manager.Ec2Manager
 
         public async Task<Ec2SnapshotDescription> GetSourceSnapshotDescriptionAsync()
         {
-            this.Logger.Log("Retrieving name and description of sourse snapshot");
+            this.Logger.Log("Retrieving name and description of source snapshot");
 
             var snapshotId = (await this.Client.DescribeVolumesAsync(new DescribeVolumesRequest()
             {
@@ -262,7 +263,7 @@ namespace Ec2Manager.Ec2Manager
             return new Ec2SnapshotDescription()
             {
                 Name = nameTag == null ? null : nameTag.Value,
-                Description = snapshot.Description,
+                Description = snapshot.Description.StartsWith(Settings.Default.SnapshotPrefix) ? snapshot.Description.Substring(Settings.Default.SnapshotPrefix.Length) : snapshot.Description,
                 OwnerId = snapshot.OwnerId,
 
             };
@@ -288,11 +289,12 @@ namespace Ec2Manager.Ec2Manager
             var response = await this.Client.CreateSnapshotAsync(new CreateSnapshotRequest()
             {
                 VolumeId = this.VolumeId,
-                Description = snapshotDescription,
+                Description = Settings.Default.SnapshotPrefix + snapshotDescription,
             });
             var snapshotId = response.Snapshot.SnapshotId;
 
             this.Logger.Log("Waiting for snapshot to reach the 'completed' state");
+            this.Logger.Log("This can take up to 5 minutes");
             await this.UntilSnapshotStateAsync(snapshotId, "completed", cancellationToken);
             this.Logger.Log("Snapshot {0} created", snapshotId);
 

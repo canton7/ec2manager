@@ -1,6 +1,7 @@
 ﻿using Amazon.EC2;
 using Amazon.EC2.Model;
 using Ec2Manager.Configuration;
+using Ec2Manager.Properties;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -27,17 +28,15 @@ namespace Ec2Manager.Ec2Manager
             var result = await this.client.DescribeSnapshotsAsync(new DescribeSnapshotsRequest()
             {
                 OwnerIds = friends.Select(x => x.UserId).ToList(),
-                Filters = new List<Filter>()
-                {
-                    new Filter() { Name = "tag-key", Values = new List<string>() { "CreatedByEc2Manager" } },
-                }
             });
 
             return from snapshot in result.Snapshots
-                    let mapItem = friendsMap.ContainsKey(snapshot.OwnerId) ? friendsMap[snapshot.OwnerId] : friendsMap["self"]
-                    from friend in mapItem
-                    orderby friend.Index, snapshot.Description
-                    select new Configuration.VolumeType(snapshot.SnapshotId, snapshot.Description, friend.Item);
+                   where snapshot.Description.StartsWith(Settings.Default.SnapshotPrefix)
+                   let filteredDescription = snapshot.Description.Substring(Settings.Default.SnapshotPrefix.Length)
+                   let mapItem = friendsMap.ContainsKey(snapshot.OwnerId) ? friendsMap[snapshot.OwnerId] : friendsMap["self"]
+                   from friend in mapItem
+                   orderby friend.Index, filteredDescription
+                   select new Configuration.VolumeType(snapshot.SnapshotId, filteredDescription, friend.Item);
         }
 
         public async Task<int?> CountSnapshotsForUserId(string userId)
@@ -47,12 +46,8 @@ namespace Ec2Manager.Ec2Manager
                 var results = await this.client.DescribeSnapshotsAsync(new DescribeSnapshotsRequest()
                 {
                     OwnerIds = new List<string>() { userId },
-                    Filters = new List<Filter>()
-                    {
-                        new Filter() { Name = "tag-key", Values = new List<string>() { "CreatedByEc2Manager" } },
-                    }
                 });
-                return results.Snapshots.Count;
+                return results.Snapshots.Count(x => x.Description.StartsWith(Settings.Default.SnapshotPrefix));
             }
             catch (AmazonEC2Exception)
             {
