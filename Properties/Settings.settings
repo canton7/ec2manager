@@ -29,5 +29,8 @@
     <Setting Name="DefaultImagesUserId" Type="System.String" Scope="User">
       <Value Profile="(Default)">935864617156</Value>
     </Setting>
+    <Setting Name="SnapshotPrefix" Type="System.String" Scope="User">
+      <Value Profile="(Default)">Ec2Manager - </Value>
+    </Setting>
   </Settings>
 </SettingsFile>
