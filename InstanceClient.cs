@@ -65,9 +65,6 @@ namespace Ec2Manager
 
             logger.Log("Establishing connection with {0}@{1}", this.User, this.Host);
 
-            // It always takes a little while for the instance to get going
-            await Task.Delay(5000);
-
             if (this.client == null)
                 this.client = new SshClient(this.Host, this.User, new PrivateKeyFile(new MemoryStream(Encoding.ASCII.GetBytes(this.Key))));
 

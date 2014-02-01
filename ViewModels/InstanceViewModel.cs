@@ -202,6 +202,9 @@ namespace Ec2Manager.ViewModels
                     Exception exception = null;
                     try
                     {
+                        // It takes them a little while to get going...
+                        this.Logger.Log("Waiting for 10 seconds for instance to boot");
+                        await Task.Delay(10000);
                         await this.Client.ConnectAsync(this.Logger);
                     }
                     catch (Exception e)
