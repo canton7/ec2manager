@@ -1,6 +1,18 @@
 Changelog
 =========
 
+v1.3.0
+------
+
+ - Better logging for scripts
+ - Elastic IPs no longer used
+ - 'Friends' system which auto-lists snapshots, instead of using configuration files
+ - Add option to delete old snapshot when creating a new one
+ - Scripts starting with CWD set sensibly
+ - Installer moved form NSIS to InnoSetup
+ - Improve dropped connection handling
+ - README updates
+
 v1.2.2
 ------
 
