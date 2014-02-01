@@ -53,10 +53,9 @@ namespace Ec2Manager.Configuration
         {
             get
             {
-                var defaults = new List<Friend>();
+                var defaults = new List<Friend>() { new Friend("self", "Your Images") };
                 if (this.MainConfig.ShowOfficialImages)
                     defaults.Add(new Friend(Settings.Default.DefaultImagesUserId, "Official Images"));
-                defaults.Add(new Friend("self", "Your Images"));
                 return defaults;
             }
         }
