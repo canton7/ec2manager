@@ -25,7 +25,7 @@ namespace Ec2Manager.Properties {
         
         [global::System.Configuration.UserScopedSettingAttribute()]
         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
-        [global::System.Configuration.DefaultSettingValueAttribute("ami-3d160149")]
+        [global::System.Configuration.DefaultSettingValueAttribute("ami-aa56a1dd")]
         public string AMI {
             get {
                 return ((string)(this["AMI"]));

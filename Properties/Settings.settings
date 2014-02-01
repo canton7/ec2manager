@@ -3,7 +3,7 @@
   <Profiles />
   <Settings>
     <Setting Name="AMI" Type="System.String" Scope="User">
-      <Value Profile="(Default)">ami-3d160149</Value>
+      <Value Profile="(Default)">ami-aa56a1dd</Value>
     </Setting>
     <Setting Name="LogonUser" Type="System.String" Scope="User">
       <Value Profile="(Default)">ubuntu</Value>
