@@ -30,10 +30,10 @@ Installing
 ----------
 
 You're welcome to build the project from source.
-You'll need Visual Studio 2012 to build the project, and [NSIS](http://nsis.sourceforge.net) if you want to build the installer.
+You'll need Visual Studio 2013 to build the project, and [InnoSetup](http://www.jrsoftware.org/isinfo.php) if you want to build the installer.
 
 Alternatively, you can grab the [latest installer](http://canton7-ec2manager.s3.amazonaws.com/Releases/Ec2Manager-latest.exe) or a [standalone .zip](http://canton7-ec2manager.s3.amazonaws.com/Releases/Ec2Manager-latest.zip).
-You'll also need .NET 4.5.
+You'll also need .NET 4.5.1.
 
 How does it work?
 -----------------
@@ -131,8 +131,8 @@ When you reconnect, Ec2Manager will prompt you for this key.
 
 If you are trying to reconnect from a different computer and didn't save the private key, you'll only be able to terminate the instance.
 
-Creating new Snapshots, and incorporating into Ec2Manager
----------------------------------------------------------
+Creating new Snapshots
+----------------------
 
 New snapshots can be created either from scratch (say you want to create a new game server), or from an existing snapshot (say you want to customise someone else's snapshot).
 I've found two slightly different approaches fit these two scenarios best, so I'll approach them separately.
@@ -170,15 +170,14 @@ When that's done, SSH in and tweak the volune to your needs.
 Before terminating the instance, create a new snaphshot using EC2 Console.
 When you're done, terminate the instance as normal.
 
-### Incorporating new volumes and instances into Ec2Manager
+Listing snapshots, and the friends mechanism
+--------------------------------------------
 
-Ec2Manager's drop-down list of volumes is built from two places: the official list (hosted by me) and your personal list.
-The location of your personal list depends on how you installed Ec2Manager.
+When Ec2Manager builds its list of snapshots which you can mount, it looks in a few places: the official images published by me, any snapshots you've created with Ec2Manager, and any snapshots published by your friends.
 
-If you grabbed a standalone zip, there should be a 'config' folder in the same directory as Ec2Manager, once you've run it once.
-In there, create a file called `snapshot-config.txt`, and copy the format from [the official list](http://canton7-ec2manager.s3.amazonaws.com/snapshot-config.txt) (that is, `snapshot-or-volume-id[space]Description`).
-
-Alternatively, host a snapshot-config.txt somewhere, and point the appropriate key in Ec2Manager.exe.config to it.
+What are friends?
+They are simply Amazon AWS users whose snapshots you want Ec2Manager to list. Go to File -> Manage Friends to add, edit, and delete them.
+To add a friend, you'll have to ask them for their Amazon AWS User ID: they can see this by going to File -> Manage Friends.
 
 Ec2Manager-specific configuration files
 ---------------------------------------
@@ -235,6 +234,8 @@ Not that boolean types have the values 'True' for true, and anything else (norma
 
 When the user actually runs your script, the arguments given are passed in in the order given by the `--args` output, each one quoted.
 For example `ec2manager/scripts/YourScript "String Argument" "True"`.
+
+Scripts are called with the working directory set to the root of the mounted volume on which they reside.
 
 Choosing another AMI
 --------------------
