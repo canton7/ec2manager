@@ -155,7 +155,7 @@ namespace Ec2Manager.ViewModels
             update();
         }
 
-        private async Task RefreshVolumes()
+        public async Task RefreshSnapshots()
         {
             var snapshots = await this.connection.CreateSnapshotBrowser().GetSnapshotsForFriendsAsync(this.config.Friends);
             this.VolumeTypes.Clear();
@@ -220,7 +220,7 @@ namespace Ec2Manager.ViewModels
 
             try
             {
-                await Task.WhenAll(createTask, this.RefreshVolumes());
+                await Task.WhenAll(createTask, this.RefreshSnapshots());
                 this.uptimeTimer.Start();
             }
             catch (OperationCanceledException)
@@ -289,7 +289,7 @@ namespace Ec2Manager.ViewModels
 
             try
             {
-                await Task.WhenAll(reconnectTask, this.RefreshVolumes());
+                await Task.WhenAll(reconnectTask, this.RefreshSnapshots());
             }
             catch (Exception e)
             {

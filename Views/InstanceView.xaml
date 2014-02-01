@@ -49,6 +49,7 @@
             <Grid>
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition/>
+                    <ColumnDefinition Width="Auto"/>
                     <ColumnDefinition/>
                     <ColumnDefinition Width="Auto"/>
                 </Grid.ColumnDefinitions>
@@ -64,8 +65,9 @@
                         </GroupStyle>
                     </ComboBox.GroupStyle>
                 </ComboBox>
-                <TextBox Name="CustomVolumeSnapshotId" Grid.Column="1" Visibility="{Binding SelectedVolumeType, Converter={x:Static conv:VolumeTypeToIdVisibilityConverter.Instance}}" Margin="10,0"/>
-                <Button Name="MountVolume" Grid.Column="2" Style="{StaticResource buttonStyle}">Mount Volume</Button>
+                <Button Name="RefreshSnapshots" Grid.Column="1" Margin="10,0,0,0">Refresh</Button>
+                <TextBox Name="CustomVolumeSnapshotId" Grid.Column="2" Visibility="{Binding SelectedVolumeType, Converter={x:Static conv:VolumeTypeToIdVisibilityConverter.Instance}}" Margin="10,0"/>
+                <Button Name="MountVolume" Grid.Column="3" Style="{StaticResource buttonStyle}">Mount Volume</Button>
             </Grid>
         </GroupBox>
         
