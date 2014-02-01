@@ -8,9 +8,6 @@
     <Setting Name="LogonUser" Type="System.String" Scope="User">
       <Value Profile="(Default)">ubuntu</Value>
     </Setting>
-    <Setting Name="SnapshotConfigUrl" Type="System.String" Scope="User">
-      <Value Profile="(Default)">http://canton7-ec2manager.s3.amazonaws.com/snapshot-config.txt</Value>
-    </Setting>
     <Setting Name="AwsCredentialsUrl" Type="System.String" Scope="User">
       <Value Profile="(Default)">https://portal.aws.amazon.com/gp/aws/securityCredentials?#access_credentials</Value>
     </Setting>

@@ -49,18 +49,6 @@ namespace Ec2Manager.Properties {
         
         [global::System.Configuration.UserScopedSettingAttribute()]
         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
-        [global::System.Configuration.DefaultSettingValueAttribute("http://canton7-ec2manager.s3.amazonaws.com/snapshot-config.txt")]
-        public string SnapshotConfigUrl {
-            get {
-                return ((string)(this["SnapshotConfigUrl"]));
-            }
-            set {
-                this["SnapshotConfigUrl"] = value;
-            }
-        }
-        
-        [global::System.Configuration.UserScopedSettingAttribute()]
-        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
         [global::System.Configuration.DefaultSettingValueAttribute("https://portal.aws.amazon.com/gp/aws/securityCredentials?#access_credentials")]
         public string AwsCredentialsUrl {
             get {
@@ -133,7 +121,7 @@ namespace Ec2Manager.Properties {
         
         [global::System.Configuration.UserScopedSettingAttribute()]
         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
-        [global::System.Configuration.DefaultSettingValueAttribute("35864617156")]
+        [global::System.Configuration.DefaultSettingValueAttribute("935864617156")]
         public string DefaultImagesUserId {
             get {
                 return ((string)(this["DefaultImagesUserId"]));
