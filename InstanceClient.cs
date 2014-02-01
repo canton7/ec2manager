@@ -22,8 +22,8 @@ namespace Ec2Manager
         public string Host { get; private set; }
         public string User { get; private set; }
         public string Key { get; private set; }
-        private AsyncSemaphore setupCmdLock = new AsyncSemaphore(1, 1);
-        private AsyncSemaphore connectLock = new AsyncSemaphore(1, 1);
+        private SemaphoreSlim setupCmdLock = new SemaphoreSlim(1, 1);
+        private SemaphoreSlim connectLock = new SemaphoreSlim(1, 1);
 
         public static readonly Dictionary<string, ScriptArgumentType> scriptArgumentTypeMapping = new Dictionary<string, ScriptArgumentType>()
         {

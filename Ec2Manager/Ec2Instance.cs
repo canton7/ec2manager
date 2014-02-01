@@ -39,7 +39,7 @@ namespace Ec2Manager.Ec2Manager
             "/dev/xvdf", "/dev/xvdg", "/dev/xvdh", "/dev/xvdi", "/dev/xvdj", "/dev/xvdk", "/dev/xvdl", "/dev/xvdm",
             "/dev/xvdn", "/dev/xvdo", "/dev/xvdp",
         };
-        private AsyncSemaphore volumeMountPointLock = new AsyncSemaphore(1, 1);
+        private SemaphoreSlim volumeMountPointLock = new SemaphoreSlim(1, 1);
 
         private string uniqueKey;
         private string securityGroupName
@@ -320,21 +320,21 @@ namespace Ec2Manager.Ec2Manager
         {
             string mountPoint = null;
 
-            await this.volumeMountPointLock.WithLock(async () =>
-                {
-                    mountPoint = mountPoints.Except((await this.GetAttachedVolumesAsync()).Select(x => x.Attachments.FirstOrDefault(y => y.InstanceId == this.InstanceId).Device)).FirstOrDefault();
-                    if (mountPoint == null)
-                        throw new Exception("Run out of mount points. You have too many volumes mounted!");
+            await this.volumeMountPointLock.WaitAsync();
+            {
+                mountPoint = mountPoints.Except((await this.GetAttachedVolumesAsync()).Select(x => x.Attachments.FirstOrDefault(y => y.InstanceId == this.InstanceId).Device)).FirstOrDefault();
+                if (mountPoint == null)
+                    throw new Exception("Run out of mount points. You have too many volumes mounted!");
 
-                    this.Logger.Log("Attaching volume to instance {0}, device {1}", this.InstanceId, mountPoint);
-                    var attachVolumeResponse = await this.Client.AttachVolumeAsync(new AttachVolumeRequest()
-                    {
-                        InstanceId = this.InstanceId,
-                        VolumeId = volume.VolumeId,
-                        Device = mountPoint,
-                    });
-                }
-            );
+                this.Logger.Log("Attaching volume to instance {0}, device {1}", this.InstanceId, mountPoint);
+                var attachVolumeResponse = await this.Client.AttachVolumeAsync(new AttachVolumeRequest()
+                {
+                    InstanceId = this.InstanceId,
+                    VolumeId = volume.VolumeId,
+                    Device = mountPoint,
+                });
+            }
+            this.volumeMountPointLock.Release();
 
             return mountPoint;
         }
