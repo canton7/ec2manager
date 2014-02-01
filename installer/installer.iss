@@ -38,7 +38,7 @@ Source: "{#AppSrc}\*.dll"; DestDir: "{app}"; Flags: ignoreversion
 Source: "{#AppSrc}\*.txt"; DestDir: "{app}"; Flags: ignoreversion
 Source: "{#AppSrc}\*.md"; DestDir: "{app}"; Flags: ignoreversion
 Source: "{#AppSrc}\*.ico"; DestDir: "{app}"; Flags: ignoreversion
-Source: "dotNetFx45_Full_setup.exe"; DestDir: {tmp}; Flags: deleteafterinstall; Check: FrameworkIsNotInstalled
+Source: "dotNet451Setup.exe"; DestDir: {tmp}; Flags: deleteafterinstall; Check: FrameworkIsNotInstalled
 
 [Icons]
 Name: "{group}\{#AppName}"; Filename: "{app}\{#AppExeName}"
@@ -46,7 +46,7 @@ Name: "{group}\{cm:UninstallProgram,{#AppName}}"; Filename: "{uninstallexe}"
 Name: "{commondesktop}\{#AppName}"; Filename: "{app}\{#AppExeName}"; Tasks: desktopicon
 
 [Run]
-Filename: "{tmp}\dotNetFx45_Full_setup.exe"; Parameters: "/passive /promptrestart"; Check: FrameworkIsNotInstalled; StatusMsg: Microsoft Framework 4.5 is being installed. Please wait...
+Filename: "{tmp}\dotNet451Setup.exe"; Parameters: "/passive /promptrestart"; Check: FrameworkIsNotInstalled; StatusMsg: Microsoft .NET Framework 4.5.1 is being installed. Please wait...
 Filename: "{app}\{#AppExeName}"; Description: "{cm:LaunchProgram,{#StringChange(AppName, '&', '&&')}}"; Flags: nowait postinstall skipifsilent
 
 [code]
@@ -56,7 +56,7 @@ var
   release: cardinal;
 begin
   exists := RegQueryDWordValue(HKEY_LOCAL_MACHINE, 'SOFTWARE\Microsoft\NET Framework Setup\NDP\v4\Full', 'Release', release);
-  result := not exists or (release < 378389);
+  result := not exists or (release < 378758);
 end;
 
 [UninstallDelete]
