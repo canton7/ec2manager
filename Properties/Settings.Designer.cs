@@ -133,7 +133,7 @@ namespace Ec2Manager.Properties {
         
         [global::System.Configuration.UserScopedSettingAttribute()]
         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
-        [global::System.Configuration.DefaultSettingValueAttribute("935864617156")]
+        [global::System.Configuration.DefaultSettingValueAttribute("35864617156")]
         public string DefaultImagesUserId {
             get {
                 return ((string)(this["DefaultImagesUserId"]));

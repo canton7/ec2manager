@@ -30,6 +30,17 @@ namespace Ec2Manager.ViewModels
             }
         }
 
+        private bool _showOfficialImages;
+        public bool ShowOfficialImages
+        {
+            get { return this._showOfficialImages; }
+            set
+            {
+                this._showOfficialImages = value;
+                this.NotifyOfPropertyChange();
+            }
+        }
+
         public BindableCollection<FriendModel> Friends { get; private set; }
 
         private FriendModel _selectedFriend;
@@ -79,6 +90,7 @@ namespace Ec2Manager.ViewModels
 
             connection.GetUserIdAsync().ContinueWith(t => this.OwnUserId = t.Result);
 
+            this.ShowOfficialImages = config.MainConfig.ShowOfficialImages;
             this.Friends = new BindableCollection<FriendModel>(config.FriendsWithoutDefaults.Select(x => new FriendModel(x, snapshotBrowser)));
 
             this.Bind(x => x.SelectedFriend, (o, e) => this.NotifyOfPropertyChange(() => this.CanEditFriend));
@@ -127,6 +139,7 @@ namespace Ec2Manager.ViewModels
         }
         public void Save()
         {
+            this.config.MainConfig.ShowOfficialImages = this.ShowOfficialImages;
             this.config.FriendsWithoutDefaults = this.Friends.Select(x => x.FriendValue);
             this.config.SaveMainConfig();
             this.TryClose(true);

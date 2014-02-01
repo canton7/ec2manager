@@ -51,7 +51,14 @@ namespace Ec2Manager.Configuration
 
         public IEnumerable<Friend> DefaultFriends
         {
-            get { return new List<Friend>() { new Friend(Settings.Default.DefaultImagesUserId, "Official Images"), new Friend("self", "Your Images") }; }
+            get
+            {
+                var defaults = new List<Friend>();
+                if (this.MainConfig.ShowOfficialImages)
+                    defaults.Add(new Friend(Settings.Default.DefaultImagesUserId, "Official Images"));
+                defaults.Add(new Friend("self", "Your Images"));
+                return defaults;
+            }
         }
 
         public IEnumerable<Friend> FriendsWithoutDefaults

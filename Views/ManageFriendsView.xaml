@@ -5,7 +5,7 @@
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              xmlns:val="clr-namespace:Ec2Manager.Validation"
              mc:Ignorable="d" 
-             d:DesignHeight="400" d:DesignWidth="300"
+             d:DesignHeight="500" d:DesignWidth="300"
              Padding="10">
     <DockPanel>
         <TextBlock DockPanel.Dock="Top" TextWrapping="Wrap">
@@ -67,7 +67,7 @@
         </Grid>
 
         <TextBlock DockPanel.Dock="Top" Text="{Binding FriendBeingEdited.Error}" Foreground="Red" Margin="0,20,0,10"/>
-
+        
         <Grid DockPanel.Dock="Bottom" VerticalAlignment="Bottom">
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="75"/>
@@ -78,5 +78,7 @@
             <Button x:Name="Save" Grid.Column="0" IsDefault="True">Save</Button>
             <Button x:Name="Cancel" Grid.Column="2" IsCancel="True">Cancel</Button>
         </Grid>
+
+        <CheckBox DockPanel.Dock="Bottom" Name="ShowOfficialImages" Margin="0,20">Show official snapshots, as well as your friends'</CheckBox>
     </DockPanel>
 </UserControl>

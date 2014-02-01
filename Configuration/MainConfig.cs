@@ -16,6 +16,7 @@ namespace Ec2Manager.Configuration
         public MainConfig()
         {
             this.Friends = new List<Friend>();
+            this.ShowOfficialImages = true;
         }
 
         public static MainConfig FromFile(string filename)
@@ -61,5 +62,7 @@ namespace Ec2Manager.Configuration
         public string PuttyPath { get; set; }
 
         public List<Friend> Friends { get; set; }
+
+        public bool ShowOfficialImages { get; set; }
     }
 }
