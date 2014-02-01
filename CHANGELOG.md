@@ -1,6 +1,11 @@
 Changelog
 =========
 
+v1.3.1
+------
+
+ - Fix a bug preventing you from listing other users' snapshots
+
 v1.3.0
 ------
 
