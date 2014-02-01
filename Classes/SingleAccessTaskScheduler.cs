@@ -114,11 +114,6 @@ namespace Ec2Manager.Classes
         {
             lock (this.tasksLock)
             {
-                if (this.tasks.Count == 0)
-                    System.Diagnostics.Debug.WriteLine("Attempting to start ThreadPool thread, but no tasks queued. Thread: {0}", Thread.CurrentThread.ManagedThreadId);
-                else if (this.anythingIsProcessingTasks)
-                    System.Diagnostics.Debug.WriteLine("Attempting to start ThreadPool thread, but something else is at work. Thread: {0}", Thread.CurrentThread.ManagedThreadId);
-
                 if (this.anythingIsProcessingTasks || this.tasks.Count == 0)
                     return;
 
