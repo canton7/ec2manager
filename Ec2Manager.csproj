@@ -125,6 +125,7 @@
     <Compile Include="Ec2Manager\InstanceSize.cs" />
     <Compile Include="Ec2Manager\InstanceSpecification.cs" />
     <Compile Include="Ec2Manager\Ec2Volume.cs" />
+    <Compile Include="Ec2Manager\SnapshotExtensions.cs" />
     <Compile Include="Events\ReconnectInstanceEvent.cs" />
     <Compile Include="Events\TerminateInstanceEvent.cs" />
     <Compile Include="Properties\Settings.Designer.cs">

@@ -30,9 +30,10 @@ namespace Ec2Manager.Ec2Manager
                 OwnerIds = friends.Select(x => x.UserId).ToList(),
             });
 
+            // Look for the 'Ec2Manager - ' prefix for now, for backwards compat
             return from snapshot in result.Snapshots
-                   where snapshot.Description.StartsWith(Settings.Default.SnapshotPrefix)
-                   let filteredDescription = snapshot.Description.Substring(Settings.Default.SnapshotPrefix.Length)
+                   where snapshot.DescriptionHasPrefix() || snapshot.Description.StartsWith("Ec2Manager -")
+                   let filteredDescription = snapshot.DescriptionWithoutPrefix()
                    let mapItem = friendsMap.ContainsKey(snapshot.OwnerId) ? friendsMap[snapshot.OwnerId] : friendsMap["self"]
                    from friend in mapItem
                    orderby friend.Index, filteredDescription
@@ -47,7 +48,7 @@ namespace Ec2Manager.Ec2Manager
                 {
                     OwnerIds = new List<string>() { userId },
                 });
-                return results.Snapshots.Count(x => x.Description.StartsWith(Settings.Default.SnapshotPrefix));
+                return results.Snapshots.Count(x => x.DescriptionHasPrefix());
             }
             catch (AmazonEC2Exception)
             {
