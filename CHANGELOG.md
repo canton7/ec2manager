@@ -1,6 +1,11 @@
 Changelog
 =========
 
+v1.3.2
+------
+
+ - Change snapshot prefix from `Ec2Manager - ` to `[Ec2Manager]`
+
 v1.3.1
 ------
 
