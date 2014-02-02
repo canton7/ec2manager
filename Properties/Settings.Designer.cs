@@ -133,7 +133,7 @@ namespace Ec2Manager.Properties {
         
         [global::System.Configuration.UserScopedSettingAttribute()]
         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
-        [global::System.Configuration.DefaultSettingValueAttribute("Ec2Manager - ")]
+        [global::System.Configuration.DefaultSettingValueAttribute("[Ec2Manager]")]
         public string SnapshotPrefix {
             get {
                 return ((string)(this["SnapshotPrefix"]));
