@@ -174,6 +174,7 @@ Listing snapshots, and the friends mechanism
 --------------------------------------------
 
 When Ec2Manager builds its list of snapshots which you can mount, it looks in a few places: the official images published by me, any snapshots you've created with Ec2Manager, and any snapshots published by your friends.
+From these, it only lists snapshots whose description starts with a special prefix: `[Ec2Manager]` (which is added automatically by Ec2Manager when you create a snapshot, and stripped when it shows you snapshot descriptions).
 
 What are friends?
 They are simply Amazon AWS users whose snapshots you want Ec2Manager to list. Go to File -> Manage Friends to add, edit, and delete them.
