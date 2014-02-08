@@ -81,7 +81,7 @@ namespace Ec2Manager
                     }
                     catch (SshAuthenticationException e)
                     {
-                        var msg = "SSH Authentication error: " + e.Message + "\nMake sure you entered the right SSH user";
+                        var msg = "SSH Authentication error:\n" + e.Format() + "\nMake sure you entered the right SSH user";
                         logger.Log(msg);
                         throw new Exception(msg, e);
                     }
@@ -335,13 +335,13 @@ namespace Ec2Manager
                 catch (SocketException e)
                 {
                     if (logger != null)
-                        logger.Log("SocketException: " + e.Message);
+                        logger.Log("SocketException:\n" + e.Format());
                     lastException = e;
                 }
                 catch (SshException e)
                 {
                     if (logger != null)
-                        logger.Log("SshException: " + e.Message);
+                        logger.Log("SshException:\n" + e.Format());
                     lastException = e;
                 }
 

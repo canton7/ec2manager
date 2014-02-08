@@ -230,8 +230,8 @@ namespace Ec2Manager.ViewModels
             }
             catch (Exception e)
             {
-                this.Logger.Log("Error occurred: {0}", e.Message);
-                MessageBox.Show(Application.Current.MainWindow, "Error occurred: " + e.Message, "Error occurred", MessageBoxButton.OK, MessageBoxImage.Error);
+                this.Logger.Log("Error occurred:\n{0}", e.Format());
+                MessageBox.Show(Application.Current.MainWindow, "Error occurred:\n" + e.Format(), "Error occurred", MessageBoxButton.OK, MessageBoxImage.Error);
                 this.TryClose();
             }
             finally
@@ -294,8 +294,8 @@ namespace Ec2Manager.ViewModels
             }
             catch (Exception e)
             {
-                this.Logger.Log("Error occurred: {0}", e.Message);
-                MessageBox.Show(Application.Current.MainWindow, "Error occurred: " + e.Message, "Error occurred", MessageBoxButton.OK, MessageBoxImage.Error);
+                this.Logger.Log("Error occurred:\n{0}", e.Format());
+                MessageBox.Show(Application.Current.MainWindow, "Error occurred:\n" + e.Format(), "Error occurred", MessageBoxButton.OK, MessageBoxImage.Error);
                 this.TryClose();
             }
             finally
@@ -385,8 +385,8 @@ namespace Ec2Manager.ViewModels
             }
             catch (Exception e)
             {
-                this.Logger.Log("Error occurred: {0}", e.Message);
-                MessageBox.Show(Application.Current.MainWindow, "Error occurred: " + e.Message, "Error occurred", MessageBoxButton.OK, MessageBoxImage.Error);
+                this.Logger.Log("Error occurred:\n{0}", e.Format());
+                MessageBox.Show(Application.Current.MainWindow, "Error occurred:\n" + e.Format(), "Error occurred", MessageBoxButton.OK, MessageBoxImage.Error);
                 volumeViewModel.TryClose();
             }
         }
@@ -424,8 +424,8 @@ namespace Ec2Manager.ViewModels
                 }
                 catch (Exception e)
                 {
-                    this.Logger.Log("Error occurred: {0}", e.Message);
-                    MessageBox.Show(Application.Current.MainWindow, "Error occurred: " + e.Message, "Error occurred", MessageBoxButton.OK, MessageBoxImage.Error);
+                    this.Logger.Log("Error occurred:\n{0}", e.Format());
+                    MessageBox.Show(Application.Current.MainWindow, "Error occurred:\n" + e.Format(), "Error occurred", MessageBoxButton.OK, MessageBoxImage.Error);
                     volumeViewModel.TryClose();
                 }
             }
