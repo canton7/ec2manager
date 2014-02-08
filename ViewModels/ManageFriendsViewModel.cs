@@ -88,7 +88,9 @@ namespace Ec2Manager.ViewModels
             this.config = config;
             this.snapshotBrowser = connection.CreateSnapshotBrowser();
 
-            connection.GetUserIdAsync().ContinueWith(t => this.OwnUserId = t.Result);
+            var getUserIdTask = connection.GetUserIdAsync();
+            getUserIdTask.ContinueWith(t => this.OwnUserId = t.Result, TaskContinuationOptions.OnlyOnRanToCompletion);
+            getUserIdTask.ContinueWith(t => System.Windows.MessageBox.Show("Error occurred finding user ID\n" + t.Exception.Format(), "Error occurred finding User ID", System.Windows.MessageBoxButton.OK), TaskContinuationOptions.OnlyOnFaulted);
 
             this.ShowOfficialImages = config.MainConfig.ShowOfficialImages;
             this.Friends = new BindableCollection<FriendModel>(config.FriendsWithoutDefaults.Select(x => new FriendModel(x, snapshotBrowser)));
