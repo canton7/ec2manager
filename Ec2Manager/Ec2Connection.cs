@@ -25,15 +25,17 @@ namespace Ec2Manager.Ec2Manager
 
         public static readonly InstanceSize[] InstanceSizes = new[]
         {
-            new InstanceSize("M1 Small", "m1.small"),
-            new InstanceSize("M1 Medium", "m1.medium"),
-            new InstanceSize("M1 Large", "m1.large"),
+            new InstanceSize("M3 Medium", "m3.medium"),
+            new InstanceSize("M3 Large", "m3.large"),
             new InstanceSize("M3 Extra Large", "m3.xlarge"),
             new InstanceSize("M3 2x Extra Large", "m3.2xlarge"),
+
             new InstanceSize("Micro", "t1.micro"),
+            
             new InstanceSize("High-Memory Extra Large", "m2.xlarge"),
             new InstanceSize("High-Memory 2x Extra Large", "m2.2xlarge"),
             new InstanceSize("High-Memory 4x Extra Large", "m2.4xlarge"),
+
             new InstanceSize("High-CPU Medium", "c1.medium"),
             new InstanceSize("High-CPU Extra Large", "c1.xlarge"),
         };
