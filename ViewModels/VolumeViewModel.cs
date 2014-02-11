@@ -279,14 +279,16 @@ namespace Ec2Manager.ViewModels
             var detailsModel = this.createSnapshotDetailsViewModelFactory.CreateCreateSnapshotDetailsViewModel();
 
             var description = await this.Volume.GetSourceSnapshotDescriptionAsync();
-            if (description == null)
+            var hasSourceSnapshot = description != null;
+            var userOwnsSourceSnapshot = hasSourceSnapshot && description.OwnerId == await this.connection.GetUserIdAsync();
+            if (!hasSourceSnapshot)
             {
-                detailsModel.HasSourceSnapshot = false;
+                detailsModel.HasSourceSnapshotToDelete = false;
             }
             else
             {
                 // Only allow them to delete if they actually own it
-                detailsModel.HasSourceSnapshot = description.OwnerId == await this.connection.GetUserIdAsync();
+                detailsModel.HasSourceSnapshotToDelete = userOwnsSourceSnapshot;
                 detailsModel.Name = description.Name;
                 detailsModel.Description = description.Description;
             }
@@ -296,9 +298,11 @@ namespace Ec2Manager.ViewModels
                 { "ResizeMode", ResizeMode.NoResize },
             });
 
+            var deleteSourceSnapshot = userOwnsSourceSnapshot && detailsModel.DeleteSourceSnapshot;
+
             if (result.HasValue && result.Value)
             {
-                if (!detailsModel.DeleteSourceSnapshot && await this.Volume.AnySnapshotsExistWithName(detailsModel.Name))
+                if (!deleteSourceSnapshot && await this.Volume.AnySnapshotsExistWithName(detailsModel.Name))
                 {
                     var confirmResult = MessageBox.Show(Application.Current.MainWindow, "Are you sure you want to create a snapshot called " + detailsModel.Name + "?\nYou already have a snapshot with this name", "Are you sure?", MessageBoxButton.YesNo, MessageBoxImage.Question, MessageBoxResult.No);
                     if (confirmResult == MessageBoxResult.No)
@@ -311,7 +315,9 @@ namespace Ec2Manager.ViewModels
 
                     this.CancelCts = new CancellationTokenSource();
                     await this.Volume.CreateSnapshotAsync(detailsModel.Name, detailsModel.Description, detailsModel.IsPublic, this.CancelCts.Token);
-                    await this.Volume.DeleteSnapshotAsync(await this.Volume.GetSourceSnapshotAsync());
+
+                    if (deleteSourceSnapshot)
+                        await this.Volume.DeleteSnapshotAsync(await this.Volume.GetSourceSnapshotAsync());
                 }
                 catch (OperationCanceledException)
                 {
