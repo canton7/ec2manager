@@ -313,8 +313,7 @@ namespace Ec2Manager
 
                     using (var registration = token.Register(() =>
                     {
-                        cmd.CancelAsync();
-                        tcs.TrySetResult(false);
+                        Task.Run(() => cmd.CancelAsync()).ContinueWith(_ => tcs.TrySetResult(false));
                     }))
                     {
                         var tasks = new List<Task>();

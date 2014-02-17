@@ -239,6 +239,7 @@ namespace Ec2Manager.ViewModels
                 return;
 
             this.Logger.Log("Starting to cancel operation");
+            this.Logger.Log("This can take a while...");
             this.CancelCts.Cancel();
             this.NotifyOfPropertyChange(() => CanCancelAction);
         }
