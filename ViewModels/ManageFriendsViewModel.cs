@@ -201,7 +201,7 @@ namespace Ec2Manager.ViewModels
                 });
 
             this.ValidateWith(() => this.Name, x => !String.IsNullOrWhiteSpace(x), "Name must not be empty");
-            this.ValidateWith(() => this.UserId, x => x != null && Regex.Match(x, @"^9\d{11}$").Success, "Bad Amazon User Id. Must be of the form 9xxxxxxxxxxx");
+            this.ValidateWith(() => this.UserId, x => x != null && Regex.Match(x, @"^\d{12}$").Success, "Bad Amazon User Id. Must be of the form xxxxxxxxxxxx");
         }
 
         public FriendModel(Friend friend, Ec2SnapshotBrowser snapshotBrowser) : this(snapshotBrowser)
