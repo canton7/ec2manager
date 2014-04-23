@@ -23,7 +23,7 @@
         <TextBlock DockPanel.Dock="Top"> AWS Secret Key:</TextBlock>
         <TextBox x:Name="MainConfig_AwsSecretKey" DockPanel.Dock="Top" Width="200" HorizontalAlignment="Left"/>
         <TextBlock DockPanel.Dock="Top" Margin="0">Forgotten your credentials?</TextBlock>
-        <TextBlock DockPanel.Dock="Top" Margin="0,0,0,10"><Hyperlink Command="{s:Action ShowCredentials}">Find them here</Hyperlink></TextBlock>
+        <TextBlock DockPanel.Dock="Top" Margin="0,0,0,10"><Hyperlink Click="{s:Action ShowCredentials}">Find them here</Hyperlink></TextBlock>
         
         <Grid DockPanel.Dock="Bottom" VerticalAlignment="Bottom">
             <Grid.ColumnDefinitions>
