@@ -9,11 +9,11 @@
     <DockPanel>
         <Menu IsMainMenu="True" DockPanel.Dock="Top">
             <MenuItem Header="_File">
-                <MenuItem x:Name="ShowSettings" Header="_Settings"/>
-                <MenuItem x:Name="ManageFriends" Header="Manage _Friends"/>
-                <MenuItem x:Name="ShowEc2Console" Header="EC2 _Console"/>
-                <MenuItem x:Name="ShowEc2Pricing" Header="EC2 _Pricing"/>
-                <MenuItem x:Name="TryClose" Header="_Exit"/>
+                <MenuItem Command="{s:Action ShowSettings}" Header="_Settings"/>
+                <MenuItem Command="{s:Action ManageFriends}" Header="Manage _Friends"/>
+                <MenuItem Command="{s:Action ShowEc2Console}" Header="EC2 _Console"/>
+                <MenuItem Command="{s:Action ShowEc2Pricing}" Header="EC2 _Pricing"/>
+                <MenuItem Command="{s:Action TryClose}" Header="_Exit"/>
             </MenuItem>
             <MenuItem Header="_Instance">
                 <MenuItem s:View.ActionTarget="{Binding ActiveItem}" Command="{s:Action CreateVolume, ActionNotFound=Disable}" Header="Create New Empty Volume"/>

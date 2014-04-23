@@ -3,12 +3,12 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:s="http://github.com/canton7/Stylet"
         xmlns:val="clr-namespace:Ec2Manager.Validation"
         mc:Ignorable="d" 
         Width="400"
-        SizeToContent="Height"
-        Padding="10">
-    <DockPanel>
+        SizeToContent="Height">
+    <DockPanel Margin="10">
         <TextBlock DockPanel.Dock="Top" TextWrapping="Wrap">
             Anyone can publish snapshots on Amazon AWS using Ec2Manager.
             Friends are Amazon AWS users whose published snapshots you want to be use from within Ec2Manager.<LineBreak/><LineBreak/>
@@ -76,10 +76,10 @@
                 <ColumnDefinition Width="75"/>
             </Grid.ColumnDefinitions>
 
-            <Button x:Name="Save" Grid.Column="0" IsDefault="True">Save</Button>
-            <Button x:Name="Cancel" Grid.Column="2" IsCancel="True">Cancel</Button>
+            <Button Grid.Column="0" IsDefault="True" Command="{s:Action Save}">Save</Button>
+            <Button Grid.Column="2" IsCancel="True" Command="{s:Action TryClose}">Cancel</Button>
         </Grid>
 
-        <CheckBox DockPanel.Dock="Bottom" Name="ShowOfficialImages" Margin="0,20">Show official snapshots, as well as your friends'</CheckBox>
+        <CheckBox DockPanel.Dock="Bottom" IsChecked="{Binding ShowOfficialImages}" Margin="0,20">Show official snapshots, as well as your friends'</CheckBox>
     </DockPanel>
 </Window>

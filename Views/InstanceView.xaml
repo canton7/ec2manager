@@ -4,6 +4,7 @@
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              xmlns:conv="clr-namespace:Ec2Manager.Converters"
+             xmlns:s="http://github.com/canton7/Stylet"
              mc:Ignorable="d" 
              d:DesignHeight="600" d:DesignWidth="600">
     <DockPanel>
@@ -36,11 +37,11 @@
                 <TextBlock Grid.Row="0" Grid.Column="1" Text="{Binding Instance.InstanceState, StringFormat='State: {0}'}"/>
                 <TextBlock Grid.Row="0" Grid.Column="2" Text="{Binding Instance.BidStatus, StringFormat='Bid Status: {0}'}" Visibility="{Binding IsSpotInstance, Converter={StaticResource booleanToVisibilityConverter}}"/>
 
-                <TextBlock Name="Uptime" Grid.Row="1" Grid.ColumnSpan="3"/>
+                <TextBlock Grid.Row="1" Grid.ColumnSpan="3" Text="{Binding Uptime}"/>
                 
                 <StackPanel Grid.Row="2" Grid.ColumnSpan="3" Orientation="Horizontal" HorizontalAlignment="Right">
-                    <Button Name="CancelAction" Margin="5,0" Style="{StaticResource buttonStyle}">Cancel Operation</Button>
-                    <Button Name="Terminate" Margin="5,0"  Style="{StaticResource buttonStyle}">Terminate Instance</Button>
+                    <Button Margin="5,0" Style="{StaticResource buttonStyle}" Command="{s:Action CancelAction}">Cancel Operation</Button>
+                    <Button Margin="5,0"  Style="{StaticResource buttonStyle}" Command="{s:Action Terminate}">Terminate Instance</Button>
                 </StackPanel>
             </Grid>
         </GroupBox>
@@ -65,12 +66,12 @@
                         </GroupStyle>
                     </ComboBox.GroupStyle>
                 </ComboBox>
-                <Button Name="RefreshSnapshots" Grid.Column="1" Margin="10,0,0,0">Refresh</Button>
-                <TextBox Name="CustomVolumeSnapshotId" Grid.Column="2" Visibility="{Binding SelectedVolumeType, Converter={x:Static conv:VolumeTypeToIdVisibilityConverter.Instance}}" Margin="10,0"/>
-                <Button Name="MountVolume" Grid.Column="3" Style="{StaticResource buttonStyle}">Mount Volume</Button>
+                <Button Grid.Column="1" Margin="10,0,0,0" Command="{s:Action RefreshSnapshots}">Refresh</Button>
+                <TextBox Grid.Column="2" Text="{Binding CustomVolumeSnapshotId}" Visibility="{Binding SelectedVolumeType, Converter={x:Static conv:VolumeTypeToIdVisibilityConverter.Instance}}" Margin="10,0"/>
+                <Button Grid.Column="3" Command="{s:Action MountVolume}" Style="{StaticResource buttonStyle}">Mount Volume</Button>
             </Grid>
         </GroupBox>
-        
-        <TabControl Name="Items" DockPanel.Dock="Top" VerticalAlignment="Stretch"/>
+
+        <TabControl Style="{StaticResource StyletConductorTabControl}" DockPanel.Dock="Top" VerticalAlignment="Stretch"/>
     </DockPanel>
 </UserControl>

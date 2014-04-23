@@ -7,8 +7,8 @@
         mc:Ignorable="d" 
         Padding="10"
         ResizeMode="NoResize"
-        d:DesignHeight="300" Width="224">
-    <DockPanel>
+        Height="300" Width="224">
+    <DockPanel Margin="10">
         <DockPanel.Resources>
             <Style TargetType="TextBlock">
                 <Setter Property="Margin" Value="0,5"/>
@@ -19,11 +19,11 @@
         </DockPanel.Resources>
         
         <TextBlock DockPanel.Dock="Top">AWS Access Key:</TextBlock>
-        <TextBox x:Name="MainConfig_AwsAccessKey" DockPanel.Dock="Top" Width="200" HorizontalAlignment="Left"/>
-        <TextBlock DockPanel.Dock="Top"> AWS Secret Key:</TextBlock>
-        <TextBox x:Name="MainConfig_AwsSecretKey" DockPanel.Dock="Top" Width="200" HorizontalAlignment="Left"/>
+        <TextBox Text="{Binding MainConfig.AwsAccessKey}" DockPanel.Dock="Top" Width="200" HorizontalAlignment="Left"/>
+        <TextBlock DockPanel.Dock="Top">AWS Secret Key:</TextBlock>
+        <TextBox Text="{Binding MainConfig.AwsSecretKey}" DockPanel.Dock="Top" Width="200" HorizontalAlignment="Left"/>
         <TextBlock DockPanel.Dock="Top" Margin="0">Forgotten your credentials?</TextBlock>
-        <TextBlock DockPanel.Dock="Top" Margin="0,0,0,10"><Hyperlink Click="{s:Action ShowCredentials}">Find them here</Hyperlink></TextBlock>
+        <TextBlock DockPanel.Dock="Top" Margin="0,0,0,10"><Hyperlink Command="{s:Action ShowCredentials}">Find them here</Hyperlink></TextBlock>
         
         <Grid DockPanel.Dock="Bottom" VerticalAlignment="Bottom">
             <Grid.ColumnDefinitions>
@@ -32,8 +32,8 @@
                 <ColumnDefinition Width="75"/>
             </Grid.ColumnDefinitions>
 
-            <Button x:Name="Save" Grid.Column="0" IsDefault="True">Save</Button>
-            <Button x:Name="Cancel" Grid.Column="2" IsCancel="True">Cancel</Button>
+            <Button Grid.Column="0" IsDefault="True" Command="{s:Action Save}">Save</Button>
+            <Button Grid.Column="2" IsCancel="True" Command="{s:Action Cancel}">Cancel</Button>
         </Grid>
     </DockPanel>
 </Window>

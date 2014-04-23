@@ -2,7 +2,8 @@
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
-        xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:s="http://github.com/canton7/Stylet"
         mc:Ignorable="d"
         Padding="10"
         ResizeMode="NoResize"
@@ -23,8 +24,8 @@
             </Grid.RowDefinitions>
 
             <TextBlock Grid.Row="1" Grid.Column="0" Margin="0,0,10,0">Private key file:</TextBlock>
-            <TextBox Grid.Row="1" Grid.Column="1" Name="PrivateKeyFile"/>
-            <Button Grid.Row="1" Grid.Column="2" Name="BrowsePrivateKeyFile" Margin="10,0,0,0">Browse</Button>
+            <TextBox Grid.Row="1" Grid.Column="1" Text="{Binding PrivateKeyFile}"/>
+            <Button Grid.Row="1" Grid.Column="2" Command="{s:Action BrowsePrivateKeyFile}" Margin="10,0,0,0">Browse</Button>
 
         </Grid>
 
@@ -35,8 +36,8 @@
                 <ColumnDefinition Width="75"/>
             </Grid.ColumnDefinitions>
 
-            <Button x:Name="Continue" Grid.Column="0" IsDefault="True">Continue</Button>
-            <Button x:Name="Cancel" Grid.Column="2" IsCancel="True">Cancel</Button>
+            <Button Grid.Column="0" IsDefault="True" Command="{s:Action Continue}">Continue</Button>
+            <Button Grid.Column="2" IsCancel="True" Command="{s:Action Cancel}">Cancel</Button>
         </Grid>
     </DockPanel>
 </Window>
