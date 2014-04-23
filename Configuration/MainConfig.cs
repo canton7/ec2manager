@@ -1,4 +1,4 @@
-﻿using Caliburn.Micro;
+﻿using Stylet;
 using Ec2Manager.Properties;
 using System;
 using System.Collections.Generic;

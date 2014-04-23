@@ -1,8 +1,8 @@
-﻿using Caliburn.Micro;
-using Ec2Manager.Classes;
+﻿using Ec2Manager.Classes;
 using Ec2Manager.Utilities;
 using Renci.SshNet;
 using Renci.SshNet.Common;
+using Stylet;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -199,7 +199,7 @@ namespace Ec2Manager
                 });
         }
 
-        public async Task<IEnumerable<LabelledValue>> GetRunCommandsAsync(string mountPointDir, CancellationToken? cancellationToken = null)
+        public async Task<IEnumerable<LabelledValue<string>>> GetRunCommandsAsync(string mountPointDir, CancellationToken? cancellationToken = null)
         {
             var mountPoint = this.mountBase + mountPointDir;
 
@@ -207,18 +207,18 @@ namespace Ec2Manager
             var lines = contents.Split(new[] { "\n", "\r\n" }, StringSplitOptions.RemoveEmptyEntries);
 
             if (lines.Length == 0)
-                return Enumerable.Empty<LabelledValue>();
+                return Enumerable.Empty<LabelledValue<string>>();
 
             // Is it an old-school run command (just the command on its own?)
             if (lines.Length == 1 && !lines[0].Contains("\n"))
             {
-                return new[] { new LabelledValue("Default Command", lines[0]) };
+                return new[] { new LabelledValue<string>("Default Command", lines[0]) };
             }
 
             return lines.Select(entry =>
                 {
                     var parts = entry.Split(new[] { '\t' }, 2);
-                    return new LabelledValue(parts[0], parts[1]);
+                    return new LabelledValue<string>(parts[0], parts[1]);
                 });
         }
 

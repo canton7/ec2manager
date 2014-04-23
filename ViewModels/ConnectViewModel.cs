@@ -1,4 +1,4 @@
-﻿using Caliburn.Micro;
+﻿using Stylet;
 using Ec2Manager.Classes;
 using Ec2Manager.Configuration;
 using Ec2Manager.Events;
@@ -16,12 +16,12 @@ namespace Ec2Manager.ViewModels
 {
     public class ConnectViewModel : Screen
     {
-        private static readonly LabelledValue[] availabilityZones = new LabelledValue[]
+        private static readonly LabelledValue<string>[] availabilityZones = new LabelledValue<string>[]
         {
-            new LabelledValue("Any", null),
-            new LabelledValue("eu-west-1a", "eu-west-1a"),
-            new LabelledValue("eu-west-1b", "eu-west-1b"),
-            new LabelledValue("eu-west-1c", "eu-west-1c"),
+            new LabelledValue<string>("Any", null),
+            new LabelledValue<string>("eu-west-1a", "eu-west-1a"),
+            new LabelledValue<string>("eu-west-1b", "eu-west-1b"),
+            new LabelledValue<string>("eu-west-1c", "eu-west-1c"),
         };
 
         private Config config;
@@ -55,13 +55,13 @@ namespace Ec2Manager.ViewModels
             }
         }
 
-        public LabelledValue[] AvailabilityZones
+        public LabelledValue<string>[] AvailabilityZones
         {
             get { return availabilityZones; }
         }
 
-        private LabelledValue selectedAvailabilityZone = availabilityZones[0];
-        public LabelledValue SelectedAvailabilityZone
+        private LabelledValue<string> selectedAvailabilityZone = availabilityZones[0];
+        public LabelledValue<string> SelectedAvailabilityZone
         {
             get { return this.selectedAvailabilityZone; }
             set
@@ -268,7 +268,7 @@ namespace Ec2Manager.ViewModels
             get
             {
                 return this.connection.IsConnected &&
-                    this.ActiveRunningInstance != null && this.ActiveRunningInstance.IsSet;
+                    this.ActiveRunningInstance != null && this.ActiveRunningInstance.Value != null;
             }
         }
         public void ReconnectInstance()
@@ -284,7 +284,7 @@ namespace Ec2Manager.ViewModels
             get
             {
                 return this.connection.IsConnected &&
-                    this.ActiveRunningInstance != null && this.ActiveRunningInstance.IsSet;
+                    this.ActiveRunningInstance != null && this.ActiveRunningInstance.Value != null;
             }
         }
         public void TerminateInstance()

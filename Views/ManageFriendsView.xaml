@@ -1,12 +1,13 @@
-﻿<UserControl x:Class="Ec2Manager.Views.ManageFriendsView"
-             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
-             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
-             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
-             xmlns:val="clr-namespace:Ec2Manager.Validation"
-             mc:Ignorable="d" 
-             d:DesignHeight="500" d:DesignWidth="300"
-             Padding="10">
+﻿<Window x:Class="Ec2Manager.Views.ManageFriendsView"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:val="clr-namespace:Ec2Manager.Validation"
+        mc:Ignorable="d" 
+        Width="400"
+        SizeToContent="Height"
+        Padding="10">
     <DockPanel>
         <TextBlock DockPanel.Dock="Top" TextWrapping="Wrap">
             Anyone can publish snapshots on Amazon AWS using Ec2Manager.
@@ -81,4 +82,4 @@
 
         <CheckBox DockPanel.Dock="Bottom" Name="ShowOfficialImages" Margin="0,20">Show official snapshots, as well as your friends'</CheckBox>
     </DockPanel>
-</UserControl>
+</Window>

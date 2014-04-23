@@ -1,6 +1,6 @@
 ﻿using Amazon.EC2;
 using Amazon.EC2.Model;
-using Caliburn.Micro;
+using Stylet;
 using Ec2Manager.Properties;
 using Ec2Manager.Utilities;
 using Ec2Manager.Classes;

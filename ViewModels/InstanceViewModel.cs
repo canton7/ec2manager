@@ -1,4 +1,4 @@
-﻿using Caliburn.Micro;
+﻿using Stylet;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -19,7 +19,7 @@ using Ec2Manager.Properties;
 
 namespace Ec2Manager.ViewModels
 {
-    public class InstanceViewModel : Conductor<IScreen>.Collection.OneActive
+    public class InstanceViewModel : Conductor<IScreen>.Collections.OneActive
     {
         private static readonly List<VolumeType> defaultVolumeTypes = new List<VolumeType>
             {
@@ -256,10 +256,7 @@ namespace Ec2Manager.ViewModels
                     KeyDescription? key = this.config.LoadKey();
                     if (key == null)
                     {
-                        var result = this.windowManager.ShowDialog<ReconnectDetailsViewModel>(settings: new Dictionary<string, object>()
-                                {
-                                    { "ResizeMode", ResizeMode.NoResize },
-                                });
+                        var result = this.windowManager.ShowDialog<ReconnectDetailsViewModel>();
 
                         if (result.Result.GetValueOrDefault())
                         {
@@ -401,10 +398,7 @@ namespace Ec2Manager.ViewModels
 
         public async void CreateVolume()
         {
-            var result = this.windowManager.ShowDialog<CreateNewVolumeDetailsViewModel>(settings: new Dictionary<string, object>()
-            {
-                { "ResizeMode", ResizeMode.NoResize },
-            });
+            var result = this.windowManager.ShowDialog<CreateNewVolumeDetailsViewModel>();
 
             if (result.Success)
             {

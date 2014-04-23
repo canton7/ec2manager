@@ -18,7 +18,7 @@ namespace Ec2Manager.Views
     /// <summary>
     /// Interaction logic for ReconnectInstanceDetails.xaml
     /// </summary>
-    public partial class ReconnectDetailsView : UserControl
+    public partial class ReconnectDetailsView : Window
     {
         public ReconnectDetailsView()
         {

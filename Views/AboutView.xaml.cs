@@ -18,7 +18,7 @@ namespace Ec2Manager.Views
     /// <summary>
     /// Interaction logic for AboutView.xaml
     /// </summary>
-    public partial class AboutView : UserControl
+    public partial class AboutView : Window
     {
         public AboutView()
         {
