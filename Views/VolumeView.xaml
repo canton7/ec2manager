@@ -5,7 +5,7 @@
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              xmlns:conv="clr-namespace:Ec2Manager.Converters"
              xmlns:supp="clr-namespace:Ec2Manager.Support"
-             xmlns:s="http://github.com/canton7/Stylet"
+             xmlns:s="https://github.com/canton7/Stylet"
              mc:Ignorable="d" 
              d:DesignHeight="400" d:DesignWidth="600">
     <UserControl.Resources>
@@ -43,14 +43,14 @@
         <GroupBox Header="Volume Control" DockPanel.Dock="Top" Padding="5">
             <DockPanel>
                 <StackPanel Orientation="Horizontal" HorizontalAlignment="Left">
-                    <ComboBox Name="Scripts" HorizontalAlignment="Left" Width="150" DisplayMemberPath="Label"/>
-                    <Button Name="StartScript" Margin="5,0" Style="{StaticResource buttonStyle}">Run Script</Button>
+                    <ComboBox ItemsSource="{Binding Scripts}" SelectedItem="{Binding SelectedScript}" HorizontalAlignment="Left" Width="150" DisplayMemberPath="Label"/>
+                    <Button Margin="5,0" Style="{StaticResource buttonStyle}" Command="{s:Action StartScript}">Run Script</Button>
                 </StackPanel>
                 
                 <TextBlock DockPanel.Dock="Left" Margin="5,0" Text="{Binding Volume.MountPoint, StringFormat='Device: {0}'}"/>
 
                 <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
-                    <Button Name="CancelAction" Margin="5,0" Style="{StaticResource buttonStyle}">Cancel Operation</Button>
+                    <Button Margin="5,0" Style="{StaticResource buttonStyle}" Command="{s:Action CancelAction}">Cancel Operation</Button>
                 </StackPanel>
             </DockPanel>
         </GroupBox>

@@ -3,7 +3,7 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
-        xmlns:s="http://github.com/canton7/Stylet"
+        xmlns:s="https://github.com/canton7/Stylet"
         xmlns:val="clr-namespace:Ec2Manager.Validation"
         mc:Ignorable="d" 
         Width="400"
@@ -41,9 +41,9 @@
 
             <StackPanel Grid.Column="1" Margin="20,20,0,0">
                 <TextBlock>Actions:</TextBlock>
-                <Button Name="AddFriend">Add</Button>
-                <Button Name="EditFriend">Edit</Button>
-                <Button Name="DeleteFriend">Delete</Button>
+                <Button Command="{s:Action AddFriend}">Add</Button>
+                <Button Command="{s:Action EditFriend}">Edit</Button>
+                <Button Command="{s:Action DeleteFriend}">Delete</Button>
             </StackPanel>
         </Grid>
 

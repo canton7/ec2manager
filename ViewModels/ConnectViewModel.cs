@@ -242,24 +242,26 @@ namespace Ec2Manager.ViewModels
         {
             if (!this.CanRefreshRunningInstances)
             {
-                this.RunningInstances = new[] { new LabelledValue<Ec2Instance>("Can't load. Try refreshing", null) };
-                this.ActiveRunningInstance = this.RunningInstances[0];
+                var runningInstances = new[] { new LabelledValue<Ec2Instance>("Can't load. Try refreshing", null) };
+                this.ActiveRunningInstance = runningInstances[0];
+                this.RunningInstances = runningInstances;
                 return;
             }
 
             try
             {
-                this.RunningInstances = (await this.connection.ListInstancesAsync()).Select(x => new LabelledValue<Ec2Instance>(x.Name, x)).ToArray();
-                if (this.RunningInstances.Length == 0)
+                var runningInstances = (await this.connection.ListInstancesAsync()).Select(x => new LabelledValue<Ec2Instance>(x.Name, x)).ToArray();
+                if (runningInstances.Length == 0)
                 {
-                    this.RunningInstances = new[] { new LabelledValue<Ec2Instance>("No Running Instances", null) };
+                    runningInstances = new[] { new LabelledValue<Ec2Instance>("No Running Instances", null) };
                 }
-                this.ActiveRunningInstance = this.RunningInstances[0];
+                this.ActiveRunningInstance = runningInstances[0];
+                this.RunningInstances = runningInstances;
             }
             catch (Exception)
             {
-                this.RunningInstances = new[] { new LabelledValue<Ec2Instance>("Error loading. Bad credentials?", null) };
-                this.ActiveRunningInstance = this.RunningInstances[0];
+                this.ActiveRunningInstance = new LabelledValue<Ec2Instance>("Error loading. Bad credentials?", null);
+                this.RunningInstances = new[] { this.ActiveRunningInstance };
             }
         }
 

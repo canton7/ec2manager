@@ -3,12 +3,12 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
-        xmlns:s="http://github.com/canton7/Stylet"
+        xmlns:s="https://github.com/canton7/Stylet"
         mc:Ignorable="d"
-        Padding="10"
+        SizeToContent="WidthAndHeight"
         ResizeMode="NoResize"
-        d:DesignHeight="150" d:DesignWidth="800">
-    <DockPanel>
+        Height="150" Width="800">
+    <DockPanel Margin="10">
         <TextBlock DockPanel.Dock="Top">Please supply some details for the new volume:</TextBlock>
 
         <Grid DockPanel.Dock="Top" Margin="0,10,0,0">
@@ -23,10 +23,10 @@
             </Grid.RowDefinitions>
 
             <TextBlock Grid.Row="0" Grid.Column="0" Margin="0,0,10,0">Name:</TextBlock>
-            <TextBox Name="Name" Grid.Row="0" Grid.Column="1"/>
+            <TextBox Text="{Binding Name}" Grid.Row="0" Grid.Column="1"/>
 
             <TextBlock Grid.Row="1" Grid.Column="0" Margin="0,0,10,0">Size (GB):</TextBlock>
-            <TextBox Name="Size" Grid.Row="1" Grid.Column="1" Width="50" HorizontalAlignment="Left"/>
+            <TextBox Text="{Binding Size}" Grid.Row="1" Grid.Column="1" Width="50" HorizontalAlignment="Left"/>
         </Grid>
 
         <Grid DockPanel.Dock="Bottom" VerticalAlignment="Bottom" Margin="0,10,0,0">
@@ -37,7 +37,7 @@
             </Grid.ColumnDefinitions>
 
             <Button Command="{s:Action Continue}" Grid.Column="0" IsDefault="True">Continue</Button>
-            <Button Command="{s:Action Cancel}" Grid.Column="2" IsCancel="True">Cancel</Button>
+            <Button Command="{s:Action TryClose}" Grid.Column="2" IsCancel="True">Cancel</Button>
         </Grid>
     </DockPanel>
 </Window>

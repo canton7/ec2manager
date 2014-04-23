@@ -18,7 +18,7 @@ namespace Ec2Manager.Views
     /// <summary>
     /// Interaction logic for CreateSnapshotDetailsView.xaml
     /// </summary>
-    public partial class CreateSnapshotDetailsView : UserControl
+    public partial class CreateSnapshotDetailsView : Window
     {
         public CreateSnapshotDetailsView()
         {
