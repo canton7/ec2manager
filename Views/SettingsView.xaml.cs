@@ -18,7 +18,7 @@ namespace Ec2Manager.Views
     /// <summary>
     /// Interaction logic for SettingsView.xaml
     /// </summary>
-    public partial class SettingsView : UserControl
+    public partial class SettingsView : Window
     {
         public SettingsView()
         {

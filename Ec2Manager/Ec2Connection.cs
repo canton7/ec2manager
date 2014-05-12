@@ -1,16 +1,16 @@
 ﻿using Amazon;
 using Amazon.EC2;
 using Amazon.EC2.Model;
-using Caliburn.Micro;
+using Stylet;
 using Ec2Manager.Configuration;
 using Ec2Manager.Utilities;
-using Ninject;
 using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using StyletIoC;
 
 namespace Ec2Manager.Ec2Manager
 {

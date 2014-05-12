@@ -1,5 +1,4 @@
-﻿using Caliburn.Micro;
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -7,6 +6,7 @@ using System.Text;
 using System.Threading.Tasks;
 using System.Threading;
 using Ec2Manager.Classes;
+using Stylet;
 
 namespace Ec2Manager.Utilities
 {
@@ -27,6 +27,9 @@ namespace Ec2Manager.Utilities
             // Some users are dumb, and can't notice collection changes
             this.Entries.CollectionChanged += (o, e) =>
                 this.NotifyOfPropertyChange(() => Entries);
+
+            // If we let it be posted asynchronously, the converter starts iterating it while we're still modifying it
+            this.Entries.PropertyChangedDispatcher = a => a();
 
             this.accessTaskFactory = new TaskFactory(new SingleAccessTaskScheduler());
         }

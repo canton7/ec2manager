@@ -1,13 +1,14 @@
-﻿<UserControl x:Class="Ec2Manager.Views.SettingsView"
-             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
-             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
-             xmlns:supp="clr-namespace:Ec2Manager.Support"
-             xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
-             mc:Ignorable="d" 
-             Padding="10"
-             d:DesignHeight="300" Width="224">
-    <DockPanel>
+﻿<Window x:Class="Ec2Manager.Views.SettingsView"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
+        xmlns:s="https://github.com/canton7/Stylet"
+        mc:Ignorable="d" 
+        Padding="10"
+        ResizeMode="NoResize"
+        Height="300" Width="224">
+    <DockPanel Margin="10">
         <DockPanel.Resources>
             <Style TargetType="TextBlock">
                 <Setter Property="Margin" Value="0,5"/>
@@ -18,11 +19,11 @@
         </DockPanel.Resources>
         
         <TextBlock DockPanel.Dock="Top">AWS Access Key:</TextBlock>
-        <TextBox x:Name="MainConfig_AwsAccessKey" DockPanel.Dock="Top" Width="200" HorizontalAlignment="Left"/>
-        <TextBlock DockPanel.Dock="Top"> AWS Secret Key:</TextBlock>
-        <TextBox x:Name="MainConfig_AwsSecretKey" DockPanel.Dock="Top" Width="200" HorizontalAlignment="Left"/>
+        <TextBox Text="{Binding MainConfig.AwsAccessKey}" DockPanel.Dock="Top" Width="200" HorizontalAlignment="Left"/>
+        <TextBlock DockPanel.Dock="Top">AWS Secret Key:</TextBlock>
+        <TextBox Text="{Binding MainConfig.AwsSecretKey}" DockPanel.Dock="Top" Width="200" HorizontalAlignment="Left"/>
         <TextBlock DockPanel.Dock="Top" Margin="0">Forgotten your credentials?</TextBlock>
-        <TextBlock DockPanel.Dock="Top" Margin="0,0,0,10"><Hyperlink supp:HyperlinkUtilities.Action="ShowCredentials">Find them here</Hyperlink></TextBlock>
+        <TextBlock DockPanel.Dock="Top" Margin="0,0,0,10"><Hyperlink Command="{s:Action ShowCredentials}">Find them here</Hyperlink></TextBlock>
         
         <Grid DockPanel.Dock="Bottom" VerticalAlignment="Bottom">
             <Grid.ColumnDefinitions>
@@ -31,8 +32,8 @@
                 <ColumnDefinition Width="75"/>
             </Grid.ColumnDefinitions>
 
-            <Button x:Name="Save" Grid.Column="0" IsDefault="True">Save</Button>
-            <Button x:Name="Cancel" Grid.Column="2" IsCancel="True">Cancel</Button>
+            <Button Grid.Column="0" IsDefault="True" Command="{s:Action Save}">Save</Button>
+            <Button Grid.Column="2" IsCancel="True" Command="{s:Action Cancel}">Cancel</Button>
         </Grid>
     </DockPanel>
-</UserControl>
+</Window>

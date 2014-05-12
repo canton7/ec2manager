@@ -1,5 +1,4 @@
-﻿using Caliburn.Micro;
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -9,6 +8,7 @@ using System.Threading;
 using System.Windows;
 using Ec2Manager.Ec2Manager;
 using Ec2Manager.Utilities;
+using Stylet;
 
 namespace Ec2Manager.ViewModels
 {
@@ -47,8 +47,8 @@ namespace Ec2Manager.ViewModels
             }
         }
 
-        private LabelledValue[] runCommands = new LabelledValue[0];
-        public LabelledValue[] RunCommands
+        private LabelledValue<string>[] runCommands = new LabelledValue<string>[0];
+        public LabelledValue<string>[] RunCommands
         {
             get { return this.runCommands; }
             set
@@ -57,14 +57,14 @@ namespace Ec2Manager.ViewModels
                 this.NotifyOfPropertyChange();
 
                 if (this.runCommands.Length < 1)
-                    this.SelectedRunCommand = new LabelledValue("No Commands", null);
+                    this.SelectedRunCommand = new LabelledValue<string>("No Commands", null);
                 else
                     this.SelectedRunCommand = this.runCommands[0];
             }
         }
 
-        private LabelledValue selectedRunCommand = new LabelledValue("Loading...", null);
-        public LabelledValue SelectedRunCommand
+        private LabelledValue<string> selectedRunCommand = new LabelledValue<string>("Loading...", null);
+        public LabelledValue<string> SelectedRunCommand
         {
             get { return this.selectedRunCommand; }
             set
@@ -294,10 +294,7 @@ namespace Ec2Manager.ViewModels
                 detailsModel.Description = description.Description;
             }
 
-            var result = this.windowManager.ShowDialog(detailsModel, settings: new Dictionary<string, object>()
-            {
-                { "ResizeMode", ResizeMode.NoResize },
-            });
+            var result = this.windowManager.ShowDialog(detailsModel);
 
             var deleteSourceSnapshot = userOwnsSourceSnapshot && detailsModel.DeleteSourceSnapshot;
 

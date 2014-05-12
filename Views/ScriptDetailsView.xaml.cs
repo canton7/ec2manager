@@ -18,7 +18,7 @@ namespace Ec2Manager.Views
     /// <summary>
     /// Interaction logic for ScriptDetailsView.xaml
     /// </summary>
-    public partial class ScriptDetailsView : UserControl
+    public partial class ScriptDetailsView : Window
     {
         public ScriptDetailsView()
         {

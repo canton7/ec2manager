@@ -3,7 +3,7 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
-             xmlns:cal="http://www.caliburnproject.org"
+             xmlns:s="https://github.com/canton7/Stylet"
              mc:Ignorable="d" 
              d:DesignHeight="500" d:DesignWidth="600"
              Padding="20">
@@ -12,25 +12,25 @@
             <DockPanel>
                 <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Margin="0,0,0,20">
                     <TextBlock>Name:</TextBlock>
-                    <TextBox Name="InstanceName" Width="150" Margin="15,0"/>
+                    <TextBox Text="{Binding InstanceName}" Width="150" Margin="15,0"/>
                 </StackPanel>
 
                 <StackPanel DockPanel.Dock="Top" Orientation="Horizontal"  Margin="0,0,0,20">
                     <TextBlock>Instance type:</TextBlock>
-                    <ComboBox x:Name="InstanceTypes" DisplayMemberPath="Name" Margin="15,0" HorizontalAlignment="Stretch" Width="180"/>
+                    <ComboBox ItemsSource="{Binding InstanceTypes}" SelectedItem="{Binding ActiveInstanceType}" DisplayMemberPath="Name" Margin="15,0" HorizontalAlignment="Stretch" Width="180"/>
                     <TextBlock>Availability Zone:</TextBlock>
-                    <ComboBox x:Name="AvailabilityZones" Width="100" Margin="15,0" DisplayMemberPath="Label" />
+                    <ComboBox ItemsSource="{Binding AvailabilityZones}" SelectedItem="{Binding SelectedAvailabilityZone}" Width="100" Margin="15,0" DisplayMemberPath="Label" />
                 </StackPanel>
 
                 <StackPanel DockPanel.Dock="Top" Orientation="Horizontal">
-                    <CheckBox x:Name="UseSpotMarket">Use Spot Market</CheckBox>
+                    <CheckBox IsChecked="{Binding UseSpotMarket}">Use Spot Market</CheckBox>
                     <Label Margin="15,0,0,0" Padding="0" IsEnabled="{Binding UseSpotMarket}">Max bid: $</Label>
                     <TextBox Margin="0,-3,0,0" Text="{Binding SpotBidAmount, StringFormat='{}{0:0.000}'}" Width="50" IsEnabled="{Binding UseSpotMarket}"/>
                     <Label Margin="15,0,0,0" Padding="0" IsEnabled="{Binding UseSpotMarket}">Current price:</Label>
                     <Label Margin="5,0,0,0" Padding="0" Content="{Binding CurrentSpotPriceLabel}" IsEnabled="{Binding UseSpotMarket}"/>
                 </StackPanel>
 
-                <Button Name="Create" DockPanel.Dock="Top" IsDefault="True" HorizontalAlignment="Center" VerticalAlignment="Top" Margin="0,20,0,0" Padding="20,5">Create Instance</Button>
+                <Button DockPanel.Dock="Top" Command="{s:Action Create}" IsDefault="True" HorizontalAlignment="Center" VerticalAlignment="Top" Margin="0,20,0,0" Padding="20,5">Create Instance</Button>
             </DockPanel>
         </GroupBox>
 
@@ -38,13 +38,13 @@
             <DockPanel>
                 <StackPanel Orientation="Horizontal" DockPanel.Dock="Top">
                     <TextBlock>Instance:</TextBlock>
-                    <ComboBox x:Name="RunningInstances" Margin="15,0" Width="200" DisplayMemberPath="Label"/>
-                    <Button cal:Message.Attach="RefreshRunningInstances" Style="{StaticResource buttonStyle}">Refresh List</Button>
+                    <ComboBox ItemsSource="{Binding RunningInstances}" SelectedItem="{Binding ActiveRunningInstance}" Margin="15,0" Width="200" DisplayMemberPath="Label"/>
+                    <Button Command="{s:Action RefreshRunningInstances}" Style="{StaticResource buttonStyle}">Refresh List</Button>
                 </StackPanel>
 
                 <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" HorizontalAlignment="Center">
-                    <Button Name="ReconnectInstance" Margin="0,20,15,0" Padding="20,5">Reconnect To Instance</Button>
-                    <Button Name="TerminateInstance" Margin="15,20,0,0" Padding="20,5">Terminate Instance</Button>
+                    <Button Command="{s:Action ReconnectInstance}" Margin="0,20,15,0" Padding="20,5">Reconnect To Instance</Button>
+                    <Button Command="{s:Action TerminateInstance}" Margin="15,20,0,0" Padding="20,5">Terminate Instance</Button>
                 </StackPanel>
                 
             </DockPanel>

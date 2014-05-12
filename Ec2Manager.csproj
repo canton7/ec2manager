@@ -62,28 +62,15 @@
       <SpecificVersion>False</SpecificVersion>
       <HintPath>packages\AWSSDK.2.0.6.1\lib\net45\AWSSDK.dll</HintPath>
     </Reference>
-    <Reference Include="Caliburn.Micro, Version=1.5.2.0, Culture=neutral, PublicKeyToken=8e5891231f2ed21f, processorArchitecture=MSIL">
-      <SpecificVersion>False</SpecificVersion>
-      <HintPath>packages\Caliburn.Micro.1.5.2\lib\net45\Caliburn.Micro.dll</HintPath>
-    </Reference>
-    <Reference Include="Castle.Core">
-      <HintPath>packages\Castle.Core.3.0.0.4001\lib\net40-client\Castle.Core.dll</HintPath>
-    </Reference>
-    <Reference Include="Ninject">
-      <HintPath>packages\Ninject.3.0.1.10\lib\net45-full\Ninject.dll</HintPath>
-    </Reference>
-    <Reference Include="Ninject.Extensions.Factory">
-      <HintPath>packages\Ninject.Extensions.Factory.3.0.1.0\lib\net45-full\Ninject.Extensions.Factory.dll</HintPath>
-    </Reference>
     <Reference Include="Renci.SshNet">
       <HintPath>packages\SSH.NET.2013.4.7\lib\net40\Renci.SshNet.dll</HintPath>
     </Reference>
+    <Reference Include="Stylet, Version=0.9.4.0, Culture=neutral, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>packages\Stylet.0.9.4\lib\net45\Stylet.dll</HintPath>
+    </Reference>
     <Reference Include="System" />
     <Reference Include="System.Data" />
-    <Reference Include="System.Windows.Interactivity, Version=4.5.0.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35, processorArchitecture=MSIL">
-      <SpecificVersion>False</SpecificVersion>
-      <HintPath>packages\Caliburn.Micro.1.5.2\lib\net45\System.Windows.Interactivity.dll</HintPath>
-    </Reference>
     <Reference Include="System.Xml" />
     <Reference Include="Microsoft.CSharp" />
     <Reference Include="System.Core" />
@@ -117,7 +104,6 @@
     <Compile Include="Converters\IntToVisibilityConverter.cs" />
     <Compile Include="Converters\ItemToPropertyNameConverter.cs" />
     <Compile Include="Converters\StringToBooleanConverter.cs" />
-    <Compile Include="Core\MainModule.cs" />
     <Compile Include="Ec2Manager\AmazonEC2ClientExtensions.cs" />
     <Compile Include="Ec2Manager\Credentials.cs" />
     <Compile Include="Ec2Manager\Ec2Instance.cs" />
@@ -136,9 +122,7 @@
     </Compile>
     <Compile Include="Utilities\ILogger.cs" />
     <Compile Include="Model\MainModel.cs" />
-    <Compile Include="Support\HyperlinkUtilities.cs" />
     <Compile Include="Support\TextBoxUtilities.cs" />
-    <Compile Include="Classes\LabelledValue.cs" />
     <Compile Include="Classes\NotifyPropertyChangedExtensions.cs" />
     <Compile Include="Classes\PortRangeDescription.cs" />
     <Compile Include="Converters\LogEntriesToTextConverter.cs" />
@@ -283,6 +267,7 @@
       <DesignTime>True</DesignTime>
       <DependentUpon>Resources.resx</DependentUpon>
     </Compile>
+    <Resource Include="StyletReadme.txt" />
     <EmbeddedResource Include="Properties\Resources.resx">
       <Generator>ResXFileCodeGenerator</Generator>
       <LastGenOutput>Resources.Designer.cs</LastGenOutput>
