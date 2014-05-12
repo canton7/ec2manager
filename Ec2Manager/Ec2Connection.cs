@@ -11,6 +11,8 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using StyletIoC;
+using Amazon.IdentityManagement;
+using System.Text.RegularExpressions;
 
 namespace Ec2Manager.Ec2Manager
 {
@@ -82,9 +84,25 @@ namespace Ec2Manager.Ec2Manager
 
         public async Task<string> GetUserIdAsync()
         {
+            // http://stackoverflow.com/a/18124234/1086121
+            // Basically we have to try and retrieve our user ID. If we don't have permission, then the exception contains our user ID. YAY
             if (this.cachedUserId == null)
-                this.cachedUserId = (await new Amazon.IdentityManagement.AmazonIdentityManagementServiceClient(credentials.AwsAccessKey, credentials.AwsSecretKey).GetUserAsync(new Amazon.IdentityManagement.Model.GetUserRequest())).User.UserId;
-
+            {
+                try
+                {
+                    this.cachedUserId = (await new Amazon.IdentityManagement.AmazonIdentityManagementServiceClient(credentials.AwsAccessKey, credentials.AwsSecretKey).GetUserAsync(new Amazon.IdentityManagement.Model.GetUserRequest())).User.UserId;
+                }
+                catch (AmazonIdentityManagementServiceException e)
+                {
+                    if (e.ErrorCode != "AccessDenied")
+                        throw;
+                    var match = Regex.Match(e.Message, "arn:aws:.*?([0-9]+)");
+                    if (match.Groups.Count < 1)
+                        throw;
+                    this.cachedUserId = match.Groups[1].Value;
+                }
+            }
+                
             return this.cachedUserId;
         }
 
