@@ -135,7 +135,8 @@ namespace Ec2Manager
         public async Task WriteAwsDetailsAsync(string accessKey, string secretKey, string region, string availabilityZone, string instanceId, string groupName)
         {
             var file = this.mountBase + "aws-config";
-            await this.RunAndLogAsync(String.Format("echo \"export AWS_ACCESS_KEY_ID={0}\" > {1}", accessKey, file));
+            await this.RunAndLogAsync(String.Format("echo \"export PUBLIC_IP={0}\" > {1}", this.Host, file));
+            await this.RunAndLogAsync(String.Format("echo \"export AWS_ACCESS_KEY_ID={0}\" >> {1}", accessKey, file));
             await this.RunAndLogAsync(String.Format("echo \"export AWS_SECRET_ACCESS_KEY={0}\" >> {1}", secretKey, file));
             await this.RunAndLogAsync(String.Format("echo \"export AWS_DEFAULT_REGION={0}\" >> {1}", region, file));
             await this.RunAndLogAsync(String.Format("echo \"export AWS_AVAILABILITY_ZONE={0}\" >> {1}", availabilityZone, file));

@@ -19,7 +19,9 @@ namespace Ec2Manager.Converters
             if (entries == null)
                 return null;
 
-            return string.Join("\n", entries.Select(x => String.Format("[{0:t}] {1}", x.Time, x.Message)));
+            var entriesArray = entries.ToArray();
+
+            return string.Join("\n", entriesArray.Select(x => String.Format("[{0:t}] {1}", x.Time, x.Message)));
         }
 
         public object ConvertBack(object value, Type targetType, object parameter, System.Globalization.CultureInfo culture)
