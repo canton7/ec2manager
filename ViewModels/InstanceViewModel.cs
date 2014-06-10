@@ -206,6 +206,12 @@ namespace Ec2Manager.ViewModels
                         this.Logger.Log("Waiting for 30 seconds for instance to boot");
                         await Task.Delay(30000);
                         await this.Client.ConnectAsync(this.Logger);
+                        await this.Client.WriteAwsDetailsAsync(this.connection.Credentials.AwsAccessKey,
+                            this.connection.Credentials.AwsSecretKey,
+                            this.connection.Endpoint.SystemName,
+                            this.Instance.Specification.AvailabilityZone,
+                            this.Instance.InstanceId,
+                            this.Instance.SecurityGroupName);
                     }
                     catch (Exception e)
                     {

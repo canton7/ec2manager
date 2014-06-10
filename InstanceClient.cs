@@ -132,6 +132,17 @@ namespace Ec2Manager
             await this.RunAndLogAsync("sudo mkfs.ext4 " + device, logger: logger, logResult: true);
         }
 
+        public async Task WriteAwsDetailsAsync(string accessKey, string secretKey, string region, string availabilityZone, string instanceId, string groupName)
+        {
+            var file = this.mountBase + "aws-config";
+            await this.RunAndLogAsync(String.Format("echo \"export AWS_ACCESS_KEY_ID={0}\" > {1}", accessKey, file));
+            await this.RunAndLogAsync(String.Format("echo \"export AWS_SECRET_ACCESS_KEY={0}\" >> {1}", secretKey, file));
+            await this.RunAndLogAsync(String.Format("echo \"export AWS_DEFAULT_REGION={0}\" >> {1}", region, file));
+            await this.RunAndLogAsync(String.Format("echo \"export AWS_AVAILABILITY_ZONE={0}\" >> {1}", availabilityZone, file));
+            await this.RunAndLogAsync(String.Format("echo \"export AWS_INSTANCE_ID={0}\" >> {1}", instanceId, file));
+            await this.RunAndLogAsync(String.Format("echo \"export AWS_GROUP_NAME={0}\" >> {1}", groupName, file));
+        }
+
         public async Task MountDeviceAsync(string device, string mountPointDir, ILogger logger, CancellationToken? cancellationToken = null)
         {
             var mountPoint = this.mountBase + mountPointDir;

@@ -18,8 +18,8 @@ namespace Ec2Manager.Ec2Manager
 {
     public class Ec2Connection : PropertyChangedBase
     {
-        private Credentials credentials;
-        private RegionEndpoint endpoint = RegionEndpoint.EUWest1;
+        public Credentials Credentials { get; private set; }
+        public readonly RegionEndpoint Endpoint = RegionEndpoint.EUWest1;
         private AmazonEC2Client client;
         private string cachedUserId;
         private Config config;
@@ -66,7 +66,7 @@ namespace Ec2Manager.Ec2Manager
 
         public void SetCredentials(Credentials credentials)
         {
-            this.credentials = credentials;
+            this.Credentials = credentials;
             this.Connect();
         }
 
@@ -90,7 +90,7 @@ namespace Ec2Manager.Ec2Manager
             {
                 try
                 {
-                    this.cachedUserId = (await new Amazon.IdentityManagement.AmazonIdentityManagementServiceClient(credentials.AwsAccessKey, credentials.AwsSecretKey).GetUserAsync(new Amazon.IdentityManagement.Model.GetUserRequest())).User.UserId;
+                    this.cachedUserId = (await new Amazon.IdentityManagement.AmazonIdentityManagementServiceClient(Credentials.AwsAccessKey, Credentials.AwsSecretKey).GetUserAsync(new Amazon.IdentityManagement.Model.GetUserRequest())).User.UserId;
                 }
                 catch (AmazonIdentityManagementServiceException e)
                 {
@@ -140,10 +140,10 @@ namespace Ec2Manager.Ec2Manager
 
         private void Connect()
         {
-            if (!this.credentials.IsComplete)
+            if (!this.Credentials.IsComplete)
                 return;
 
-            this.client = new AmazonEC2Client(this.credentials.AwsAccessKey, this.credentials.AwsSecretKey, this.endpoint);
+            this.client = new AmazonEC2Client(this.Credentials.AwsAccessKey, this.Credentials.AwsSecretKey, this.Endpoint);
             // TODO: Actually set properly
             this.IsConnected = true;
         }
