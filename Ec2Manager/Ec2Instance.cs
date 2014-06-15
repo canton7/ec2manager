@@ -1,6 +1,6 @@
 ﻿using Amazon.EC2;
 using Amazon.EC2.Model;
-using Caliburn.Micro;
+using Stylet;
 using Ec2Manager.Classes;
 using Ec2Manager.Configuration;
 using Ec2Manager.Utilities;
@@ -42,7 +42,7 @@ namespace Ec2Manager.Ec2Manager
         private SemaphoreSlim volumeMountPointLock = new SemaphoreSlim(1, 1);
 
         private string uniqueKey;
-        private string securityGroupName
+        public string SecurityGroupName
         {
             get { return "Ec2SecurityGroup-" + this.uniqueKey; }
         }
@@ -181,10 +181,10 @@ namespace Ec2Manager.Ec2Manager
 
         private async Task CreateSecurityGroupAsync()
         {
-            this.Logger.Log("Creating a new security group: {0}", this.securityGroupName);
+            this.Logger.Log("Creating a new security group: {0}", this.SecurityGroupName);
             var createSecurityGroupResponse = await this.Client.CreateSecurityGroupAsync(new CreateSecurityGroupRequest()
             {
-                GroupName = this.securityGroupName,
+                GroupName = this.SecurityGroupName,
                 Description = "Ec2Manager-created security group",
             });
             this.Logger.Log("Security group ID {0} created", createSecurityGroupResponse.GroupId);
@@ -192,12 +192,12 @@ namespace Ec2Manager.Ec2Manager
 
         private async Task DeleteSecurityGroupAsync()
         {
-            this.Logger.Log("Deleting security group {0}", this.securityGroupName);
+            this.Logger.Log("Deleting security group {0}", this.SecurityGroupName);
             try
             {
                 await this.Client.DeleteSecurityGroupAsync(new DeleteSecurityGroupRequest()
                 {
-                    GroupName = this.securityGroupName,
+                    GroupName = this.SecurityGroupName,
                 });
             }
             catch (AmazonEC2Exception e)
@@ -220,7 +220,7 @@ namespace Ec2Manager.Ec2Manager
 
             var ingressRequest = new AuthorizeSecurityGroupIngressRequest()
             {
-                GroupName = this.securityGroupName,
+                GroupName = this.SecurityGroupName,
                 IpPermissions = portRanges.Select(x => new IpPermission()
                 {
                     IpProtocol = x.Proto,
@@ -435,7 +435,7 @@ namespace Ec2Manager.Ec2Manager
                 ImageId = this.Specification.Ami,
                 InstanceType = this.Specification.Size.Key,
                 KeyName = this.privateKeyPair.KeyName,
-                SecurityGroups = new List<string>() { this.securityGroupName },
+                SecurityGroups = new List<string>() { this.SecurityGroupName },
             };
             if (!string.IsNullOrWhiteSpace(this.Specification.AvailabilityZone))
             {
@@ -485,7 +485,7 @@ namespace Ec2Manager.Ec2Manager
                 MinCount = 1,
                 MaxCount = 1,
                 KeyName = this.privateKeyPair.KeyName,
-                SecurityGroups = new List<string>() { this.securityGroupName },
+                SecurityGroups = new List<string>() { this.SecurityGroupName },
             };
             if (!string.IsNullOrWhiteSpace(this.Specification.AvailabilityZone))
             {

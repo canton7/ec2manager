@@ -32,7 +32,7 @@ namespace Ec2Manager.Ec2Manager
 
             // Look for the 'Ec2Manager - ' prefix for now, for backwards compat
             return from snapshot in result.Snapshots
-                   where snapshot.DescriptionHasPrefix() || snapshot.Description.StartsWith("Ec2Manager -")
+                   where snapshot.DescriptionHasPrefix() || (snapshot.Description != null && snapshot.Description.StartsWith("Ec2Manager -"))
                    let filteredDescription = snapshot.DescriptionWithoutPrefix()
                    let mapItem = friendsMap.ContainsKey(snapshot.OwnerId) ? friendsMap[snapshot.OwnerId] : friendsMap["self"]
                    from friend in mapItem

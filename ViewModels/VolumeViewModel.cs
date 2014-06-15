@@ -1,5 +1,4 @@
-﻿using Caliburn.Micro;
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -9,6 +8,7 @@ using System.Threading;
 using System.Windows;
 using Ec2Manager.Ec2Manager;
 using Ec2Manager.Utilities;
+using Stylet;
 
 namespace Ec2Manager.ViewModels
 {
@@ -47,8 +47,8 @@ namespace Ec2Manager.ViewModels
             }
         }
 
-        private LabelledValue[] runCommands = new LabelledValue[0];
-        public LabelledValue[] RunCommands
+        private LabelledValue<string>[] runCommands = new LabelledValue<string>[0];
+        public LabelledValue<string>[] RunCommands
         {
             get { return this.runCommands; }
             set
@@ -57,14 +57,14 @@ namespace Ec2Manager.ViewModels
                 this.NotifyOfPropertyChange();
 
                 if (this.runCommands.Length < 1)
-                    this.SelectedRunCommand = new LabelledValue("No Commands", null);
+                    this.SelectedRunCommand = new LabelledValue<string>("No Commands", null);
                 else
                     this.SelectedRunCommand = this.runCommands[0];
             }
         }
 
-        private LabelledValue selectedRunCommand = new LabelledValue("Loading...", null);
-        public LabelledValue SelectedRunCommand
+        private LabelledValue<string> selectedRunCommand = new LabelledValue<string>("Loading...", null);
+        public LabelledValue<string> SelectedRunCommand
         {
             get { return this.selectedRunCommand; }
             set
@@ -239,6 +239,7 @@ namespace Ec2Manager.ViewModels
                 return;
 
             this.Logger.Log("Starting to cancel operation");
+            this.Logger.Log("This can take a while...");
             this.CancelCts.Cancel();
             this.NotifyOfPropertyChange(() => CanCancelAction);
         }
@@ -279,26 +280,27 @@ namespace Ec2Manager.ViewModels
             var detailsModel = this.createSnapshotDetailsViewModelFactory.CreateCreateSnapshotDetailsViewModel();
 
             var description = await this.Volume.GetSourceSnapshotDescriptionAsync();
-            if (description == null)
+            var hasSourceSnapshot = description != null;
+            var userOwnsSourceSnapshot = hasSourceSnapshot && description.OwnerId == await this.connection.GetUserIdAsync();
+            if (!hasSourceSnapshot)
             {
-                detailsModel.HasSourceSnapshot = false;
+                detailsModel.HasSourceSnapshotToDelete = false;
             }
             else
             {
                 // Only allow them to delete if they actually own it
-                detailsModel.HasSourceSnapshot = description.OwnerId == await this.connection.GetUserIdAsync();
+                detailsModel.HasSourceSnapshotToDelete = userOwnsSourceSnapshot;
                 detailsModel.Name = description.Name;
                 detailsModel.Description = description.Description;
             }
 
-            var result = this.windowManager.ShowDialog(detailsModel, settings: new Dictionary<string, object>()
-            {
-                { "ResizeMode", ResizeMode.NoResize },
-            });
+            var result = this.windowManager.ShowDialog(detailsModel);
+
+            var deleteSourceSnapshot = userOwnsSourceSnapshot && detailsModel.DeleteSourceSnapshot;
 
             if (result.HasValue && result.Value)
             {
-                if (!detailsModel.DeleteSourceSnapshot && await this.Volume.AnySnapshotsExistWithName(detailsModel.Name))
+                if (!deleteSourceSnapshot && await this.Volume.AnySnapshotsExistWithName(detailsModel.Name))
                 {
                     var confirmResult = MessageBox.Show(Application.Current.MainWindow, "Are you sure you want to create a snapshot called " + detailsModel.Name + "?\nYou already have a snapshot with this name", "Are you sure?", MessageBoxButton.YesNo, MessageBoxImage.Question, MessageBoxResult.No);
                     if (confirmResult == MessageBoxResult.No)
@@ -311,7 +313,9 @@ namespace Ec2Manager.ViewModels
 
                     this.CancelCts = new CancellationTokenSource();
                     await this.Volume.CreateSnapshotAsync(detailsModel.Name, detailsModel.Description, detailsModel.IsPublic, this.CancelCts.Token);
-                    await this.Volume.DeleteSnapshotAsync(await this.Volume.GetSourceSnapshotAsync());
+
+                    if (deleteSourceSnapshot)
+                        await this.Volume.DeleteSnapshotAsync(await this.Volume.GetSourceSnapshotAsync());
                 }
                 catch (OperationCanceledException)
                 {

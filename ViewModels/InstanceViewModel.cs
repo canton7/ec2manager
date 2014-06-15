@@ -1,4 +1,4 @@
-﻿using Caliburn.Micro;
+﻿using Stylet;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -19,7 +19,7 @@ using Ec2Manager.Properties;
 
 namespace Ec2Manager.ViewModels
 {
-    public class InstanceViewModel : Conductor<IScreen>.Collection.OneActive
+    public class InstanceViewModel : Conductor<IScreen>.Collections.OneActive
     {
         private static readonly List<VolumeType> defaultVolumeTypes = new List<VolumeType>
             {
@@ -206,6 +206,12 @@ namespace Ec2Manager.ViewModels
                         this.Logger.Log("Waiting for 30 seconds for instance to boot");
                         await Task.Delay(30000);
                         await this.Client.ConnectAsync(this.Logger);
+                        await this.Client.WriteAwsDetailsAsync(this.connection.Credentials.AwsAccessKey,
+                            this.connection.Credentials.AwsSecretKey,
+                            this.connection.Endpoint.SystemName,
+                            this.Instance.Specification.AvailabilityZone,
+                            this.Instance.InstanceId,
+                            this.Instance.SecurityGroupName);
                     }
                     catch (Exception e)
                     {
@@ -230,8 +236,8 @@ namespace Ec2Manager.ViewModels
             }
             catch (Exception e)
             {
-                this.Logger.Log("Error occurred: {0}", e.Message);
-                MessageBox.Show(Application.Current.MainWindow, "Error occurred: " + e.Message, "Error occurred", MessageBoxButton.OK, MessageBoxImage.Error);
+                this.Logger.Log("Error occurred:\n{0}", e.Format());
+                MessageBox.Show(Application.Current.MainWindow, "Error occurred:\n" + e.Format(), "Error occurred", MessageBoxButton.OK, MessageBoxImage.Error);
                 this.TryClose();
             }
             finally
@@ -256,10 +262,7 @@ namespace Ec2Manager.ViewModels
                     KeyDescription? key = this.config.LoadKey();
                     if (key == null)
                     {
-                        var result = this.windowManager.ShowDialog<ReconnectDetailsViewModel>(settings: new Dictionary<string, object>()
-                                {
-                                    { "ResizeMode", ResizeMode.NoResize },
-                                });
+                        var result = this.windowManager.ShowDialog<ReconnectDetailsViewModel>();
 
                         if (result.Result.GetValueOrDefault())
                         {
@@ -294,8 +297,8 @@ namespace Ec2Manager.ViewModels
             }
             catch (Exception e)
             {
-                this.Logger.Log("Error occurred: {0}", e.Message);
-                MessageBox.Show(Application.Current.MainWindow, "Error occurred: " + e.Message, "Error occurred", MessageBoxButton.OK, MessageBoxImage.Error);
+                this.Logger.Log("Error occurred:\n{0}", e.Format());
+                MessageBox.Show(Application.Current.MainWindow, "Error occurred:\n" + e.Format(), "Error occurred", MessageBoxButton.OK, MessageBoxImage.Error);
                 this.TryClose();
             }
             finally
@@ -385,8 +388,8 @@ namespace Ec2Manager.ViewModels
             }
             catch (Exception e)
             {
-                this.Logger.Log("Error occurred: {0}", e.Message);
-                MessageBox.Show(Application.Current.MainWindow, "Error occurred: " + e.Message, "Error occurred", MessageBoxButton.OK, MessageBoxImage.Error);
+                this.Logger.Log("Error occurred:\n{0}", e.Format());
+                MessageBox.Show(Application.Current.MainWindow, "Error occurred:\n" + e.Format(), "Error occurred", MessageBoxButton.OK, MessageBoxImage.Error);
                 volumeViewModel.TryClose();
             }
         }
@@ -401,10 +404,7 @@ namespace Ec2Manager.ViewModels
 
         public async void CreateVolume()
         {
-            var result = this.windowManager.ShowDialog<CreateNewVolumeDetailsViewModel>(settings: new Dictionary<string, object>()
-            {
-                { "ResizeMode", ResizeMode.NoResize },
-            });
+            var result = this.windowManager.ShowDialog<CreateNewVolumeDetailsViewModel>();
 
             if (result.Success)
             {
@@ -424,8 +424,8 @@ namespace Ec2Manager.ViewModels
                 }
                 catch (Exception e)
                 {
-                    this.Logger.Log("Error occurred: {0}", e.Message);
-                    MessageBox.Show(Application.Current.MainWindow, "Error occurred: " + e.Message, "Error occurred", MessageBoxButton.OK, MessageBoxImage.Error);
+                    this.Logger.Log("Error occurred:\n{0}", e.Format());
+                    MessageBox.Show(Application.Current.MainWindow, "Error occurred:\n" + e.Format(), "Error occurred", MessageBoxButton.OK, MessageBoxImage.Error);
                     volumeViewModel.TryClose();
                 }
             }

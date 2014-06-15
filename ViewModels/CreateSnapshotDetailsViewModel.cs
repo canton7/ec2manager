@@ -1,4 +1,4 @@
-﻿using Caliburn.Micro;
+﻿using Stylet;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -45,7 +45,7 @@ namespace Ec2Manager.ViewModels
         }
 
         private bool hasSourceSnapshot;
-        public bool HasSourceSnapshot
+        public bool HasSourceSnapshotToDelete
         {
             get { return this.hasSourceSnapshot; }
             set

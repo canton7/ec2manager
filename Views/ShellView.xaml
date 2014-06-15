@@ -3,34 +3,34 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
-             xmlns:cal="http://www.caliburnproject.org"
+             xmlns:s="https://github.com/canton7/Stylet"
              mc:Ignorable="d"
              Width="600" Height="700">
     <DockPanel>
         <Menu IsMainMenu="True" DockPanel.Dock="Top">
             <MenuItem Header="_File">
-                <MenuItem x:Name="ShowSettings" Header="_Settings"/>
-                <MenuItem x:Name="ManageFriends" Header="Manage _Friends"/>
-                <MenuItem x:Name="ShowEc2Console" Header="EC2 _Console"/>
-                <MenuItem x:Name="ShowEc2Pricing" Header="EC2 _Pricing"/>
-                <MenuItem x:Name="TryClose" Header="_Exit"/>
+                <MenuItem Command="{s:Action ShowSettings}" Header="_Settings"/>
+                <MenuItem Command="{s:Action ManageFriends}" Header="Manage _Friends"/>
+                <MenuItem Command="{s:Action ShowEc2Console}" Header="EC2 _Console"/>
+                <MenuItem Command="{s:Action ShowEc2Pricing}" Header="EC2 _Pricing"/>
+                <MenuItem Command="{s:Action TryClose}" Header="_Exit"/>
             </MenuItem>
             <MenuItem Header="_Instance">
-                <MenuItem cal:Action.TargetWithoutContext="{Binding ActiveItem}" cal:Message.Attach="CreateVolume" Header="Create New Empty Volume"/>
-                <MenuItem cal:Action.TargetWithoutContext="{Binding ActiveItem}" cal:Message.Attach="LaunchPutty" Header="Launch PuTTY"/>
-                <MenuItem cal:Action.TargetWithoutContext="{Binding ActiveItem}" cal:Message.Attach="SavePrivateKey" Header="Save OpenSSL Key"/>
-                <MenuItem cal:Action.TargetWithoutContext="{Binding ActiveItem}" cal:Message.Attach="SavePuttyKey" Header="Save PuTTY Key"/>
+                <MenuItem s:View.ActionTarget="{Binding ActiveItem}" Command="{s:Action CreateVolume, ActionNotFound=Disable}" Header="Create New Empty Volume"/>
+                <MenuItem s:View.ActionTarget="{Binding ActiveItem}" Command="{s:Action LaunchPutty, ActionNotFound=Disable}" Header="Launch PuTTY"/>
+                <MenuItem s:View.ActionTarget="{Binding ActiveItem}" Command="{s:Action SavePrivateKey, ActionNotFound=Disable}" Header="Save OpenSSL Key"/>
+                <MenuItem s:View.ActionTarget="{Binding ActiveItem}" Command="{s:Action SavePuttyKey, ActionNotFound=Disable}" Header="Save PuTTY Key"/>
             </MenuItem>
             <MenuItem Header="_Volume">
-                <MenuItem cal:Action.TargetWithoutContext="{Binding SubActiveItem}" cal:Message.Attach="UnmountVolume" Header="Unmount"/>
-                <MenuItem cal:Action.TargetWithoutContext="{Binding SubActiveItem}" cal:Message.Attach="CreateSnapshot" Header="Create Snapshot"/>
+                <MenuItem s:View.ActionTarget="{Binding SubActiveItem}" Command="{s:Action UnmountVolume, ActionNotFound=Disable}" Header="Unmount"/>
+                <MenuItem s:View.ActionTarget="{Binding SubActiveItem}" Command="{s:Action CreateSnapshot, ActionNotFound=Disable}" Header="Create Snapshot"/>
             </MenuItem>
             <MenuItem Header="_Help">
-                <MenuItem x:Name="CheckForUpdate" Header="_Check for Updates"/>
-                <MenuItem x:Name="ShowAbout" Header="_About"/>
+                <MenuItem Command="{s:Action CheckForUpdate}" Header="_Check for Updates"/>
+                <MenuItem Command="{s:Action ShowAbout}" Header="_About"/>
             </MenuItem>
         </Menu>
 
-        <TabControl Name="Items" DockPanel.Dock="Top"/>
+        <TabControl Style="{StaticResource StyletConductorTabControl}" DockPanel.Dock="Top"/>
     </DockPanel>
 </Window>

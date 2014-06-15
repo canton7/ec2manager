@@ -1,8 +1,9 @@
 ﻿using Amazon.EC2;
 using Amazon.EC2.Model;
-using Caliburn.Micro;
+using Stylet;
 using Ec2Manager.Properties;
 using Ec2Manager.Utilities;
+using Ec2Manager.Classes;
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -377,7 +378,7 @@ namespace Ec2Manager.Ec2Manager
                 }
                 catch (Exception e)
                 {
-                    this.Logger.Log("Error creating volume from snapshot: {0}", e.Message);
+                    this.Logger.Log("Error creating volume from snapshot:\n{0}", e.Format());
                     throw;
                 }
             }
@@ -438,7 +439,7 @@ namespace Ec2Manager.Ec2Manager
             }
             catch (Exception e)
             {
-                this.Logger.Log("Error creating new volume: {0}", e.Message);
+                this.Logger.Log("Error creating new volume:\n{0}", e.Format());
                 throw;
             }
 

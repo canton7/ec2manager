@@ -1,8 +1,8 @@
-﻿using Caliburn.Micro;
-using Ec2Manager.Classes;
+﻿using Ec2Manager.Classes;
 using Ec2Manager.Utilities;
 using Renci.SshNet;
 using Renci.SshNet.Common;
+using Stylet;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -81,7 +81,7 @@ namespace Ec2Manager
                     }
                     catch (SshAuthenticationException e)
                     {
-                        var msg = "SSH Authentication error: " + e.Message + "\nMake sure you entered the right SSH user";
+                        var msg = "SSH Authentication error:\n" + e.Format() + "\nMake sure you entered the right SSH user";
                         logger.Log(msg);
                         throw new Exception(msg, e);
                     }
@@ -130,6 +130,18 @@ namespace Ec2Manager
         public async Task SetupFilesystemAsync(string device, ILogger logger)
         {
             await this.RunAndLogAsync("sudo mkfs.ext4 " + device, logger: logger, logResult: true);
+        }
+
+        public async Task WriteAwsDetailsAsync(string accessKey, string secretKey, string region, string availabilityZone, string instanceId, string groupName)
+        {
+            var file = this.mountBase + "aws-config";
+            await this.RunAndLogAsync(String.Format("echo \"export PUBLIC_IP={0}\" > {1}", this.Host, file));
+            await this.RunAndLogAsync(String.Format("echo \"export AWS_ACCESS_KEY_ID={0}\" >> {1}", accessKey, file));
+            await this.RunAndLogAsync(String.Format("echo \"export AWS_SECRET_ACCESS_KEY={0}\" >> {1}", secretKey, file));
+            await this.RunAndLogAsync(String.Format("echo \"export AWS_DEFAULT_REGION={0}\" >> {1}", region, file));
+            await this.RunAndLogAsync(String.Format("echo \"export AWS_AVAILABILITY_ZONE={0}\" >> {1}", availabilityZone, file));
+            await this.RunAndLogAsync(String.Format("echo \"export AWS_INSTANCE_ID={0}\" >> {1}", instanceId, file));
+            await this.RunAndLogAsync(String.Format("echo \"export AWS_GROUP_NAME={0}\" >> {1}", groupName, file));
         }
 
         public async Task MountDeviceAsync(string device, string mountPointDir, ILogger logger, CancellationToken? cancellationToken = null)
@@ -199,7 +211,7 @@ namespace Ec2Manager
                 });
         }
 
-        public async Task<IEnumerable<LabelledValue>> GetRunCommandsAsync(string mountPointDir, CancellationToken? cancellationToken = null)
+        public async Task<IEnumerable<LabelledValue<string>>> GetRunCommandsAsync(string mountPointDir, CancellationToken? cancellationToken = null)
         {
             var mountPoint = this.mountBase + mountPointDir;
 
@@ -207,18 +219,18 @@ namespace Ec2Manager
             var lines = contents.Split(new[] { "\n", "\r\n" }, StringSplitOptions.RemoveEmptyEntries);
 
             if (lines.Length == 0)
-                return Enumerable.Empty<LabelledValue>();
+                return Enumerable.Empty<LabelledValue<string>>();
 
             // Is it an old-school run command (just the command on its own?)
             if (lines.Length == 1 && !lines[0].Contains("\n"))
             {
-                return new[] { new LabelledValue("Default Command", lines[0]) };
+                return new[] { new LabelledValue<string>("Default Command", lines[0]) };
             }
 
             return lines.Select(entry =>
                 {
                     var parts = entry.Split(new[] { '\t' }, 2);
-                    return new LabelledValue(parts[0], parts[1]);
+                    return new LabelledValue<string>(parts[0], parts[1]);
                 });
         }
 
@@ -313,8 +325,7 @@ namespace Ec2Manager
 
                     using (var registration = token.Register(() =>
                     {
-                        cmd.CancelAsync();
-                        tcs.TrySetResult(false);
+                        Task.Run(() => cmd.CancelAsync()).ContinueWith(_ => tcs.TrySetResult(false));
                     }))
                     {
                         var tasks = new List<Task>();
@@ -335,13 +346,13 @@ namespace Ec2Manager
                 catch (SocketException e)
                 {
                     if (logger != null)
-                        logger.Log("SocketException: " + e.Message);
+                        logger.Log("SocketException:\n" + e.Format());
                     lastException = e;
                 }
                 catch (SshException e)
                 {
                     if (logger != null)
-                        logger.Log("SshException: " + e.Message);
+                        logger.Log("SshException:\n" + e.Format());
                     lastException = e;
                 }
 

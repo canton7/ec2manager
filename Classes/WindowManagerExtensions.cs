@@ -1,4 +1,4 @@
-﻿using Caliburn.Micro;
+﻿using Stylet;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -26,14 +26,14 @@ namespace Ec2Manager.Classes
 
     public static class WindowManagerExtensions
     {
-        public static ShowDialogResult<T> ShowDialog<T>(this IWindowManager windowManager, object context = null, IDictionary<string, object> settings = null)
+        public static ShowDialogResult<T> ShowDialog<T>(this IWindowManager windowManager)
         {
             T vm = IoC.Get<T>();
             bool? result = null;
 
-            Caliburn.Micro.Execute.OnUIThread(() =>
+            Execute.OnUIThread(() =>
                 {
-                    result = windowManager.ShowDialog(vm, context, settings);
+                    result = windowManager.ShowDialog(vm);
                 });
 
             return new ShowDialogResult<T>(vm, result);

@@ -1,23 +1,25 @@
 ﻿using Amazon;
 using Amazon.EC2;
 using Amazon.EC2.Model;
-using Caliburn.Micro;
+using Stylet;
 using Ec2Manager.Configuration;
 using Ec2Manager.Utilities;
-using Ninject;
 using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using StyletIoC;
+using Amazon.IdentityManagement;
+using System.Text.RegularExpressions;
 
 namespace Ec2Manager.Ec2Manager
 {
     public class Ec2Connection : PropertyChangedBase
     {
-        private Credentials credentials;
-        private RegionEndpoint endpoint = RegionEndpoint.EUWest1;
+        public Credentials Credentials { get; private set; }
+        public readonly RegionEndpoint Endpoint = RegionEndpoint.EUWest1;
         private AmazonEC2Client client;
         private string cachedUserId;
         private Config config;
@@ -25,15 +27,17 @@ namespace Ec2Manager.Ec2Manager
 
         public static readonly InstanceSize[] InstanceSizes = new[]
         {
-            new InstanceSize("M1 Small", "m1.small"),
-            new InstanceSize("M1 Medium", "m1.medium"),
-            new InstanceSize("M1 Large", "m1.large"),
+            new InstanceSize("M3 Medium", "m3.medium"),
+            new InstanceSize("M3 Large", "m3.large"),
             new InstanceSize("M3 Extra Large", "m3.xlarge"),
             new InstanceSize("M3 2x Extra Large", "m3.2xlarge"),
+
             new InstanceSize("Micro", "t1.micro"),
+            
             new InstanceSize("High-Memory Extra Large", "m2.xlarge"),
             new InstanceSize("High-Memory 2x Extra Large", "m2.2xlarge"),
             new InstanceSize("High-Memory 4x Extra Large", "m2.4xlarge"),
+
             new InstanceSize("High-CPU Medium", "c1.medium"),
             new InstanceSize("High-CPU Extra Large", "c1.xlarge"),
         };
@@ -62,7 +66,7 @@ namespace Ec2Manager.Ec2Manager
 
         public void SetCredentials(Credentials credentials)
         {
-            this.credentials = credentials;
+            this.Credentials = credentials;
             this.Connect();
         }
 
@@ -80,9 +84,25 @@ namespace Ec2Manager.Ec2Manager
 
         public async Task<string> GetUserIdAsync()
         {
+            // http://stackoverflow.com/a/18124234/1086121
+            // Basically we have to try and retrieve our user ID. If we don't have permission, then the exception contains our user ID. YAY
             if (this.cachedUserId == null)
-                this.cachedUserId = (await new Amazon.IdentityManagement.AmazonIdentityManagementServiceClient(credentials.AwsAccessKey, credentials.AwsSecretKey).GetUserAsync(new Amazon.IdentityManagement.Model.GetUserRequest())).User.UserId;
-
+            {
+                try
+                {
+                    this.cachedUserId = (await new Amazon.IdentityManagement.AmazonIdentityManagementServiceClient(Credentials.AwsAccessKey, Credentials.AwsSecretKey).GetUserAsync(new Amazon.IdentityManagement.Model.GetUserRequest())).User.UserId;
+                }
+                catch (AmazonIdentityManagementServiceException e)
+                {
+                    if (e.ErrorCode != "AccessDenied")
+                        throw;
+                    var match = Regex.Match(e.Message, "arn:aws:.*?([0-9]+)");
+                    if (match.Groups.Count < 1)
+                        throw;
+                    this.cachedUserId = match.Groups[1].Value;
+                }
+            }
+                
             return this.cachedUserId;
         }
 
@@ -120,10 +140,10 @@ namespace Ec2Manager.Ec2Manager
 
         private void Connect()
         {
-            if (!this.credentials.IsComplete)
+            if (!this.Credentials.IsComplete)
                 return;
 
-            this.client = new AmazonEC2Client(this.credentials.AwsAccessKey, this.credentials.AwsSecretKey, this.endpoint);
+            this.client = new AmazonEC2Client(this.Credentials.AwsAccessKey, this.Credentials.AwsSecretKey, this.Endpoint);
             // TODO: Actually set properly
             this.IsConnected = true;
         }

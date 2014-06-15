@@ -18,7 +18,7 @@ namespace Ec2Manager.Views
     /// <summary>
     /// Interaction logic for CreateNewVolumeDetailsView.xaml
     /// </summary>
-    public partial class CreateNewVolumeDetailsView : UserControl
+    public partial class CreateNewVolumeDetailsView : Window
     {
         public CreateNewVolumeDetailsView()
         {

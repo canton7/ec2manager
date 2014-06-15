@@ -1,4 +1,4 @@
-﻿using Caliburn.Micro;
+﻿using Stylet;
 using Ec2Manager.Classes;
 using Ec2Manager.Configuration;
 using Ec2Manager.Events;
@@ -16,12 +16,12 @@ namespace Ec2Manager.ViewModels
 {
     public class ConnectViewModel : Screen
     {
-        private static readonly LabelledValue[] availabilityZones = new LabelledValue[]
+        private static readonly LabelledValue<string>[] availabilityZones = new LabelledValue<string>[]
         {
-            new LabelledValue("Any", null),
-            new LabelledValue("eu-west-1a", "eu-west-1a"),
-            new LabelledValue("eu-west-1b", "eu-west-1b"),
-            new LabelledValue("eu-west-1c", "eu-west-1c"),
+            new LabelledValue<string>("Any", null),
+            new LabelledValue<string>("eu-west-1a", "eu-west-1a"),
+            new LabelledValue<string>("eu-west-1b", "eu-west-1b"),
+            new LabelledValue<string>("eu-west-1c", "eu-west-1c"),
         };
 
         private Config config;
@@ -55,13 +55,13 @@ namespace Ec2Manager.ViewModels
             }
         }
 
-        public LabelledValue[] AvailabilityZones
+        public LabelledValue<string>[] AvailabilityZones
         {
             get { return availabilityZones; }
         }
 
-        private LabelledValue selectedAvailabilityZone = availabilityZones[0];
-        public LabelledValue SelectedAvailabilityZone
+        private LabelledValue<string> selectedAvailabilityZone = availabilityZones[0];
+        public LabelledValue<string> SelectedAvailabilityZone
         {
             get { return this.selectedAvailabilityZone; }
             set
@@ -242,24 +242,26 @@ namespace Ec2Manager.ViewModels
         {
             if (!this.CanRefreshRunningInstances)
             {
-                this.RunningInstances = new[] { new LabelledValue<Ec2Instance>("Can't load. Try refreshing", null) };
-                this.ActiveRunningInstance = this.RunningInstances[0];
+                var runningInstances = new[] { new LabelledValue<Ec2Instance>("Can't load. Try refreshing", null) };
+                this.ActiveRunningInstance = runningInstances[0];
+                this.RunningInstances = runningInstances;
                 return;
             }
 
             try
             {
-                this.RunningInstances = (await this.connection.ListInstancesAsync()).Select(x => new LabelledValue<Ec2Instance>(x.Name, x)).ToArray();
-                if (this.RunningInstances.Length == 0)
+                var runningInstances = (await this.connection.ListInstancesAsync()).Select(x => new LabelledValue<Ec2Instance>(x.Name, x)).ToArray();
+                if (runningInstances.Length == 0)
                 {
-                    this.RunningInstances = new[] { new LabelledValue<Ec2Instance>("No Running Instances", null) };
+                    runningInstances = new[] { new LabelledValue<Ec2Instance>("No Running Instances", null) };
                 }
-                this.ActiveRunningInstance = this.RunningInstances[0];
+                this.ActiveRunningInstance = runningInstances[0];
+                this.RunningInstances = runningInstances;
             }
             catch (Exception)
             {
-                this.RunningInstances = new[] { new LabelledValue<Ec2Instance>("Error loading. Bad credentials?", null) };
-                this.ActiveRunningInstance = this.RunningInstances[0];
+                this.ActiveRunningInstance = new LabelledValue<Ec2Instance>("Error loading. Bad credentials?", null);
+                this.RunningInstances = new[] { this.ActiveRunningInstance };
             }
         }
 
@@ -268,7 +270,7 @@ namespace Ec2Manager.ViewModels
             get
             {
                 return this.connection.IsConnected &&
-                    this.ActiveRunningInstance != null && this.ActiveRunningInstance.IsSet;
+                    this.ActiveRunningInstance != null && this.ActiveRunningInstance.Value != null;
             }
         }
         public void ReconnectInstance()
@@ -284,7 +286,7 @@ namespace Ec2Manager.ViewModels
             get
             {
                 return this.connection.IsConnected &&
-                    this.ActiveRunningInstance != null && this.ActiveRunningInstance.IsSet;
+                    this.ActiveRunningInstance != null && this.ActiveRunningInstance.Value != null;
             }
         }
         public void TerminateInstance()

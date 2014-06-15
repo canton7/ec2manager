@@ -1,4 +1,4 @@
-﻿using Caliburn.Micro;
+﻿using Stylet;
 using Ec2Manager.Configuration;
 using Ec2Manager.Validation;
 using System;
@@ -88,7 +88,9 @@ namespace Ec2Manager.ViewModels
             this.config = config;
             this.snapshotBrowser = connection.CreateSnapshotBrowser();
 
-            connection.GetUserIdAsync().ContinueWith(t => this.OwnUserId = t.Result);
+            var getUserIdTask = connection.GetUserIdAsync();
+            getUserIdTask.ContinueWith(t => this.OwnUserId = t.Result, TaskContinuationOptions.OnlyOnRanToCompletion);
+            getUserIdTask.ContinueWith(t => System.Windows.MessageBox.Show("Error occurred finding user ID\n" + t.Exception.Format(), "Error occurred finding User ID", System.Windows.MessageBoxButton.OK), TaskContinuationOptions.OnlyOnFaulted);
 
             this.ShowOfficialImages = config.MainConfig.ShowOfficialImages;
             this.Friends = new BindableCollection<FriendModel>(config.FriendsWithoutDefaults.Select(x => new FriendModel(x, snapshotBrowser)));
@@ -199,7 +201,7 @@ namespace Ec2Manager.ViewModels
                 });
 
             this.ValidateWith(() => this.Name, x => !String.IsNullOrWhiteSpace(x), "Name must not be empty");
-            this.ValidateWith(() => this.UserId, x => x != null && Regex.Match(x, @"^9\d{11}$").Success, "Bad Amazon User Id. Must be of the form 9xxxxxxxxxxx");
+            this.ValidateWith(() => this.UserId, x => x != null && Regex.Match(x, @"^\d{12}$").Success, "Bad Amazon User Id. Must be of the form xxxxxxxxxxxx");
         }
 
         public FriendModel(Friend friend, Ec2SnapshotBrowser snapshotBrowser) : this(snapshotBrowser)

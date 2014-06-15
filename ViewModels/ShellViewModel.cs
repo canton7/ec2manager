@@ -1,4 +1,4 @@
-﻿using Caliburn.Micro;
+﻿using Stylet;
 using Ec2Manager.Events;
 using System;
 using System.Collections.Generic;
@@ -17,7 +17,7 @@ using Ec2Manager.Ec2Manager;
 namespace Ec2Manager.ViewModels
 {
     public class ShellViewModel
-        : Conductor<IScreen>.Collection.OneActive,
+        : Conductor<IScreen>.Collections.OneActive,
         IHandle<CreateInstanceEvent>, IHandle<TerminateInstanceEvent>, IHandle<ReconnectInstanceEvent>
     {
         private IWindowManager windowManager;
@@ -67,7 +67,7 @@ namespace Ec2Manager.ViewModels
             this.ActivateItem(connectModel);
         }
 
-        protected override void OnViewLoaded(object view)
+        protected override void OnViewLoaded()
         {
             this.CheckForUpdate();
 
@@ -77,7 +77,7 @@ namespace Ec2Manager.ViewModels
                 // TODO: Find a better way of doing this
                 Task.Run(() =>
                     {
-                        Caliburn.Micro.Execute.OnUIThread(() =>
+                        Execute.OnUIThread(() =>
                             {
                                 var result = MessageBox.Show(Application.Current.MainWindow, "Do you want to set your AWS credentials? You will need to do this before you'll be able to do anything else.", "Set AWS credentials?", MessageBoxButton.YesNo, MessageBoxImage.Question);
                                 if (result == MessageBoxResult.Yes)
@@ -91,7 +91,7 @@ namespace Ec2Manager.ViewModels
         {
             if (!await this.versionManager.IsUpToDateAsync())
             {
-                Caliburn.Micro.Execute.OnUIThread(() =>
+                Execute.OnUIThread(() =>
                 {
                     var result = MessageBox.Show(Application.Current.MainWindow, "A new version is available!\nWould you like to download version " + this.versionManager.CurrentVersion.ToString(3) + "?", "New version!", MessageBoxButton.YesNo, MessageBoxImage.Question);
                     if (result == MessageBoxResult.Yes)
@@ -106,16 +106,16 @@ namespace Ec2Manager.ViewModels
             }
         }
 
-        public override void CanClose(Action<bool> callback)
+        public override Task<bool> CanCloseAsync()
         {
             if (this.Items.Count > 1)
             {
                 var result = MessageBox.Show(Application.Current.MainWindow, "Are you sure you want to close Ec2Manager? If you have running instances you will not be able to reconnect to them, and they will cost you money!", "Are you sure?", MessageBoxButton.YesNo, MessageBoxImage.Question);
-                callback(result == MessageBoxResult.Yes);
+                return Task.FromResult(result == MessageBoxResult.Yes);
             }
             else
             {
-                callback(true);
+                return Task.FromResult(true);
             }
         }
 
@@ -126,19 +126,12 @@ namespace Ec2Manager.ViewModels
 
         public void ManageFriends()
         {
-            this.windowManager.ShowDialog<ManageFriendsViewModel>(settings: new Dictionary<string, object>()
-                {
-                    { "Width", 400 },
-                    { "SizeToContent", SizeToContent.Height },
-                });
+            this.windowManager.ShowDialog<ManageFriendsViewModel>();
         }
 
         public void ShowSettings()
         {
-            this.windowManager.ShowDialog<SettingsViewModel>(settings: new Dictionary<string, object>()
-                {
-                    { "ResizeMode", ResizeMode.NoResize },
-                });
+            this.windowManager.ShowDialog<SettingsViewModel>();
         }
 
         public void ShowEc2Console()
@@ -153,11 +146,7 @@ namespace Ec2Manager.ViewModels
 
         public void ShowAbout()
         {
-            this.windowManager.ShowDialog<AboutViewModel>(settings: new Dictionary<string, object>()
-                {
-                    { "WindowStyle", WindowStyle.None },
-                    { "ShowInTaskbar", false},
-                });
+            this.windowManager.ShowDialog<AboutViewModel>();
         }
 
         public async void Handle(CreateInstanceEvent message)

@@ -18,7 +18,7 @@ namespace Ec2Manager.Views
     /// <summary>
     /// Interaction logic for ManageFriendsView.xaml
     /// </summary>
-    public partial class ManageFriendsView : UserControl
+    public partial class ManageFriendsView : Window
     {
         public ManageFriendsView()
         {
