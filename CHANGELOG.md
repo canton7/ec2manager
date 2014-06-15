@@ -1,6 +1,13 @@
 Changelog
 =========
 
+v1.3.3
+------
+
+ - ~/aws-info writter, for scripts
+ - Better error reporting
+ - Numerous bug fixes
+
 v1.3.2
 ------
 
