@@ -238,6 +238,9 @@ For example `ec2manager/scripts/YourScript "String Argument" "True"`.
 
 Scripts are called with the working directory set to the root of the mounted volume on which they reside.
 
+To help your scripts, the file `/home/ubuntu/aws-info` is written, which contains definitions of variables holding various useful bits of info, such as the AWS access and secret keys, the public IP, security group name, etc.
+If you need to use these in your script, source this file, then reference the variables (e.g. `source ~/aws-info; echo $AWS_ACCESS_KEY`).
+
 Choosing another AMI
 --------------------
 
