@@ -25,13 +25,18 @@ namespace Ec2Manager.Configuration
                 if (executableDirectory.StartsWith(Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles)))
                     return Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), appDataFolder);
                 else
-                    return Path.Combine(executableDirectory, "config");
+                    return Path.Combine(executableDirectory, "appdata");
             }
         }
 
         public string KeyPath
         {
             get { return Path.Combine(this.ConfigDir, "ec2key", "eu-west-1"); }
+        }
+
+        public string LogFileDir
+        {
+            get { return Path.Combine(this.ConfigDir, "logs"); }
         }
 
 

@@ -85,6 +85,8 @@ namespace Ec2Manager.ViewModels
                             });
                     });
             }
+
+            throw new Exception("foo");
         }
 
         public async void CheckForUpdate(bool dontAltertIfNoVersionAvailable = true)
