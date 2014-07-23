@@ -67,7 +67,7 @@
                     </ComboBox.GroupStyle>
                 </ComboBox>
                 <Button Grid.Column="1" Margin="10,0,0,0" Command="{s:Action RefreshSnapshots}">Refresh</Button>
-                <TextBox Grid.Column="2" Text="{Binding CustomVolumeSnapshotId}" Visibility="{Binding SelectedVolumeType, Converter={x:Static conv:VolumeTypeToIdVisibilityConverter.Instance}}" Margin="10,0"/>
+                <TextBox Grid.Column="2" Text="{Binding CustomVolumeSnapshotId, UpdateSourceTrigger=PropertyChanged}" Visibility="{Binding SelectedVolumeType, Converter={x:Static conv:VolumeTypeToIdVisibilityConverter.Instance}}" Margin="10,0"/>
                 <Button Grid.Column="3" Command="{s:Action MountVolume}" Style="{StaticResource buttonStyle}">Mount Volume</Button>
             </Grid>
         </GroupBox>
