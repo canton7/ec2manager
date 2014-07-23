@@ -17,7 +17,7 @@ using Ec2Manager.Ec2Manager;
 namespace Ec2Manager.ViewModels
 {
     public class ShellViewModel
-        : Conductor<IScreen>.Collections.OneActive,
+        : Conductor<IScreen>.Collection.OneActive,
         IHandle<CreateInstanceEvent>, IHandle<TerminateInstanceEvent>, IHandle<ReconnectInstanceEvent>
     {
         private IWindowManager windowManager;

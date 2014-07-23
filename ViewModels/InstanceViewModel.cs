@@ -19,7 +19,7 @@ using Ec2Manager.Properties;
 
 namespace Ec2Manager.ViewModels
 {
-    public class InstanceViewModel : Conductor<IScreen>.Collections.OneActive
+    public class InstanceViewModel : Conductor<IScreen>.Collection.OneActive
     {
         private static readonly List<VolumeType> defaultVolumeTypes = new List<VolumeType>
             {
