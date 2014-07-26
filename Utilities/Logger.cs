@@ -20,18 +20,11 @@ namespace Ec2Manager.Utilities
             get { return this.entries; }
         }
 
-        private TaskFactory accessTaskFactory;
-
         public Logger()
         {
             // Some users are dumb, and can't notice collection changes
             this.Entries.CollectionChanged += (o, e) =>
                 this.NotifyOfPropertyChange(() => Entries);
-
-            // If we let it be posted asynchronously, the converter starts iterating it while we're still modifying it
-            this.Entries.PropertyChangedDispatcher = a => a();
-
-            this.accessTaskFactory = new TaskFactory(new SingleAccessTaskScheduler());
         }
 
         public void Log(string message)
@@ -83,53 +76,54 @@ namespace Ec2Manager.Utilities
 
         private void newLogEntry(string text, string category = null, bool allowRepititionMessages = false, bool allowIncompleteMessages = false)
         {
-            this.accessTaskFactory.StartNew(() =>
+            Execute.OnUIThread(() =>
+            {
+                var lastMessageIsComplete = text.EndsWith("\n") || text.EndsWith("\r\n");
+
+                var entries = text.TrimEnd(new[]{ '\r', '\n' }).Split(new[] { "\r\n", "\n" }, StringSplitOptions.None);
+                for (int i = 0; i < entries.Length; i++)
                 {
-                    var lastMessageIsComplete = text.EndsWith("\n") || text.EndsWith("\r\n");
+                    var entriesInCategory = this.entries.Reverse().Where(x => x.Category == category);
+                    var entriesInCategoryLength = entriesInCategory.Count();
 
-                    var entries = text.TrimEnd(new[]{ '\r', '\n' }).Split(new[] { "\r\n", "\n" }, StringSplitOptions.None);
-                    for (int i = 0; i < entries.Length; i++)
+                    var entry = entries[i];
+                    var isCompleteMessage = !allowIncompleteMessages || lastMessageIsComplete || i < entries.Length - 1;
+                    var allowRepititionMessage = allowRepititionMessages && !string.IsNullOrWhiteSpace(entry);
+
+                    // Don't let the log grow too big
+                    if (this.Entries.Count > maxLogEntries)
                     {
-                        var entriesInCategory = this.entries.Reverse().Where(x => x.Category == category);
-
-                        var entry = entries[i];
-                        var isCompleteMessage = !allowIncompleteMessages || lastMessageIsComplete || i < entries.Length - 1;
-                        var allowRepititionMessage = allowRepititionMessages && !string.IsNullOrWhiteSpace(entry);
-
-                        // Don't let the log grow too big
-                        if (this.Entries.Count > maxLogEntries)
-                        {
-                            this.Entries.RemoveAt(0);
-                        }
-
-                        entry = entry.TrimEnd(new[] { '\r', '\n' });
-
-                        // Go to great lenths to avoid converting entriesInCategory to a list, as that involves an unnecessary copy...
-
-                        // Logic to display 'last message repeated n times'
-                        if (allowRepititionMessage && entriesInCategory.Count() > 1 && entry == entriesInCategory.First().Message)
-                        {
-                            this.Entries.Add(new LogEntry(1, category));
-                        }
-                        else if (allowRepititionMessage && entriesInCategory.Count() > 2 && entry == entriesInCategory.Skip(1).Take(1).First().Message && entriesInCategory.First().RepititionCount > 0)
-                        {
-                            int prevRepitition = entriesInCategory.First().RepititionCount;
-                            this.Entries.RemoveAt(this.Entries.Count - 1);
-                            this.Entries.Add(new LogEntry(prevRepitition + 1, category));
-                        }
-                        else if (allowIncompleteMessages && entriesInCategory.Count() > 0 && !entriesInCategory.First().IsComplete)
-                        {
-                            var oldEntry = entriesInCategory.First();
-                            oldEntry.AddMessagePart(entry);
-                            oldEntry.IsComplete = isCompleteMessage;
-                            this.Entries.Refresh();
-                        }
-                        else if (entry.Length > 0)
-                        {
-                            this.Entries.Add(new LogEntry(entry, isCompleteMessage, category));
-                        }
+                        this.Entries.RemoveAt(0);
                     }
-                });
+
+                    entry = entry.TrimEnd(new[] { '\r', '\n' });
+
+                    // Go to great lenths to avoid converting entriesInCategory to a list, as that involves an unnecessary copy...
+
+                    // Logic to display 'last message repeated n times'
+                    if (allowRepititionMessage && entriesInCategoryLength > 1 && entry == entriesInCategory.First().Message)
+                    {
+                        this.Entries.Add(new LogEntry(1, category));
+                    }
+                    else if (allowRepititionMessage && entriesInCategoryLength > 2 && entry == entriesInCategory.Skip(1).Take(1).First().Message && entriesInCategory.First().RepititionCount > 0)
+                    {
+                        int prevRepitition = entriesInCategory.First().RepititionCount;
+                        this.Entries.RemoveAt(this.Entries.Count - 1);
+                        this.Entries.Add(new LogEntry(prevRepitition + 1, category));
+                    }
+                    else if (allowIncompleteMessages && entriesInCategoryLength > 0 && !entriesInCategory.First().IsComplete)
+                    {
+                        var oldEntry = entriesInCategory.First();
+                        oldEntry.AddMessagePart(entry);
+                        oldEntry.IsComplete = isCompleteMessage;
+                        this.Entries.Refresh();
+                    }
+                    else if (entry.Length > 0)
+                    {
+                        this.Entries.Add(new LogEntry(entry, isCompleteMessage, category));
+                    }
+                }
+            });
         }
     }
 }
