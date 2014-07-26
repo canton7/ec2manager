@@ -49,9 +49,9 @@ namespace Ec2Manager.Core
             base.Launch();
         }
 
-        protected override void OnUnhandledExecption(object sender, System.Windows.Threading.DispatcherUnhandledExceptionEventArgs e)
+        protected override void OnApplicationUnhandledExecption(object sender, System.Windows.Threading.DispatcherUnhandledExceptionEventArgs e)
         {
-            base.OnUnhandledExecption(sender, e);
+            base.OnApplicationUnhandledExecption(sender, e);
 
             this.exceptionLogger.Error("Unhandled exeption", e.Exception);
 

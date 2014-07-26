@@ -54,15 +54,15 @@ namespace Ec2Manager.ViewModels
             }
         }
 
-        private PropertyChangedSubscription friendBeingEditedChangeHandler;
+        private IEventBinding friendBeingEditedChangeHandler;
         private FriendModel _friendBeingEdited;
         public FriendModel FriendBeingEdited
         {
             get { return this._friendBeingEdited; }
             set
             {
-                if (this._friendBeingEdited != null)
-                    this._friendBeingEdited.Unbind(friendBeingEditedChangeHandler);
+                if (this.friendBeingEditedChangeHandler != null)
+                    this.friendBeingEditedChangeHandler.Unbind();
                 
                 this._friendBeingEdited = value;
 
