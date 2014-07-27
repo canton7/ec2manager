@@ -39,14 +39,12 @@ namespace Ec2Manager.Core
             builder.Bind<ITerminateInstanceViewModelFactory>().ToAbstractFactory();
         }
 
-        protected override void Launch()
+        protected override void OnStart()
         {
             this.exceptionLogPath = Path.Combine(IoC.Get<Config>().LogFileDir, "latest-exception.txt");
 
             GlobalDiagnosticsContext.Set("LogFilePath", this.exceptionLogPath);
             this.exceptionLogger = LogManager.GetLogger("ExceptionLogger");
-
-            base.Launch();
         }
 
         protected override void OnApplicationUnhandledExecption(object sender, System.Windows.Threading.DispatcherUnhandledExceptionEventArgs e)

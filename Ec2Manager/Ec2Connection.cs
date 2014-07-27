@@ -25,22 +25,12 @@ namespace Ec2Manager.Ec2Manager
         private Config config;
         public ILogger Logger;
 
-        public static readonly InstanceSize[] InstanceSizes = new[]
+        public static readonly InstanceSize[] InstanceSizes;
+
+        static Ec2Connection()
         {
-            new InstanceSize("M3 Medium", "m3.medium"),
-            new InstanceSize("M3 Large", "m3.large"),
-            new InstanceSize("M3 Extra Large", "m3.xlarge"),
-            new InstanceSize("M3 2x Extra Large", "m3.2xlarge"),
-
-            new InstanceSize("Micro", "t1.micro"),
-            
-            new InstanceSize("High-Memory Extra Large", "m2.xlarge"),
-            new InstanceSize("High-Memory 2x Extra Large", "m2.2xlarge"),
-            new InstanceSize("High-Memory 4x Extra Large", "m2.4xlarge"),
-
-            new InstanceSize("High-CPU Medium", "c1.medium"),
-            new InstanceSize("High-CPU Extra Large", "c1.xlarge"),
-        };
+            InstanceSizes = InstanceSizesConfiguration.Default.InstanceSizes.Select(x => new InstanceSize(x.Name, x.Key)).ToArray();
+        }
 
         private bool isConnected;
         public bool IsConnected
